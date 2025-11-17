@@ -289,9 +289,51 @@ export default function PatientDashboard() {
           </div>
 
           <div className="col-lg-3">
-            {/* You can render upcoming list here using `upcoming` */}
-            {/* For example later: upcoming.map(...) */}
+            <div className="card shadow-sm h-100">
+              <div className="card-header bg-white border-0">
+                <h6 className="mb-0 fw-bold">Upcoming appointments</h6>
+              </div>
+              <div className="card-body p-2" style={{ maxHeight: 400, overflowY: "auto" }}>
+                {loadingUpcoming ? (
+                  <p className="text-muted small mb-0">Loading...</p>
+                ) : upcoming.length === 0 ? (
+                  <p className="text-muted small mb-0">
+                    No upcoming appointments found.
+                  </p>
+                ) : (
+                  upcoming.map((a) => (
+                    <div
+                      key={a._id}
+                      className="p-2 mb-2 border rounded-3"
+                      style={{ backgroundColor: "#f8f9ff", cursor: "pointer" }}
+                      onClick={() => navigate(`/patient/appointments/${a._id}`)}
+                    >
+                      <div className="d-flex justify-content-between">
+                        <span className="fw-semibold small">
+                          {a.doctorName || "Doctor"}
+                        </span>
+                        <span className="badge bg-light text-dark border">
+                          {a.status || "Scheduled"}
+                        </span>
+                      </div>
+                      <div className="small text-muted">
+                        {a.clinic || "Clinic"}
+                      </div>
+                      <div className="small mt-1">
+                        <span className="fw-semibold">
+                          {a.date || "Date not set"}
+                        </span>
+                        {a.time && (
+                          <span className="text-muted"> • {a.time}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
     </PatientLayout>
