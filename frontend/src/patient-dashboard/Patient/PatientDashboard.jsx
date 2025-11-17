@@ -1,8 +1,10 @@
+// src/patient-dashboard/PatientDashboard.jsx
+
 import React, { useEffect, useState, useRef } from "react";
 
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";       // ✅ add this
+import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 
 import axios from "axios";
@@ -28,18 +30,22 @@ export default function PatientDashboard() {
       return null;
     }
   })();
+
   const patientId =
     storedPatient?._id ||
     storedPatient?.id ||
     localStorage.getItem("patientId") ||
     null;
-  const token =
-    localStorage.getItem("token") || localStorage.getItem("patientToken") || null;
 
-  // 🔧 Vite DOESN'T support process.env in browser → just hardcode or use import.meta.env later
+  const token =
+    localStorage.getItem("token") ||
+    localStorage.getItem("patientToken") ||
+    null;
+
+  // backend base URL
   const API_BASE = "http://localhost:3001";
 
-  // demo fallback event
+  // fallback demo event (if no data or error)
   const demoEvents = [
     {
       id: "demo-1",
@@ -52,41 +58,36 @@ export default function PatientDashboard() {
     },
   ];
 
+  // Very simple: use only `date` → all-day event
   const mapAppointmentToEvent = (a) => {
     const id = a._id ?? a.id;
+
+    // must have a.date, else skip this appointment
+    if (!a.date) {
+      console.warn("Appointment has no date, skipping:", a);
+      return null;
+    }
+
+    const startDate = new Date(a.date); // e.g. "2025-11-20"
+
+    if (isNaN(startDate.getTime())) {
+      console.warn("Invalid start date for appointment, skipping:", a);
+      return null;
+    }
+
     const doctorName =
       a.doctorName ??
       a.doctor?.name ??
       (a.doctor && `${a.doctor.firstName} ${a.doctor.lastName}`) ??
       "Doctor";
+
     const service = a.serviceName ?? a.service ?? "Appointment";
-
-    let start =
-      a.start ||
-      a.datetime ||
-      (a.date && (a.time ? `${a.date}T${a.time}` : `${a.date}T09:00:00`));
-    let end = a.end || a.endTime || null;
-
-    if (!start && a.date) start = `${a.date}T09:00:00`;
-    if (!end && start) {
-      const dt = new Date(start);
-      dt.setMinutes(dt.getMinutes() + (a.durationMinutes ?? 30));
-      end = dt.toISOString();
-    }
-
-    const allDay =
-      (!!start &&
-        typeof start === "string" &&
-        start.length === 10 &&
-        !start.includes("T")) ||
-      !!a.allDay;
 
     return {
       id,
       title: `${doctorName} — ${service}`,
-      start,
-      end,
-      allDay,
+      start: startDate, // FullCalendar can use Date object
+      allDay: true, // whole day event
       backgroundColor: "#ff5c7c",
       borderColor: "#ff5c7c",
       extendedProps: { raw: a },
@@ -96,6 +97,7 @@ export default function PatientDashboard() {
   // fetch events for calendar
   useEffect(() => {
     let mounted = true;
+
     const fetchEvents = async () => {
       setLoadingEvents(true);
       setErrorEvents(null);
@@ -111,7 +113,7 @@ export default function PatientDashboard() {
 
         const appointments = Array.isArray(res.data)
           ? res.data
-          : res.data.data ?? [];
+          : res.data?.data ?? [];
 
         if (!appointments || appointments.length === 0) {
           if (mounted) {
@@ -119,7 +121,10 @@ export default function PatientDashboard() {
             setErrorEvents(null);
           }
         } else {
-          const mapped = appointments.map(mapAppointmentToEvent);
+          const mapped = appointments
+            .map(mapAppointmentToEvent) // convert each appointment → event or null
+            .filter(Boolean); // remove null values
+
           if (mounted) setEvents(mapped);
         }
       } catch (err) {
@@ -138,18 +143,22 @@ export default function PatientDashboard() {
     };
 
     fetchEvents();
-    return () => (mounted = false);
-  }, [patientId, token]); // include token in deps just in case
+    return () => {
+      mounted = false;
+    };
+  }, [patientId, token]);
 
   // fetch upcoming list (right side)
   useEffect(() => {
     let mounted = true;
+
     const fetchUpcoming = async () => {
       setLoadingUpcoming(true);
       try {
         let url = `${API_BASE}/appointments`;
-        if (patientId)
+        if (patientId) {
           url = `${API_BASE}/appointments?patientId=${patientId}&upcoming=true`;
+        }
 
         const res = await axios.get(url, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -157,8 +166,9 @@ export default function PatientDashboard() {
 
         const appointments = Array.isArray(res.data)
           ? res.data
-          : res.data.data ?? [];
-        if (mounted) setUpcoming(appointments.slice(0, 6)); // show first 6
+          : res.data?.data ?? [];
+
+        if (mounted) setUpcoming(appointments.slice(0, 6)); // first 6
       } catch (err) {
         console.error("Failed to fetch upcoming appointments:", err);
         if (mounted) setUpcoming([]);
@@ -168,7 +178,9 @@ export default function PatientDashboard() {
     };
 
     fetchUpcoming();
-    return () => (mounted = false);
+    return () => {
+      mounted = false;
+    };
   }, [patientId, token]);
 
   // calendar interactions
@@ -192,7 +204,7 @@ export default function PatientDashboard() {
             <button
               className="btn btn-outline-secondary"
               onClick={() => {
-                /* open filters later */
+                // later you can open filter modal here
               }}
             >
               Apply filters
@@ -252,9 +264,7 @@ export default function PatientDashboard() {
                   <button
                     className="btn btn-sm btn-outline-secondary"
                     onClick={() =>
-                      calendarRef.current
-                        ?.getApi()
-                        .changeView("timeGridDay")
+                      calendarRef.current?.getApi().changeView("timeGridDay")
                     }
                   >
                     Day
@@ -264,7 +274,7 @@ export default function PatientDashboard() {
 
               <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // ✅ timeGridPlugin now defined
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
                 headerToolbar={false}
                 selectable={true}
@@ -279,7 +289,8 @@ export default function PatientDashboard() {
           </div>
 
           <div className="col-lg-3">
-            {/* you can put Upcoming list here later using `upcoming` */}
+            {/* You can render upcoming list here using `upcoming` */}
+            {/* For example later: upcoming.map(...) */}
           </div>
         </div>
       </div>
