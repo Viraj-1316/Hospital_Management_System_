@@ -166,7 +166,7 @@ const BillingRecords = () => {
                           <span className={statusBadge(bill.status)}>{bill.status}</span>
                         </td>
 
-                        {/* ⭐ UPDATED ACTION BUTTONS WITH PDF DOWNLOAD */}
+                        {/* UPDATED ACTION BUTTONS WITH PDF DOWNLOAD */}
                         <td>
                           <div className="d-flex justify-content-center gap-2">
 

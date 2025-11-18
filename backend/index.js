@@ -9,7 +9,7 @@ const Patient = require('./models/Patient');
 const DoctorModel = require("./models/Doctor");
 const BillingModel = require("./models/Billing");
 const AppointmentModel = require("./models/Appointment");
-const Service = require("./Models/Service");
+const Service = require("./models/Service");
 const ADMIN_EMAIL = "admin@onecare.com";
 const ADMIN_PASSWORD = "admin123";
 
@@ -287,66 +287,6 @@ app.put("/api/services/:id", async (req, res) => {
   } catch (err) {
     console.error("Update service error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-// ===============================
-//         BILL APIs
-// ===============================
-
-// Create Bill
-app.post("/bills", async (req, res) => {
-  try {
-    const bill = await BillingModel.create(req.body);
-    res.json({ message: "Bill created successfully", data: bill });
-  } catch (err) {
-    res.status(500).json({ message: "Error", error: err.message });
-  }
-});
-
-// Get All Bills
-app.get("/bills", async (req, res) => {
-  try {
-    const bills = await BillingModel.find().sort({ createdAt: -1 });
-    res.json(bills);
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error fetching bills", error: err.message });
-  }
-});
-
-// Get Single Bill
-app.get("/bills/:id", async (req, res) => {
-  try {
-    const bill = await BillingModel.findById(req.params.id);
-    res.json(bill);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching bill" });
-  }
-});
-
-// Update Bill
-app.put("/bills/:id", async (req, res) => {
-  try {
-    const updated = await BillingModel.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    res.json({ message: "Bill updated", data: updated });
-  } catch (err) {
-    res.status(500).json({ message: "Error updating bill" });
-  }
-});
-
-// Delete Bill
-app.delete("/bills/:id", async (req, res) => {
-  try {
-    await BillingModel.findByIdAndDelete(req.params.id);
-    res.json({ message: "Bill deleted" });
-  } catch (err) {
-    res.status(500).json({ message: "Error deleting bill" });
   }
 });
 
