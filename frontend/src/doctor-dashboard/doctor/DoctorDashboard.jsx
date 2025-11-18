@@ -18,14 +18,14 @@ import {
   FaListAlt,
 } from "react-icons/fa";
 
-// 🔹 Simple base URL for backend – no process.env
+// ✅ Simple base URL for backend
 const API_BASE = "http://localhost:3001";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
   const calendarRef = useRef(null);
 
-  // stats (you can replace with API fetch if you already have stats endpoint)
+  // ---------- STATS ----------
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalAppointments: 0,
@@ -34,107 +34,107 @@ export default function DoctorDashboard() {
   });
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // calendar events
+  // ---------- CALENDAR ----------
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [error, setError] = useState(null);
 
-  // get doctor id & token from localStorage (adjust keys if you use different names)
-  const storedDoctor = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("doctor") || "null");
-    } catch {
-      return null;
-    }
-  })();
-
-  const doctorId =
-    storedDoctor?._id ||
-    storedDoctor?.id ||
-    localStorage.getItem("doctorId") ||
-    null;
-
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("doctorToken") ||
-    null;
-
-  // helper mapping function: adapt to your appointment JSON shape
+  // -----------------------------
+  // 1) MAP ONE APPOINTMENT → EVENT
+  // -----------------------------
+  // Keep it VERY simple: use only "date" from your appointment.
+  // Example appointment from your logs:
+  // { _id: '...', patientName: 'Patient', doctorName: 'viraj ...', clinic: 'Valley Clinic', date: '2025-11-20', ... }
   const mapAppointmentToEvent = (a) => {
-    const id = a._id || a.id;
+    const id = a._id || a.id || Math.random().toString(36).slice(2);
 
+    // 1) Get a safe title
     const patientName =
       a.patientName ||
       a.patient?.name ||
       (a.patient && `${a.patient.firstName} ${a.patient.lastName}`) ||
       "Patient";
 
-    const serviceName =
-      a.serviceName ||
-      a.service ||
-      (a.service && a.service.name) ||
-      "Appointment";
+    const doctorName = a.doctorName || "Doctor";
+    const serviceName = a.serviceName || a.service || "Appointment";
 
-    let start =
-      a.start ||
-      a.datetime ||
-      (a.date &&
-        (a.time ? `${a.date}T${a.time}` : `${a.date}T00:00:00`));
-
-    let end =
-      a.end ||
-      a.endTime ||
-      (a.date && (a.endTime ? `${a.date}T${a.endTime}` : null));
-
-    const allDay =
-      (!!start && typeof start === "string" && start.length === 10 && !start.includes("T")) ||
-      !!a.allDay;
-
-    if (!start && a.date) start = `${a.date}T09:00:00`;
-
-    if (!end && start && !allDay) {
-      const dt = new Date(start);
-      if (!isNaN(dt.getTime())) {
-        dt.setMinutes(dt.getMinutes() + 30);
-        end = dt.toISOString();
-      }
+    // 2) Build start date (full-day event)
+    if (!a.date) {
+      console.warn("DoctorDashboard: appointment has NO date, skip:", a);
+      return null;
     }
 
+    // a.date should be like "2025-11-20"
+    const startDate = new Date(a.date);
+
+    if (isNaN(startDate.getTime())) {
+      console.warn("DoctorDashboard: INVALID date, skip:", a.date, a);
+      return null;
+    }
+
+    // 3) Return FullCalendar event object
     return {
       id,
-      title: `${patientName} — ${serviceName}`,
-      start,
-      end,
-      allDay,
+      title: `${patientName} — ${serviceName} — ${doctorName}`,
+      start: startDate, // pass Date object
+      allDay: true, // full day event
       backgroundColor: "#1560ff",
       borderColor: "#1560ff",
       extendedProps: { raw: a },
     };
   };
 
-  // fetch stats
+  // -----------------------------
+  // 2) FETCH STATS FROM BACKEND
+  // -----------------------------
   useEffect(() => {
-    let mounted = true;
+  let mounted = true;
 
-    const fetchStats = async () => {
-      setLoadingStats(true);
-      try {
-        // You can replace this with a real API later
-        setStats((s) => ({ ...s, totalServices: 2 }));
-      } catch (err) {
-        console.error("Failed to fetch stats", err);
-      } finally {
-        if (mounted) setLoadingStats(false);
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      const res = await axios.get(`${API_BASE}/dashboard-stats`);
+
+      // ✅ now we read all 3 values from backend
+      const {
+        totalPatients,
+        totalAppointments,
+        todayAppointments,
+      } = res.data || {};
+
+      if (mounted) {
+        setStats({
+          totalPatients: totalPatients || 0,
+          totalAppointments: totalAppointments || 0,
+          todayAppointments: todayAppointments || 0,
+          totalServices: 2, // still dummy for now
+        });
       }
-    };
+    } catch (err) {
+      console.error("DoctorDashboard: failed to fetch stats", err);
+      if (mounted) {
+        setStats({
+          totalPatients: 0,
+          totalAppointments: 0,
+          todayAppointments: 0,
+          totalServices: 0,
+        });
+      }
+    } finally {
+      if (mounted) setLoadingStats(false);
+    }
+  };
 
-    fetchStats();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  fetchStats();
+  return () => {
+    mounted = false;
+  };
+}, []);
 
-  // fetch appointments and map to events
+
+  // -----------------------------
+  // 3) FETCH APPOINTMENTS → EVENTS
+  // -----------------------------
   useEffect(() => {
     let mounted = true;
 
@@ -143,22 +143,22 @@ export default function DoctorDashboard() {
       setError(null);
 
       try {
-        let url = `${API_BASE}/appointments`;
-        if (doctorId) url = `${API_BASE}/appointments?doctorId=${doctorId}`;
-
-        const res = await axios.get(url, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+    
+        const res = await axios.get(`${API_BASE}/appointments`);
 
         const appointments = Array.isArray(res.data)
           ? res.data
           : res.data.data ?? [];
 
-        const mapped = appointments.map(mapAppointmentToEvent);
+        console.log("DoctorDashboard /appointments :", appointments);
+
+        const mapped = appointments
+          .map(mapAppointmentToEvent)
+          .filter(Boolean); // remove null
 
         if (mounted) setEvents(mapped);
       } catch (err) {
-        console.error("Failed to fetch appointments for calendar:", err);
+        console.error("DoctorDashboard: failed to fetch appointments", err);
         if (mounted) {
           setError("Failed to load calendar events");
           setEvents([]);
@@ -172,9 +172,11 @@ export default function DoctorDashboard() {
     return () => {
       mounted = false;
     };
-  }, [doctorId, token]);
+  }, []); // run once on mount
 
-  // calendar interactions
+  // -----------------------------
+  // 4) CALENDAR INTERACTIONS
+  // -----------------------------
   const handleDateSelect = (selectInfo) => {
     const d = selectInfo.startStr;
     navigate(`/doctor/appointments?date=${encodeURIComponent(d)}`);
@@ -186,6 +188,9 @@ export default function DoctorDashboard() {
     navigate(`/doctor/appointments/${ev.id}`);
   };
 
+  // -----------------------------
+  // 5) RENDER
+  // -----------------------------
   return (
     <DoctorLayout>
       <div className="container-fluid py-4">
@@ -235,7 +240,7 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
-          {/* Today's Appointments */}
+          {/* Today's Appointments (we'll calculate later if needed) */}
           <div className="col-md-3">
             <div
               className="card shadow-sm border-0 p-3 text-center clickable"
@@ -289,7 +294,11 @@ export default function DoctorDashboard() {
                     Apply filters
                   </button>
                   <span className="text-muted small">
-                    {loadingEvents ? "Loading events…" : `${events.length} events`}
+                    {loadingEvents
+                      ? "Loading events…"
+                      : events.length === 0
+                      ? "No appointments found"
+                      : `${events.length} events`}
                   </span>
                 </div>
               </div>
