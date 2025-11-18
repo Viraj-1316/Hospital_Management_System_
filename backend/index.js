@@ -19,13 +19,18 @@ const QRCode = require("qrcode");
 const fs = require("fs");
 const path = require("path");
 
+// Csv Import Libraries
+const multer = require("multer");
+const csv = require("csv-parser");
+const upload = multer({ dest: path.join(__dirname, "uploads") });
 
-// 2. Create an Express app
+
+
 const app = express();
 
-// 3. Middlewares: to understand JSON body + allow CORS
-app.use(cors());            // allow requests from frontend
-app.use(express.json());    // parse JSON request body
+
+app.use(cors());            
+app.use(express.json());    
 
 // connect to MongoDB
 mongoose
@@ -204,6 +209,68 @@ app.delete("/doctors/:id", async (req, res) => {
   }
 });
 
+//doctor Csv Import
+
+app.post("/doctors/import", upload.single("file"), async (req, res) => {
+  try {
+    console.log("📥 /doctors/import hit");
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const results = [];
+
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (row) => {
+        // CSV headers:
+        // firstName,lastName,clinic,email,phone,dob,specialization,gender,status
+        results.push({
+          firstName: row.firstName,
+          lastName: row.lastName,
+          clinic: row.clinic,
+          email: row.email,
+          phone: row.phone,
+          dob: row.dob, // string is fine, your schema will cast to Date if needed
+          specialization: row.specialization,
+          gender: row.gender,
+          status: row.status || "Active",
+        });
+      })
+      .on("end", async () => {
+        try {
+          console.log("Parsed doctors from CSV:", results.length);
+          if (results.length > 0) {
+            await DoctorModel.insertMany(results);
+          }
+
+          // delete temp file
+          fs.unlinkSync(req.file.path);
+
+          res.json({
+            message: "Imported doctors",
+            count: results.length,
+          });
+        } catch (err) {
+          console.error("❌ Doctor import save error:", err);
+          res.status(500).json({
+            message: "Error saving doctors",
+            error: err.message,
+          });
+        }
+      })
+      .on("error", (err) => {
+        console.error("❌ CSV parse error (doctors):", err);
+        res.status(500).json({ message: "CSV parse error" });
+      });
+  } catch (err) {
+    console.error("❌ Doctor import error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
 
 // ===============================
 //          APPOINTMENTS
@@ -229,6 +296,365 @@ app.get("/appointments", async (req, res) => {
   }
 });
 
+// Csv File Import data 
+app.post("/appointments/import", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (row) => {
+        
+        results.push({
+          date: row.date,
+          clinic: row["Clinic name"],
+          services: row.Service,
+          doctorName: row["Doctor name"],
+          patientName: row["Patient name"],
+          status: row.Status || "booked",
+        });
+      })
+      .on("end", async () => {
+        await AppointmentModel.insertMany(results);
+        fs.unlinkSync(req.file.path);
+        res.json({ message: "Imported appointments", count: results.length });
+      })
+      .on("error", (err) => {
+        console.error("CSV parse error:", err);
+        res.status(500).json({ message: "CSV parse error" });
+      });
+  } catch (err) {
+    console.error("Import error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// UPDATE appointment
+app.put("/appointments/:id", async (req, res) => {
+  try {
+    const updated = await AppointmentModel.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    res.json({ message: "Appointment updated", data: updated });
+  } catch (err) {
+    console.error("Update appointment error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
+// Appointments pdf  section
+
+
+app.get("/appointments/:id/pdf", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const appt = await AppointmentModel.findById(id);
+    if (!appt) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    // Try to fetch doctor details from DoctorModel using doctorName
+    let doctor = null;
+    if (appt.doctorName) {
+      const parts = appt.doctorName.split(" ");
+      const first = parts[0];
+      const last = parts.slice(1).join(" ");
+      doctor = await DoctorModel.findOne({
+        firstName: first,
+        lastName: last,
+      });
+    }
+
+    // --------- Derived fields ---------
+    const clinicName = appt.clinic || doctor?.clinic || "Valley Clinic";
+    const clinicEmail = doctor?.email || "valley_clinic@example.com";
+    const clinicPhone = doctor?.phone || "0000000000";
+
+    const rawAddress =
+      doctor?.address ||
+      "Address not available\nCity, State, Country, 000000";
+
+    const addressLines = String(rawAddress).split(/\r?\n/);
+    const addressLine1 = addressLines[0] || "";
+    const addressLine2 = addressLines[1] || "";
+
+    const patientName = appt.patientName || "N/A";
+    const patientEmail = "N/A"; // wire to PatientModel later if needed
+
+    const apptDateObj = appt.date ? new Date(appt.date) : null;
+    const apptDateFormatted = apptDateObj
+      ? apptDateObj.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "N/A";
+
+    const todayFormatted = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const apptTime = appt.slot || "N/A";
+    const apptStatus = appt.status || "Booked";
+    const paymentMode = appt.paymentMode || "Manual";
+    const serviceText = appt.services || "N/A";
+    const totalBill = appt.charges ? `₹${appt.charges}/-` : "Not available";
+
+    // =========================================
+    //        CREATE A4 PORTRAIT PDF
+    // =========================================
+    const pdfDoc = await PDFDocument.create();
+
+    const pageWidth = 595;  // A4 portrait
+    const pageHeight = 842;
+    const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    const margin = 40;
+    let y = pageHeight - margin; // start near top
+
+    // ---------- Header: Logo + Clinic ----------
+    const logoSize = 55;
+    const logoX = margin;
+    const logoY = y - logoSize + 5;
+
+    // draw logo (optional)
+    try {
+      const logoPath = path.join(__dirname, "assets", "logo.png");
+      if (fs.existsSync(logoPath)) {
+        const logoBytes = fs.readFileSync(logoPath);
+        const logoImg = await pdfDoc.embedPng(logoBytes);
+        page.drawImage(logoImg, {
+          x: logoX,
+          y: logoY,
+          width: logoSize,
+          height: logoSize,
+        });
+      }
+    } catch (e) {
+      console.warn("Logo not found or failed to load.");
+    }
+
+    const textStartX = logoX + logoSize + 10;
+
+    // Clinic name
+    page.drawText(clinicName, {
+      x: textStartX,
+      y,
+      size: 18,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
+
+    // Date (top-right)
+    page.drawText(`Date: ${todayFormatted}`, {
+      x: pageWidth - margin - 150,
+      y,
+      size: 11,
+      font,
+    });
+
+    // Doctor name
+    y -= 18;
+    page.drawText(`Dr. ${appt.doctorName || "Not specified"}`, {
+      x: textStartX,
+      y,
+      size: 11,
+      font,
+    });
+
+    // Address lines
+    y -= 20;
+    page.drawText(`Address: ${addressLine1}`, {
+      x: textStartX,
+      y,
+      size: 10,
+      font,
+    });
+
+    if (addressLine2) {
+      y -= 14;
+      page.drawText(addressLine2, {
+        x: textStartX + 60, // indent slightly so it visually continues
+        y,
+        size: 10,
+        font,
+      });
+    }
+
+    // Contact + Email row (ALWAYS after address lines)
+    y -= 18;
+    page.drawText(`Contact No: ${clinicPhone}`, {
+      x: textStartX,
+      y,
+      size: 10,
+      font,
+    });
+    page.drawText(`Email: ${clinicEmail}`, {
+      x: pageWidth - margin - 200,
+      y,
+      size: 10,
+      font,
+    });
+
+    // Divider line
+    y -= 25;
+    page.drawLine({
+      start: { x: margin, y },
+      end: { x: pageWidth - margin, y },
+      thickness: 1,
+      color: rgb(0.7, 0.7, 0.7),
+    });
+
+    // ---------- Patient section ----------
+    y -= 25;
+    page.drawText(`Patient Name: ${patientName}`, {
+      x: margin,
+      y,
+      size: 11,
+      font: bold,
+    });
+
+    y -= 16;
+    page.drawText(`Email: ${patientEmail}`, {
+      x: margin,
+      y,
+      size: 10,
+      font,
+    });
+
+    // ---------- Appointment Detail Title ----------
+    y -= 35;
+    page.drawText("Appointment Detail", {
+      x: pageWidth / 2 - 70,
+      y,
+      size: 13,
+      font: bold,
+    });
+
+    y -= 15;
+    page.drawLine({
+      start: { x: margin, y },
+      end: { x: pageWidth - margin, y },
+      thickness: 1,
+      color: rgb(0.7, 0.7, 0.7),
+    });
+
+    // ---------- Detail rows (NO overlap) ----------
+    y -= 25;
+    const colLeftX = margin;
+    const colRightX = pageWidth / 2 + 10;
+
+    // Row 1: date + time
+    page.drawText("Appointment Date:", {
+      x: colLeftX,
+      y,
+      size: 10,
+      font: bold,
+    });
+    page.drawText(apptDateFormatted, {
+      x: colLeftX + 115,
+      y,
+      size: 10,
+      font,
+    });
+
+    page.drawText("Appointment Time:", {
+      x: colRightX,
+      y,
+      size: 10,
+      font: bold,
+    });
+    page.drawText(apptTime, { x: colRightX + 115, y, size: 10, font });
+
+    // Row 2: status + payment
+    y -= 22;
+    page.drawText("Appointment Status:", {
+      x: colLeftX,
+      y,
+      size: 10,
+      font: bold,
+    });
+    page.drawText(apptStatus, {
+      x: colLeftX + 115,
+      y,
+      size: 10,
+      font,
+    });
+
+    page.drawText("Payment Mode:", {
+      x: colRightX,
+      y,
+      size: 10,
+      font: bold,
+    });
+    page.drawText(paymentMode, {
+      x: colRightX + 115,
+      y,
+      size: 10,
+      font,
+    });
+
+    // Row 3: service + total
+    y -= 22;
+    page.drawText("Service:", {
+      x: colLeftX,
+      y,
+      size: 10,
+      font: bold,
+    });
+    page.drawText(serviceText, {
+      x: colLeftX + 115,
+      y,
+      size: 10,
+      font,
+    });
+
+    page.drawText("Total Bill Payment:", {
+      x: colRightX,
+      y,
+      size: 10,
+      font: bold,
+    });
+    page.drawText(totalBill, {
+      x: colRightX + 115,
+      y,
+      size: 10,
+      font,
+    });
+
+    // ---------- Send PDF ----------
+    const pdfBytes = await pdfDoc.save();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=appointment-${appt._id}.pdf`
+    );
+    res.send(Buffer.from(pdfBytes));
+  } catch (err) {
+    console.error("Appointment PDF error:", err);
+    res.status(500).json({ message: "PDF generation failed" });
+  }
+});
+
+
+
 // ===============================
 //         SERVICE APIs
 // ===============================
@@ -237,7 +663,6 @@ app.get("/appointments", async (req, res) => {
 app.get("/api/services", async (req, res) => {
   try {
     const all = await Service.find();
-    console.log("GET /api/services ->", all.length, "items");  // 👈 log how many
     res.json(all);
   } catch (err) {
     console.error("GET /api/services error:", err);
