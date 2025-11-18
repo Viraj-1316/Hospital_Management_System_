@@ -374,7 +374,7 @@ app.delete("/appointments/:id", async (req, res) => {
   }
 });
 
-// Cancel appointment (mark status Cancelled)
+// Cancel appointment 
 app.put("/appointments/:id/cancel", async (req, res) => {
   try {
     const { id } = req.params;
