@@ -30,8 +30,8 @@ export default function PatientSidebar({ isOpen = true }) {
       </div>
 
       <ul className="nav flex-column">
-        {item("/patient/home", FaHome, "Home")}
-        {item("/patient/dashboard", FaTachometerAlt, "Dashboard")}
+        {/* {item("/patient-dashboard", FaHome, "Home")} */}
+        {item("/patient-dashboard", FaTachometerAlt, "Dashboard")}
         {item("/patient/appointments", FaCalendarAlt, "Appointments")}  {/* <-- fixed path */}
         {item("/patient/encounters", FaClipboardList, "Encounters")}
         {item("/patient/billing", FaFileInvoice, "Billing records")}
