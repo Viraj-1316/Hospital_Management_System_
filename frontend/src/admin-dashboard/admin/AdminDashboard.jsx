@@ -73,7 +73,7 @@ const AdminDashboard = () => {
                 </div>
                 <div className="text-start">
                   <h6 className="text-muted mb-1">Total Appointments</h6>
-                  <h3 className="fw-bold mb-0">{stats.totalAppointment}</h3>
+                  <h3 className="fw-bold mb-0">{stats.totalAppointments}</h3>
                 </div>
               </div>
             </div>
