@@ -21,7 +21,7 @@ import Taxes from "./admin-dashboard/admin/Taxes";
 
 /* Settings */
 import Settings from "./admin-dashboard/admin/Settings/Settings";
-import PdfTemplate from "./admin-dashboard/admin/Settings/PdfTemplate/PdfTemplate";
+import PdfTemplate from "./admin-dashboard/admin/Settings/PdfTemplate/PdfTemplate.jsx";
 
 /* Patient */
 import PatientDashboard from "./patient-dashboard/Patient/PatientDashboard";

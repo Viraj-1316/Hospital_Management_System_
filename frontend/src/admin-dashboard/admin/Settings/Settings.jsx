@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import "./settings.css";
 
-import PdfTemplate from "./PdfTemplate/PdfTemplate";
+import PdfTemplate from "./PdfTemplate/PdfTemplate.jsx";
 
 const Settings = ({ sidebarCollapsed, toggleSidebar }) => {
   const [activeMenu, setActiveMenu] = useState("pdf-template");
@@ -12,18 +12,13 @@ const Settings = ({ sidebarCollapsed, toggleSidebar }) => {
       case "pdf-template":
         return <PdfTemplate />;
       default:
-        return (
-          <div className="coming-soon-box">
-            Coming soon...
-          </div>
-        );
+        return <div className="coming-soon-box">Coming soon...</div>;
     }
   };
 
   return (
     <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="settings-container">
-
         {/* LEFT MENU */}
         <div className="settings-sidebar">
           <div
@@ -112,9 +107,7 @@ const Settings = ({ sidebarCollapsed, toggleSidebar }) => {
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="settings-content">
-          {renderContent()}
-        </div>
+        <div className="settings-content">{renderContent()}</div>
       </div>
     </AdminLayout>
   );

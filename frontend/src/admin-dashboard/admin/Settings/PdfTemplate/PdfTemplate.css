@@ -1,58 +1,27 @@
-.pdf-template-container {
-  padding: 30px;
+.form-label {
+  font-size: 15px;
+  color: #333;
 }
 
-.pdf-card {
-  background: #fff;
-  padding: 30px;
+.card {
+  border-radius: 20px;
+}
+
+input,
+textarea {
+  border-radius: 10px !important;
+}
+
+.btn-primary {
+  background: #2f67ff !important;
+  border: none !important;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
 }
 
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 12px;
+.btn-primary:hover {
+  background: #1d4fe0 !important;
 }
 
-.pdf-input {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+.img-thumbnail {
+  border-radius: 14px !important;
 }
-
-.pdf-file {
-  margin-bottom: 12px;
-}
-
-.pdf-logo-preview {
-  width: 150px;
-  height: auto;
-  margin-top: 10px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-}
-
-.pdf-textarea {
-  width: 100%;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-}
-
-.save-btn {
-  background: #0d6efd;
-  color: white;
-  padding: 10px 22px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-}
-
-/* src/admin-dashboard/admin/Settings/PdfTemplate/PdfTemplate.css */
-
-.pdf-template-page { background: white; border-radius: 8px; }
-.pdf-template-page .card { border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
-.logo-preview img { border: 1px solid #eee; padding: 6px; background: #fff; border-radius: 4px; }

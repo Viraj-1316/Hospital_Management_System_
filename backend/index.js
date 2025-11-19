@@ -27,6 +27,10 @@ const app = express();
 app.use(cors()); // allow requests from frontend
 app.use(express.json()); // parse JSON request body
 
+app.use("/api/pdf-template", require("./routes/pdfTemplate"));
+
+
+
 // connect to MongoDB
 mongoose
   .connect("mongodb://127.0.0.1:27017/hospital_auth")
@@ -706,89 +710,9 @@ app.get("/bills/:id/pdf", async (req, res) => {
   
 });
 
-// =============================
-// PDF TEMPLATE SETTINGS (ONECARE)
-// =============================
-
-// For uploading image as BASE64 we must increase body limit
-app.use(express.json({ limit: "10mb" }));
-
-// Storage folder
-const assetsDir = path.join(__dirname, "assets");
-if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir);
-
-// Save logo coming from BASE64
-app.post("/settings/upload-logo", async (req, res) => {
-  try {
-    const { filename, dataUrl } = req.body;
-
-    if (!filename || !dataUrl)
-      return res.status(400).json({ message: "Missing file data" });
-
-    const base64 = dataUrl.split(";base64,").pop();
-    const filePath = path.join(assetsDir, filename);
-
-    fs.writeFileSync(filePath, Buffer.from(base64, "base64"));
-
-    res.json({ path: `/assets/${filename}` });
-  } catch (err) {
-    console.error("Logo upload error:", err);
-    res.status(500).json({ message: "Failed to upload logo" });
-  }
-});
-
-// Template JSON file
-const TEMPLATE_FILE = path.join(assetsDir, "pdf_template.json");
-
-function readTemplate() {
-  if (!fs.existsSync(TEMPLATE_FILE)) return null;
-  return JSON.parse(fs.readFileSync(TEMPLATE_FILE, "utf8"));
-}
-
-function writeTemplate(data) {
-  fs.writeFileSync(TEMPLATE_FILE, JSON.stringify(data, null, 2), "utf8");
-}
-
-// GET template
-app.get("/settings/pdf-template", (req, res) => {
-  const tpl = readTemplate();
-  res.json(tpl || {});
-});
-
-// CREATE template
-app.post("/settings/pdf-template", (req, res) => {
-  const template = { ...req.body, _id: "one-template" };
-  writeTemplate(template);
-  res.json({ message: "Template saved", data: template });
-});
-
-// UPDATE template
-app.put("/settings/pdf-template/:id", (req, res) => {
-  const template = { ...req.body, _id: req.params.id };
-  writeTemplate(template);
-  res.json({ message: "Template updated", data: template });
-});
-
-// DOWNLOAD PDF TEMPLATE (as JSON file)
-app.get("/settings/pdf-template/download", (req, res) => {
-  try {
-    if (!fs.existsSync(TEMPLATE_FILE)) {
-      return res.status(404).json({ message: "No template saved yet" });
-    }
-
-    res.download(TEMPLATE_FILE, "pdf-template.json");
-  } catch (err) {
-    console.error("Download template error:", err);
-    res.status(500).json({ message: "Failed to download template" });
-  }
-});
-
-
-// Expose static logos
-app.use("/assets", express.static(assetsDir));
 
 /* ---------------------------------------
-   DOWNLOAD TEMPLATE (ADD THIS BELOW)
+           DOWNLOAD TEMPLATE 
 --------------------------------------- */
 app.get("/settings/pdf-template/download", async (req, res) => {
   try {
