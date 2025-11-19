@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import AdminLayout from "../layouts/AdminLayout";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { FaFilter, FaPlus, FaDownload } from "react-icons/fa";
+import { FaDownload } from "react-icons/fa";
 import "../styles/appointments.css";
 
 const Appointments = () => {
@@ -28,18 +28,23 @@ const Appointments = () => {
     doctor: "",
   });
 
+  // dropdown data from backend
+  const [doctors, setDoctors] = useState([]);
+  const [servicesList, setServicesList] = useState([]);
+  const [patients, setPatients] = useState([]);
+
   // add-form state (matching UI)
   const [form, setForm] = useState({
     clinic: "",
     doctor: "",
     service: "",
     date: "",
-    // time/slot will be selected from available slot box (not detailed yet)
     patient: "",
     status: "booked", // default
     servicesDetail: "",
   });
 
+  // ------------------ FETCH APPOINTMENTS ------------------
   useEffect(() => {
     fetchAppointments();
   }, []);
@@ -59,7 +64,32 @@ const Appointments = () => {
     }
   };
 
-  // Tab filter mapping to status
+  // ------------------ FETCH DOCTORS / SERVICES / PATIENTS ------------------
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [docRes, servRes, patRes] = await Promise.all([
+          axios.get("http://localhost:3001/doctors"),
+          axios.get("http://localhost:3001/api/services"),
+          axios.get("http://localhost:3001/patients"),
+        ]);
+
+        console.log("Doctors API:", docRes.data);
+        console.log("Services API:", servRes.data);
+        console.log("Patients API:", patRes.data);
+
+        setDoctors(Array.isArray(docRes.data) ? docRes.data : []);
+        setServicesList(Array.isArray(servRes.data) ? servRes.data : []);
+        setPatients(Array.isArray(patRes.data) ? patRes.data : []);
+      } catch (err) {
+        console.error("Error fetching dropdown data:", err);
+      }
+    };
+
+    fetchDropdownData();
+  }, []);
+
+  // ------------------ TAB LOGIC (ALL / UPCOMING / PAST) ------------------
   useEffect(() => {
     const q = {};
     if (tab === "upcoming") q.status = "upcoming";
@@ -70,6 +100,7 @@ const Appointments = () => {
     setAddOpen(false);
   }, [tab]);
 
+  // ------------------ FILTERS ------------------
   const applyFilters = () => {
     const q = {};
     if (filters.date) q.date = filters.date;
@@ -87,7 +118,7 @@ const Appointments = () => {
     setFiltersOpen(false);
   };
 
-  // local search
+  // ------------------ LOCAL SEARCH ------------------
   const filteredAppointments = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return appointments;
@@ -101,7 +132,7 @@ const Appointments = () => {
     });
   }, [appointments, searchTerm]);
 
-  // form handlers
+  // ------------------ FORM HANDLERS ------------------
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
@@ -127,7 +158,10 @@ const Appointments = () => {
         servicesDetail: form.servicesDetail,
         createdAt: new Date(),
       };
-      const res = await axios.post("http://localhost:3001/appointments", payload);
+      const res = await axios.post(
+        "http://localhost:3001/appointments",
+        payload
+      );
       if (res.data?.message) {
         alert("Appointment added");
         closeAddForm();
@@ -151,6 +185,42 @@ const Appointments = () => {
     }
   };
 
+  // ------------------ DELETE & CANCEL HANDLERS ------------------
+  const handleDeleteAppointment = async (id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this appointment?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`http://localhost:3001/appointments/${id}`);
+      setAppointments((prev) => prev.filter((a) => a._id !== id));
+    } catch (err) {
+      console.error("Error deleting appointment:", err);
+      alert("Error deleting appointment. Check console.");
+    }
+  };
+
+  const handleCancelAppointment = async (id) => {
+    const confirmCancel = window.confirm(
+      "Mark this appointment as cancelled?"
+    );
+    if (!confirmCancel) return;
+
+    try {
+      await axios.put(`http://localhost:3001/appointments/${id}/cancel`);
+      setAppointments((prev) =>
+        prev.map((a) =>
+          a._id === id ? { ...a, status: "cancelled" } : a
+        )
+      );
+    } catch (err) {
+      console.error("Error cancelling appointment:", err);
+      alert("Error cancelling appointment. Check console.");
+    }
+  };
+
+  // ------------------ JSX ------------------
   return (
     <AdminLayout>
       <div className="container-fluid py-3">
@@ -162,21 +232,27 @@ const Appointments = () => {
             <div className="btn-group btn-sm" role="group" aria-label="tabs">
               <button
                 type="button"
-                className={`btn btn-outline-primary btn-sm ${tab === "all" ? "active small-tab" : ""}`}
+                className={`btn btn-outline-primary btn-sm ${
+                  tab === "all" ? "active small-tab" : ""
+                }`}
                 onClick={() => setTab("all")}
               >
                 ALL
               </button>
               <button
                 type="button"
-                className={`btn btn-outline-primary btn-sm ${tab === "upcoming" ? "active small-tab" : ""}`}
+                className={`btn btn-outline-primary btn-sm ${
+                  tab === "upcoming" ? "active small-tab" : ""
+                }`}
                 onClick={() => setTab("upcoming")}
               >
                 UPCOMING
               </button>
               <button
                 type="button"
-                className={`btn btn-outline-primary btn-sm ${tab === "past" ? "active small-tab" : ""}`}
+                className={`btn btn-outline-primary btn-sm ${
+                  tab === "past" ? "active small-tab" : ""
+                }`}
                 onClick={() => setTab("past")}
               >
                 PAST
@@ -215,7 +291,9 @@ const Appointments = () => {
                   type="date"
                   className="form-control"
                   value={filters.date}
-                  onChange={(e) => setFilters((p) => ({ ...p, date: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((p) => ({ ...p, date: e.target.value }))
+                  }
                 />
               </div>
 
@@ -224,7 +302,9 @@ const Appointments = () => {
                 <input
                   className="form-control"
                   value={filters.clinic}
-                  onChange={(e) => setFilters((p) => ({ ...p, clinic: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((p) => ({ ...p, clinic: e.target.value }))
+                  }
                 />
               </div>
 
@@ -233,7 +313,9 @@ const Appointments = () => {
                 <input
                   className="form-control"
                   value={filters.patient}
-                  onChange={(e) => setFilters((p) => ({ ...p, patient: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((p) => ({ ...p, patient: e.target.value }))
+                  }
                 />
               </div>
 
@@ -242,7 +324,9 @@ const Appointments = () => {
                 <input
                   className="form-control"
                   value={filters.doctor}
-                  onChange={(e) => setFilters((p) => ({ ...p, doctor: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((p) => ({ ...p, doctor: e.target.value }))
+                  }
                 />
               </div>
 
@@ -251,7 +335,9 @@ const Appointments = () => {
                 <select
                   className="form-select"
                   value={filters.status}
-                  onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((p) => ({ ...p, status: e.target.value }))
+                  }
                 >
                   <option value="">All</option>
                   <option value="booked">Booked</option>
@@ -296,38 +382,59 @@ const Appointments = () => {
                       </select>
                     </div>
 
-                    <div className="col-md-6">
+                    {/* Doctor from DB */}
+                    <div className="col-md-12">
                       <label className="form-label">Doctor *</label>
                       <div className="d-flex justify-content-between align-items-center">
-                        <input
+                        <select
                           name="doctor"
-                          className="form-control"
-                          placeholder="Search"
+                          className="form-select"
                           value={form.doctor}
                           onChange={handleFormChange}
                           required
-                        />
+                        >
+                          <option value="">Search</option>
+                          {doctors.map((d) => (
+                            <option
+                              key={d._id}
+                              value={`${d.firstName} ${d.lastName}`}
+                            >
+                              {d.firstName} {d.lastName}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
-                    <div className="col-md-6">
+                    {/* Service from DB */}
+                    <div className="col-md-12">
                       <label className="form-label">Service *</label>
                       <div className="d-flex justify-content-between align-items-center">
-                        <input
+                        <select
                           name="service"
-                          className="form-control"
-                          placeholder="Service"
+                          className="form-select"
                           value={form.service}
                           onChange={handleFormChange}
                           required
-                        />
-                        <a className="ms-2 small-link" href="#add-service" onClick={(e) => e.preventDefault()}>
+                        >
+                          <option value="">Service</option>
+                          {servicesList.map((s) => (
+                            <option key={s._id} value={s.name}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                        <a
+                          className="ms-2 small-link"
+                          href="#add-service"
+                          onClick={(e) => e.preventDefault()}
+                        >
                           + Add Service
                         </a>
                       </div>
                     </div>
 
-                    <div className="col-md-6">
+                    <div className="col-md-12">
                       <label className="form-label">Appointment Date *</label>
                       <input
                         name="date"
@@ -339,24 +446,38 @@ const Appointments = () => {
                       />
                     </div>
 
-                    <div className="col-md-6">
+                    {/* Patient from DB */}
+                    <div className="col-md-12">
                       <label className="form-label">Patient *</label>
                       <div className="d-flex justify-content-between align-items-center">
-                        <input
+                        <select
                           name="patient"
-                          className="form-control"
-                          placeholder="Search"
+                          className="form-select"
                           value={form.patient}
                           onChange={handleFormChange}
                           required
-                        />
-                        <a className="ms-2 small-link" href="#add-patient" onClick={(e) => e.preventDefault()}>
+                        >
+                          <option value="">Search</option>
+                          {patients.map((p) => (
+                            <option
+                              key={p._id}
+                              value={`${p.firstName} ${p.lastName}`}
+                            >
+                              {p.firstName} {p.lastName}
+                            </option>
+                          ))}
+                        </select>
+                        <a
+                          className="ms-2 small-link"
+                          href="#add-patient"
+                          onClick={(e) => e.preventDefault()}
+                        >
                           + Add patient
                         </a>
                       </div>
                     </div>
 
-                    <div className="col-md-6">
+                    <div className="col-md-12">
                       <label className="form-label">Status *</label>
                       <select
                         name="status"
@@ -394,7 +515,11 @@ const Appointments = () => {
 
               {/* bottom-right Save/Cancel buttons (aligned to match UI) */}
               <div className="d-flex justify-content-end gap-2 mt-3">
-                <button type="button" className="btn btn-outline-secondary" onClick={closeAddForm}>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={closeAddForm}
+                >
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
@@ -426,7 +551,9 @@ const Appointments = () => {
             {loading ? (
               <div className="text-center py-5">Loading...</div>
             ) : filteredAppointments.length === 0 ? (
-              <div className="text-center py-5 text-muted">No Appointments Found</div>
+              <div className="text-center py-5 text-muted">
+                No Appointments Found
+              </div>
             ) : (
               <div className="table-responsive">
                 <table className="table table-hover align-middle">
@@ -454,6 +581,8 @@ const Appointments = () => {
                                 ? "bg-warning"
                                 : a.status === "completed"
                                 ? "bg-success"
+                                : a.status === "cancelled"
+                                ? "bg-danger"
                                 : "bg-secondary"
                             }`}
                           >
@@ -462,8 +591,21 @@ const Appointments = () => {
                         </td>
                         <td>
                           <div className="d-flex gap-2">
-                            <button className="btn btn-sm btn-outline-primary">View</button>
-                            <button className="btn btn-sm btn-outline-danger">Delete</button>
+                            <button className="btn btn-sm btn-outline-primary">
+                              View
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => handleCancelAppointment(a._id)}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteAppointment(a._id)}
+                            >
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
