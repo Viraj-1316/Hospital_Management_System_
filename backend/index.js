@@ -234,68 +234,145 @@ app.delete("/doctors/:id", async (req, res) => {
  *          APPOINTMENTS
  * =============================== */
 
-// Create appointment
+// POST /appointments - create appointment using provided patient/doctor contact fields
 app.post("/appointments", async (req, res) => {
   try {
-    const doc = await AppointmentModel.create(req.body);
-    res.json({ message: "Appointment created", data: doc });
+    const payload = {
+      patientId: req.body.patientId || null,
+      patientName: req.body.patientName || req.body.patient || "Patient",
+      patientEmail: req.body.patientEmail || req.body.email || "",
+      patientPhone: req.body.patientPhone || req.body.phone || "",
+
+      doctorId: req.body.doctorId || null,
+      doctorName: req.body.doctorName || req.body.doctor || "",
+
+      clinic: req.body.clinic || "",
+      date: req.body.date || "",
+      time: req.body.time || "",
+      services: req.body.services || req.body.servicesDetail || "",
+      servicesDetail: req.body.servicesDetail || "",
+      charges: req.body.charges || 0,
+      paymentMode: req.body.paymentMode || "",
+      status: req.body.status || "upcoming",
+      createdAt: req.body.createdAt ? new Date(req.body.createdAt) : new Date(),
+    };
+
+    const created = await AppointmentModel.create(payload);
+    return res.status(201).json(created);
   } catch (err) {
     console.error("Error creating appointment:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
-// List appointments with optional filters (query params)
-// Supports:
-//   ?date=YYYY-MM-DD
-//   ?clinic=<string>
-//   ?patient=<string>      (matches patientName)
-//   ?doctor=<string>       (matches doctorName)
-//   ?status=<string>
-//   ?patientId=<id>        (if you store patientId on Appointment)
-//   ?doctorId=<id>         (if you store doctorId on Appointment)
+// List appointments with optional filters (returns populated patient + doctor)
 app.get("/appointments", async (req, res) => {
   try {
     const q = {};
-
     if (req.query.date) q.date = req.query.date;
-    if (req.query.clinic)
-      q.clinic = { $regex: req.query.clinic, $options: "i" };
-    if (req.query.patient)
-      q.patientName = { $regex: req.query.patient, $options: "i" };
-    if (req.query.doctor)
-      q.doctorName = { $regex: req.query.doctor, $options: "i" };
+    if (req.query.clinic) q.clinic = { $regex: req.query.clinic, $options: "i" };
+    if (req.query.patient) q.patientName = { $regex: req.query.patient, $options: "i" };
+    if (req.query.doctor) q.doctorName = { $regex: req.query.doctor, $options: "i" };
     if (req.query.status) q.status = req.query.status;
 
-    // extra filters by ids (safe even if you don't use them yet)
-    if (req.query.patientId) q.patientId = req.query.patientId;
-    if (req.query.doctorId) q.doctorId = req.query.doctorId;
-
+    // find appointments and populate patientId and doctorId
     const list = await AppointmentModel.find(q)
       .sort({ createdAt: -1 })
-      .limit(500);
+      .limit(1000)
+      .populate({
+        path: "patientId",
+        select: "firstName lastName email phone",
+        model: "patients"
+      })
+      .populate({
+        path: "doctorId",
+        select: "name clinic",
+        model: "doctors"
+      })
+      .lean();
 
-    res.json(list);
+    // Normalize: if patientId populated, ensure patientName exists for old UI
+    const normalized = list.map(a => {
+      const copy = { ...a };
+      if (copy.patientId && typeof copy.patientId === "object") {
+        const p = copy.patientId;
+        copy.patientName = copy.patientName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || copy.patientName;
+        // also copy email/phone so front end can show them
+        copy.patientEmail = copy.patientEmail || p.email || "";
+        copy.patientPhone = copy.patientPhone || p.phone || "";
+      }
+      if (copy.doctorId && typeof copy.doctorId === "object") {
+        copy.doctorName = copy.doctorName || copy.doctorId.name || "";
+        copy.clinic = copy.clinic || copy.doctorId.clinic || copy.clinic;
+      }
+      return copy;
+    });
+
+    res.json(normalized);
   } catch (err) {
-    console.error("Error fetching appointments:", err);
+    console.error("appointments list error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
-// 🔹 Get single appointment by id  (used by DoctorAppointmentDetails)
+// Get appointment by ID (populate patient and doctor, return normalized patient info)
 app.get("/appointments/:id", async (req, res) => {
   try {
-    const appt = await AppointmentModel.findById(req.params.id);
+    const { id } = req.params;
 
-    if (!appt) {
-      console.warn("GET /appointments/:id → not found:", req.params.id);
-      return res.status(404).json({ message: "Appointment not found" });
+    const appt = await AppointmentModel.findById(id)
+      .populate({
+        path: "patientId",                // matches your schema ref
+        select: "firstName lastName email phone",
+        model: "patients",                // explicit model name (optional)
+      })
+      .populate({
+        path: "doctorId",
+        select: "name clinic",
+        model: "doctors",
+      })
+      .lean();
+
+    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+
+    // Build normalized patient info with fallbacks
+    let patientInfo = { name: "N/A", email: "N/A", phone: "N/A" };
+
+    if (appt.patientId && typeof appt.patientId === "object") {
+      // populated patient doc
+      const p = appt.patientId;
+      const nameParts = [];
+      if (p.firstName) nameParts.push(p.firstName);
+      if (p.lastName) nameParts.push(p.lastName);
+      patientInfo.name = nameParts.join(" ") || p.name || "N/A";
+      patientInfo.email = p.email || "N/A";
+      patientInfo.phone = p.phone || "N/A";
+    } else if (appt.patientName) {
+      // fallback to stored patientName field on appointment
+      patientInfo.name = appt.patientName || "N/A";
+      // if you have patientEmail/patientPhone fields on appointment use them
+      patientInfo.email = appt.patientEmail || appt.patientEmail || "N/A";
+      patientInfo.phone = appt.patientPhone || "N/A";
     }
 
-    res.json(appt);
+    // Attach a clear field for frontend convenience
+    appt._patientInfo = patientInfo;
+
+    // Also attach doctor nice info
+    let doctorInfo = { name: "N/A", clinic: "N/A" };
+    if (appt.doctorId && typeof appt.doctorId === "object") {
+      doctorInfo.name = appt.doctorId.name || "N/A";
+      doctorInfo.clinic = appt.doctorId.clinic || appt.clinic || "N/A";
+    } else if (appt.doctorName) {
+      doctorInfo.name = appt.doctorName;
+      doctorInfo.clinic = appt.clinic || "N/A";
+    }
+    appt._doctorInfo = doctorInfo;
+
+    return res.json(appt);
   } catch (err) {
-    console.error("Error fetching appointment:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Error fetching appointment by id:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
@@ -466,7 +543,6 @@ app.put("/patients/by-user/:userId", async (req, res) => {
     try {
       userId = new mongoose.Types.ObjectId(userId);
     } catch (err) {
-      console.error("Invalid userId:", err);
       return res.status(400).json({ message: "Invalid userId" });
     }
 
@@ -475,8 +551,6 @@ app.put("/patients/by-user/:userId", async (req, res) => {
       { $set: { ...updateData, userId } }, // update fields + ensure userId set
       { new: true, upsert: true }          // create if not found
     );
-
-    console.log("✅ Patient document upserted:", patient);
     return res.json(patient);
   } catch (err) {
     console.error("Error updating/creating patient:", err);
@@ -500,14 +574,26 @@ app.put("/users/:id/profile-completed", async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    console.log("✅ User profileCompleted updated:", user._id);
     return res.json(user);
   } catch (err) {
-    console.error("Error updating profileCompleted:", err);
     return res
       .status(500)
       .json({ message: "Failed to update profile status" });
+  }
+});
+
+// new appointment 
+// GET patient by userId (returns patient doc if exists)
+app.get("/patients/by-user/:userId", async (req, res) => {
+  try {
+    let { userId } = req.params;
+    try { userId = new mongoose.Types.ObjectId(userId); } catch (e) { /* keep string if invalid */ }
+    const patient = await PatientModel.findOne({ userId });
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+    return res.json(patient);
+  } catch (err) {
+    console.error("GET /patients/by-user/:userId error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 

@@ -10,11 +10,13 @@ function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  const API_BASE = "http://localhost:3001";
+
   const handleRoleClick = (newRole) => {
     setRole(newRole);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!email || !password) {
@@ -24,52 +26,99 @@ function Login() {
 
     setError("");
 
-    fetch("http://localhost:3001/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const errData = await res.json();
-          setError(errData.message || "Login failed");
-          return;
-        }
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-        const data = await res.json();
-        const user = data.user || data;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.message || "Login failed");
+        return;
+      }
 
-        console.log("Login response user:", user);
+      const data = await res.json();
+      // backend may return user directly or inside { user: ... }
+      const user = data.user || data;
 
-        // role check vs button selection
-        if (user.role !== role) {
-          setError("Invalid Credentials");
-          return;
-        }
+      console.log("Login response user:", user);
 
-        // ✅ STORE AUTH USER HERE
-        console.log("Saving authUser to localStorage:", user);
-        localStorage.setItem("authUser", JSON.stringify(user));
+      // role check vs button selection
+      if (user.role !== role) {
+        setError("Invalid Credentials");
+        return;
+      }
 
-        // redirect based on role and profileCompleted
-        if (user.role === "admin") {
-          navigate("/admin-dashboard");
-        } else if (user.role === "doctor") {
-          navigate("/doctor-dashboard");
-        } else if (user.role === "receptionist") {
-          navigate("/reception-dashboard");
-        } else if (user.role === "patient") {
-          if (user.profileCompleted) {
-            navigate("/patient-dashboard");
+      // Normalize authUser object we'll store
+      const authUser = {
+        id: user.id || user._id || user._id?.toString?.() || null,
+        _id: user._id || user.id || null,
+        email: user.email || "",
+        role: user.role || "",
+        name: user.name || "",
+        profileCompleted: !!user.profileCompleted,
+      };
+
+      console.log("Saving authUser to localStorage:", authUser);
+      localStorage.setItem("authUser", JSON.stringify(authUser));
+
+      // Try to fetch patient doc by userId (may 404 if not created yet)
+      try {
+        const pid = authUser.id || authUser._id;
+        if (pid) {
+          const pRes = await fetch(`${API_BASE}/patients/by-user/${pid}`);
+          if (pRes.ok) {
+            const patientDoc = await pRes.json();
+            const patientObj = {
+              id: patientDoc._id || patientDoc.id || pid,
+              _id: patientDoc._id || patientDoc.id || pid,
+              userId: patientDoc.userId || pid,
+              firstName: patientDoc.firstName || "",
+              lastName: patientDoc.lastName || "",
+              name:
+                (patientDoc.firstName || patientDoc.lastName)
+                  ? `${patientDoc.firstName || ""} ${patientDoc.lastName || ""}`.trim()
+                  : patientDoc.name || authUser.name || "",
+              email: patientDoc.email || authUser.email || "",
+              phone: patientDoc.phone || "",
+              clinic: patientDoc.clinic || "",
+              dob: patientDoc.dob || "",
+              address: patientDoc.address || "",
+            };
+            console.log("Saving patient to localStorage:", patientObj);
+            localStorage.setItem("patient", JSON.stringify(patientObj));
           } else {
-            navigate("/patient/profile-setup");
+            // no patient yet — ensure there's no stale patient key
+            localStorage.removeItem("patient");
+            console.log("No patient doc found for user — patient not saved in localStorage.");
           }
         }
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Network error: backend not responding");
-      });
+      } catch (errFetchPatient) {
+        console.warn("Could not fetch patient doc after login:", errFetchPatient);
+        // don't block login on patient fetch failure
+      }
+
+      // Redirect based on role and profileCompleted
+      if (authUser.role === "admin") {
+        navigate("/admin-dashboard");
+      } else if (authUser.role === "doctor") {
+        navigate("/doctor-dashboard");
+      } else if (authUser.role === "receptionist") {
+        navigate("/reception-dashboard");
+      } else if (authUser.role === "patient") {
+        // If profile not completed, route to setup; otherwise dashboard
+        if (!authUser.profileCompleted) navigate("/patient/profile-setup");
+        else navigate("/patient-dashboard");
+      } else {
+        // unknown role — fallback to home
+        navigate("/");
+      }
+    } catch (err) {
+      console.error("Network/login error:", err);
+      setError("Network error: backend not responding");
+    }
   };
 
   return (

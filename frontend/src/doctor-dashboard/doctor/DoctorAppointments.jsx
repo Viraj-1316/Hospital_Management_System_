@@ -1,6 +1,7 @@
 // src/doctor/DoctorAppointments.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import DoctorLayout from "../layouts/DoctorLayout";
 
 export default function DoctorAppointments() {
@@ -10,14 +11,14 @@ export default function DoctorAppointments() {
 
   useEffect(() => {
     let mounted = true;
-    const fetch = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setErr(null);
       try {
-        // reuse admin endpoint (adjust if admin uses different path)
         const res = await axios.get("http://localhost:3001/appointments");
         if (!mounted) return;
-        setAppointments(Array.isArray(res.data) ? res.data : res.data.data ?? []);
+        // res.data is expected to be an array after backend change
+        setAppointments(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
         console.error(error);
         if (mounted) setErr("Failed to load appointments");
@@ -25,9 +26,17 @@ export default function DoctorAppointments() {
         if (mounted) setLoading(false);
       }
     };
-    fetch();
+    fetchData();
     return () => (mounted = false);
   }, []);
+
+  const formatDate = (d) => {
+    if (!d) return "N/A";
+    // d might be stored as "YYYY-MM-DD" or an ISO string
+    const parsed = new Date(d);
+    if (isNaN(parsed.getTime())) return d; // fallback to raw string
+    return parsed.toLocaleDateString();
+  };
 
   return (
     <DoctorLayout>
@@ -56,20 +65,36 @@ export default function DoctorAppointments() {
                     </tr>
                   </thead>
                   <tbody>
-                    {appointments.map((a) => (
-                      <tr key={a._id || a.id}>
-                        <td>{a.patientName || a.patient?.name || "-"}</td>
-                        <td>{new Date(a.date).toLocaleDateString()}</td>
-                        <td>{a.time || a.slot || "-"}</td>
-                        <td>{a.serviceName || a.service || "-"}</td>
-                        <td>{a.status || "scheduled"}</td>
-                        <td>
-                          <a href={`/doctor/appointments/${a._id || a.id}`} className="btn btn-sm btn-outline-primary">
-                            View
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
+                    {appointments.map((a) => {
+                      const id = a._id || a.id;
+                      // prefer populated patient name, then appointment patientName, then fallback
+                      const patientName =
+                        (a.patientId && (a.patientId.firstName || a.patientId.lastName)
+                          ? `${a.patientId.firstName || ""} ${a.patientId.lastName || ""}`.trim()
+                          : a.patientName) || "-";
+                      const dateStr = formatDate(a.date);
+                      const timeStr = a.time || a.slot || "-";
+                      const service = a.serviceName || a.services || a.service || "-";
+                      const status = a.status || "scheduled";
+
+                      return (
+                        <tr key={id}>
+                          <td>{patientName}</td>
+                          <td>{dateStr}</td>
+                          <td>{timeStr}</td>
+                          <td>{service}</td>
+                          <td>{status}</td>
+                          <td>
+                            <Link
+                              to={`/doctor/appointments/${id}`}
+                              className="btn btn-sm btn-outline-primary"
+                            >
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

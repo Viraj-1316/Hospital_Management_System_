@@ -1,3 +1,4 @@
+// src/patient/PatientBookAppointment.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import PatientLayout from "../layouts/PatientLayout";
@@ -11,7 +12,7 @@ const FALLBACK_SERVICES = [
   { id: "checkup", name: "Checkup", price: 100 },
 ];
 
-// static time slots (like your screenshot)
+// static time slots
 const DEFAULT_SLOTS = [
   "11:30 am", "12:00 pm", "12:30 pm", "1:00 pm", "1:30 pm",
   "2:00 pm", "2:30 pm", "3:00 pm", "3:30 pm", "4:30 pm", "5:00 pm",
@@ -23,21 +24,24 @@ export default function PatientBookAppointment() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // read patient from localStorage (same style as other patient pages)
+  // Read patient from localStorage (try "patient" first, fallback to "authUser")
   const storedPatient = (() => {
     try {
-      return JSON.parse(localStorage.getItem("patient") || "null");
+      const p = localStorage.getItem("patient");
+      if (p) return JSON.parse(p);
+      const a = localStorage.getItem("authUser");
+      if (a) return JSON.parse(a);
+      return null;
     } catch {
       return null;
     }
   })();
 
+  // Pre-fill patient name from storage (if available)
   const patientName =
     storedPatient?.name ||
-    (storedPatient?.firstName
-      ? `${storedPatient.firstName} ${storedPatient.lastName || ""}`
-      : "") ||
-    "";
+    (storedPatient?.firstName ? `${storedPatient.firstName} ${storedPatient.lastName || ""}`.trim() : "") ||
+    "Patient";
 
   // get preselected date from query (?date=...)
   const params = new URLSearchParams(location.search);
@@ -54,19 +58,67 @@ export default function PatientBookAppointment() {
   const [selectedSlot, setSelectedSlot] = useState("");
 
   const [form, setForm] = useState({
-  clinic: "",
-  doctor: "",
-  date: preselectedDate,
-  // auto-fill, fallback to "Patient"
-  patient: patientName || "Patient",
-  status: "booked",
-  servicesDetail: "",
-});
-
+    clinic: "",
+    doctor: "",
+    date: preselectedDate,
+    patient: patientName,
+    status: "booked",
+    servicesDetail: "",
+  });
 
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch doctors and derive clinics from them
+  // --- 0) If storedPatient is missing but authUser exists, try to fetch patient doc and save it to localStorage
+  useEffect(() => {
+    let mounted = true;
+    // If we already have a patient object, nothing to do
+    const localP = localStorage.getItem("patient");
+    if (localP) return;
+
+    // Try to read authUser and fetch patient doc by userId
+    try {
+      const authRaw = localStorage.getItem("authUser");
+      const auth = authRaw ? JSON.parse(authRaw) : null;
+      const userId = auth?.id || auth?._id || null;
+      if (!userId) return;
+
+      axios.get(`${API_BASE}/patients/by-user/${userId}`)
+        .then(res => {
+          if (!mounted) return;
+          const p = res.data;
+
+          // Normalize patient object and save in localStorage
+          const patientObj = {
+            id: p._id || p.id || userId,
+            _id: p._id || p.id || userId,
+            userId: p.userId || userId,
+            firstName: p.firstName || "",
+            lastName: p.lastName || "",
+            name: (p.firstName || p.lastName) ? `${p.firstName || ""} ${p.lastName || ""}`.trim() : (p.name || auth.name || ""),
+            email: p.email || auth.email || "",
+            phone: p.phone || "",
+            clinic: p.clinic || "",
+            dob: p.dob || "",
+            address: p.address || "",
+          };
+
+          localStorage.setItem("patient", JSON.stringify(patientObj));
+
+          // update form.patient (force a re-render)
+          setForm(prev => ({ ...prev, patient: patientObj.name || prev.patient }));
+        })
+        .catch(err => {
+          // It's okay if no patient exists yet; profile setup will create it
+          console.warn("No patient doc found for authUser or fetch failed:", err?.response?.status || err?.message);
+        });
+    } catch (err) {
+      // ignore
+    }
+
+    return () => { mounted = false; };
+  }, []); // run once on mount
+
+  // Fetch doctors and services
   useEffect(() => {
     let mounted = true;
 
@@ -76,15 +128,7 @@ export default function PatientBookAppointment() {
         if (!mounted) return;
         const docs = Array.isArray(res.data) ? res.data : [];
         setDoctors(docs);
-
-        // derive unique clinic names from doctors
-        const clinicNames = Array.from(
-          new Set(
-            docs
-              .map((d) => d.clinic)
-              .filter((c) => typeof c === "string" && c.trim() !== "")
-          )
-        );
+        const clinicNames = Array.from(new Set(docs.map((d) => d.clinic).filter(Boolean)));
         setClinics(clinicNames);
       } catch (err) {
         console.error("Error loading doctors:", err);
@@ -97,7 +141,6 @@ export default function PatientBookAppointment() {
       }
     };
 
-    // optional: fetch services from backend
     const fetchServices = async () => {
       try {
         const res = await axios.get(`${API_BASE}/services`);
@@ -112,7 +155,6 @@ export default function PatientBookAppointment() {
           setServices(mapped);
         }
       } catch (err) {
-        // use fallback if API not ready
         console.warn("Using fallback services, /services not available.");
         setServices(FALLBACK_SERVICES);
       } finally {
@@ -123,22 +165,15 @@ export default function PatientBookAppointment() {
     fetchDoctors();
     fetchServices();
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   // filter doctors by selected clinic
-  const filteredDoctors = form.clinic
-    ? doctors.filter((d) => d.clinic === form.clinic)
-    : doctors;
+  const filteredDoctors = form.clinic ? doctors.filter((d) => d.clinic === form.clinic) : doctors;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const toggleService = (id) => {
@@ -151,22 +186,29 @@ export default function PatientBookAppointment() {
     setSelectedSlot(slot);
   };
 
-  // compute current selected services + total
   const selectedServiceDetails = selectedServices
     .map((id) => services.find((s) => s.id === id))
     .filter(Boolean);
 
-  const totalAmount = selectedServiceDetails.reduce(
-    (sum, s) => sum + (s.price || 0),
-    0
-  );
+  const totalAmount = selectedServiceDetails.reduce((sum, s) => sum + (s.price || 0), 0);
+
+  // Helper: find doctor object matching current selection label
+  const findDoctorByLabel = (label) => {
+    if (!label) return null;
+    return doctors.find((d) => {
+      const docLabel = d.firstName
+        ? `${d.firstName} ${d.lastName || ""} ${d.specialization ? `(${d.specialization})` : ""}`.trim()
+        : d.name || d.email || "";
+      return docLabel === label;
+    }) || null;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.clinic || !form.doctor || !form.date) {
-  alert("Please fill all required fields (*)");
-  return;
+      alert("Please fill all required fields (*)");
+      return;
     }
     if (!selectedSlot) {
       alert("Please select an available time slot.");
@@ -178,19 +220,38 @@ export default function PatientBookAppointment() {
     }
 
     setSubmitting(true);
+
     try {
-      const servicesNames = selectedServiceDetails
-        .map((s) => s.name)
-        .join(", ");
+      // prepare service text
+      const servicesNames = selectedServiceDetails.map((s) => s.name).join(", ");
+      const servicesDetailText = selectedServiceDetails.map((s) => `${s.name} - $${s.price || 0}/-`).join(" | ");
 
-      const servicesDetailText = selectedServiceDetails
-        .map((s) => `${s.name} - $${s.price || 0}/-`)
-        .join(" | ");
+      // resolve doctor object & id
+      const selectedDoctorObj = findDoctorByLabel(form.doctor);
+      const doctorId = selectedDoctorObj ? (selectedDoctorObj._id || selectedDoctorObj.id) : null;
+      const doctorName = form.doctor;
 
-      // keep compatible with Admin Appointments table
+      // resolve patient info from localStorage (try patient, then authUser)
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem("patient") || "null"); } catch { stored = null; }
+      if (!stored) {
+        try { stored = JSON.parse(localStorage.getItem("authUser") || "null"); } catch { stored = null; }
+      }
+
+      const patientId = stored ? (stored.id || stored._id || null) : null;
+      const patientEmail = stored ? (stored.email || "") : "";
+      const patientPhone = stored ? (stored.phone || "") : "";
+
+      // Build payload and include patient contact & id
       const payload = {
-        patientName: form.patient,
-        doctorName: form.doctor,
+        patientId: patientId,
+        patientName: form.patient || (stored?.name || "Patient"),
+        patientEmail: patientEmail,
+        patientPhone: patientPhone,
+
+        doctorId: doctorId,
+        doctorName: doctorName,
+
         clinic: form.clinic,
         date: form.date,
         time: selectedSlot,
@@ -198,12 +259,18 @@ export default function PatientBookAppointment() {
         status: form.status,
         servicesDetail: servicesDetailText,
         charges: totalAmount,
-        paymentMode: "Manual", // or "Online" in future
+        paymentMode: "Manual",
         createdAt: new Date(),
       };
 
+      // POST to backend
       const res = await axios.post(`${API_BASE}/appointments`, payload);
-      if (res.data && (res.data.message || res.data.data)) {
+
+      if (res.status === 201 || (res.data && (res.data._id || res.data.id || res.data.data))) {
+        alert("Appointment booked successfully!");
+        navigate("/patient/appointments");
+      } else if (res.data) {
+        // fallback
         alert("Appointment booked successfully!");
         navigate("/patient/appointments");
       } else {
@@ -215,6 +282,14 @@ export default function PatientBookAppointment() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Helper to format date safely
+  const formatDate = (d) => {
+    if (!d) return "N/A";
+    const parsed = new Date(d);
+    if (isNaN(parsed.getTime())) return d;
+    return parsed.toLocaleDateString();
   };
 
   return (
@@ -236,7 +311,7 @@ export default function PatientBookAppointment() {
 
         <form onSubmit={handleSubmit}>
           <div className="row g-3">
-            {/* LEFT COLUMN: clinic / doctor / service / date */}
+            {/* LEFT COLUMN */}
             <div className="col-lg-6">
               <div className="mb-3">
                 <label className="form-label">
@@ -260,9 +335,7 @@ export default function PatientBookAppointment() {
                     <option>No clinics found</option>
                   ) : (
                     clinics.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+                      <option key={c} value={c}>{c}</option>
                     ))
                   )}
                 </select>
@@ -287,18 +360,9 @@ export default function PatientBookAppointment() {
                   ) : (
                     filteredDoctors.map((d) => {
                       const label = d.firstName
-                        ? `${d.firstName} ${d.lastName || ""} ${
-                            d.specialization
-                              ? `(${d.specialization})`
-                              : ""
-                          }`
-                        : d.name || d.email;
-
-                      return (
-                        <option key={d._id} value={label}>
-                          {label}
-                        </option>
-                      );
+                        ? `${d.firstName} ${d.lastName || ""} ${d.specialization ? `(${d.specialization})` : ""}`.trim()
+                        : d.name || d.email || "";
+                      return <option key={d._id || d.id} value={label}>{label}</option>;
                     })
                   )}
                 </select>
@@ -320,11 +384,7 @@ export default function PatientBookAppointment() {
                         <button
                           key={s.id}
                           type="button"
-                          className={
-                            active
-                              ? "btn btn-sm btn-primary"
-                              : "btn btn-sm btn-outline-primary"
-                          }
+                          className={active ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-primary"}
                           onClick={() => toggleService(s.id)}
                         >
                           {s.name}
@@ -350,7 +410,7 @@ export default function PatientBookAppointment() {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: slots + service detail + tax */}
+            {/* RIGHT COLUMN */}
             <div className="col-lg-6">
               <div className="mb-3">
                 <label className="form-label">
@@ -363,11 +423,7 @@ export default function PatientBookAppointment() {
                       <button
                         key={slot}
                         type="button"
-                        className={
-                          selectedSlot === slot
-                            ? "btn btn-sm btn-primary"
-                            : "btn btn-sm btn-outline-primary"
-                        }
+                        className={selectedSlot === slot ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-primary"}
                         onClick={() => handleSlotClick(slot)}
                       >
                         {slot}
@@ -381,21 +437,15 @@ export default function PatientBookAppointment() {
                 <label className="form-label">Service Detail</label>
                 <div className="border rounded p-3">
                   {selectedServiceDetails.length === 0 ? (
-                    <div className="text-muted small">
-                      No service selected yet.
-                    </div>
+                    <div className="text-muted small">No service selected yet.</div>
                   ) : (
                     <>
                       <ul className="small mb-2">
                         {selectedServiceDetails.map((s) => (
-                          <li key={s.id}>
-                            <strong>{s.name}</strong> – ${s.price || 0}/-
-                          </li>
+                          <li key={s.id}><strong>{s.name}</strong> – ${s.price || 0}/-</li>
                         ))}
                       </ul>
-                      <div className="fw-semibold">
-                        Total: ₹{totalAmount || 0}
-                      </div>
+                      <div className="fw-semibold">Total: ₹{totalAmount || 0}</div>
                     </>
                   )}
                 </div>
@@ -403,21 +453,14 @@ export default function PatientBookAppointment() {
 
               <div>
                 <label className="form-label">Tax</label>
-                <div className="border rounded p-3 text-muted small">
-                  No tax found.
-                </div>
+                <div className="border rounded p-3 text-muted small">No tax found.</div>
               </div>
             </div>
           </div>
 
-          {/* BOTTOM BUTTONS */}
+          {/* bottom actions */}
           <div className="d-flex justify-content-end gap-2 mt-3">
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => navigate("/patient/appointments")}
-              disabled={submitting}
-            >
+            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate("/patient/appointments")} disabled={submitting}>
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={submitting}>

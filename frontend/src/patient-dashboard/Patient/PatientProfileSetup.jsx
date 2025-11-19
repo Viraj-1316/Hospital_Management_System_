@@ -77,44 +77,105 @@ export default function PatientProfileSetup() {
     }));
   };
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setSaving(true);
+  //   setError("");
+
+  //   try {
+  //     if (!user) {
+  //       setError("User not loaded. Please login again.");
+  //       setSaving(false);
+  //       return;
+  //     }
+
+  //     const userId = user.id; // from your login response
+
+  //     await axios.put(`${API_BASE}/patients/by-user/${userId}`, form);
+
+  //     await axios.put(`${API_BASE}/users/${userId}/profile-completed`, {
+  //       profileCompleted: true,
+  //     });
+
+  //     const updatedUser = {
+  //       ...user,
+  //       profileCompleted: true,
+  //       name: `${form.firstName} ${form.lastName}`.trim(),
+  //       email: form.email,
+  //     };
+
+  //     localStorage.setItem("authUser", JSON.stringify(updatedUser));
+
+  //     alert("✅ Profile saved successfully!");
+  //     navigate("/patient-dashboard");
+  //   } catch (err) {
+  //     console.error("❌ Error saving patient profile:", err);
+  //     setError("Failed to save profile. Please try again.");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
+  e.preventDefault();
+  setSaving(true);
+  setError("");
 
-    try {
-      if (!user) {
-        setError("User not loaded. Please login again.");
-        setSaving(false);
-        return;
-      }
-
-      const userId = user.id; // from your login response
-
-      await axios.put(`${API_BASE}/patients/by-user/${userId}`, form);
-
-      await axios.put(`${API_BASE}/users/${userId}/profile-completed`, {
-        profileCompleted: true,
-      });
-
-      const updatedUser = {
-        ...user,
-        profileCompleted: true,
-        name: `${form.firstName} ${form.lastName}`.trim(),
-        email: form.email,
-      };
-
-      localStorage.setItem("authUser", JSON.stringify(updatedUser));
-
-      alert("✅ Profile saved successfully!");
-      navigate("/patient-dashboard");
-    } catch (err) {
-      console.error("❌ Error saving patient profile:", err);
-      setError("Failed to save profile. Please try again.");
-    } finally {
+  try {
+    if (!user) {
+      setError("User not loaded. Please login again.");
       setSaving(false);
+      return;
     }
-  };
+
+    const userId = user.id || user._id;
+
+    // Save/update patient record on backend and get patient doc back
+    const patientRes = await axios.put(`${API_BASE}/patients/by-user/${userId}`, form);
+    // patientRes.data should be the saved patient document (because our backend upsert returns it)
+    const patientDoc = patientRes.data;
+
+    // Mark user profileCompleted = true
+    await axios.put(`${API_BASE}/users/${userId}/profile-completed`, {
+      profileCompleted: true,
+    });
+
+    // Update authUser (so UI still sees profileCompleted)
+    const updatedUser = {
+      ...user,
+      profileCompleted: true,
+      name: `${form.firstName} ${form.lastName}`.trim(),
+      email: form.email,
+    };
+
+    // IMPORTANT: save both keys so other pages can rely on either
+    localStorage.setItem("authUser", JSON.stringify(updatedUser));
+    localStorage.setItem("patient", JSON.stringify({
+      // Normalize patient storage to include id/_id, email, phone
+      id: patientDoc._id || patientDoc.id || userId,
+      _id: patientDoc._id || patientDoc.id || userId,
+      userId: patientDoc.userId || userId,
+      firstName: patientDoc.firstName || form.firstName,
+      lastName: patientDoc.lastName || form.lastName,
+      name: `${form.firstName} ${form.lastName}`.trim(),
+      email: patientDoc.email || form.email || updatedUser.email || "",
+      phone: patientDoc.phone || form.phone || "",
+      clinic: patientDoc.clinic || form.clinic || "",
+      // store whatever else might be useful later:
+      dob: patientDoc.dob || form.dob || "",
+      address: patientDoc.address || form.address || "",
+    }));
+
+    alert("✅ Profile saved successfully!");
+    navigate("/patient-dashboard");
+  } catch (err) {
+    console.error("❌ Error saving patient profile:", err);
+    setError("Failed to save profile. Please try again.");
+  } finally {
+    setSaving(false);
+  }
+};
+
 
   if (!user) {
     return (
