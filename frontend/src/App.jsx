@@ -19,6 +19,10 @@ import EditBill from "./admin-dashboard/admin/EditBill";
 import Services from "./admin-dashboard/admin/Services";
 import Taxes from "./admin-dashboard/admin/Taxes";
 
+/* Settings */
+import Settings from "./admin-dashboard/admin/Settings/Settings";
+import PdfTemplate from "./admin-dashboard/admin/Settings/PdfTemplate/PdfTemplate";
+
 /* Patient */
 import PatientDashboard from "./patient-dashboard/Patient/PatientDashboard";
 import PatientAppointments from "./patient-dashboard/Patient/PatientAppointments";
@@ -31,50 +35,62 @@ import DoctorPatients from "./doctor-dashboard/doctor/DoctorPatients";
 import DoctorAppointments from "./doctor-dashboard/doctor/DoctorAppointments";
 import DoctorServices from "./doctor-dashboard/doctor/DoctorServices";
 
+
 function App() {
 
-  // Sidebar state lives here
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const toggleSidebar = () => setSidebarCollapsed((s) => !s);
 
   return (
     <Routes>
-      {/* Pass props to pages that render Navbar + Sidebar */}
-      <Route path="/admin-dashboard" element={<AdminDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
 
-      <Route path="/doctor-dashboard" element={<DoctorDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/doctor/patients" element={<DoctorPatients sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/doctor/appointments" element={<DoctorAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/doctor/services" element={<DoctorServices sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      
-      {/* Patient section */}
-      <Route path="/patient-dashboard" element={<PatientDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/patient/appointments" element={<PatientAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/patient/book" element={<PatientBookAppointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+      {/* Admin */}
+      <Route path="/admin-dashboard"
+        element={<AdminDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
+      />
 
+      {/* Doctor */}
+      <Route path="/doctor-dashboard"
+        element={<DoctorDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
+      />
+      <Route path="/doctor/patients" element={<DoctorPatients />} />
+      <Route path="/doctor/appointments" element={<DoctorAppointments />} />
+      <Route path="/doctor/services" element={<DoctorServices />} />
+
+      {/* Patient */}
+      <Route path="/patient-dashboard"
+        element={<PatientDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
+      />
+      <Route path="/patient/appointments" element={<PatientAppointments />} />
+      <Route path="/patient/book" element={<PatientBookAppointment />} />
+
+      {/* Reception */}
       <Route path="/reception-dashboard" element={<ReptionistDashboard />} />
 
+      {/* Auth */}
       <Route path="/" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/patients" element={<Patients sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/AddPatient" element={<AddPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/doctors" element={<Doctors sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/AddDoctor" element={<AddDoctor sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/Appointments" element={<Appointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
 
-      {/*Billing section */}
-      <Route path="/BillingRecords" element={<BillingRecords sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/AddBill" element={<AddBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-      <Route path="/EditBill/:id" element={<EditBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+      {/* Billing */}
+      <Route path="/BillingRecords" element={<BillingRecords />} />
+      <Route path="/AddBill" element={<AddBill />} />
+      <Route path="/EditBill/:id" element={<EditBill />} />
 
-      {/* Services route receives the props too */}
-      <Route path="/services" element={<Services sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+      {/* Services */}
+      <Route path="/services" element={<Services />} />
 
-      {/*Tax section */}
-      <Route path="/taxes" element={<Taxes sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+      {/* Taxes */}
+      <Route path="/taxes" element={<Taxes />} />
+
+      {/* Settings (Nested Routes) */}
+      <Route
+        path="/settings"
+        element={<Settings sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
+      >
+        <Route path="pdf-template" element={<PdfTemplate />} />
+      </Route>
 
     </Routes>
-
   );
 }
 

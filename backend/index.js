@@ -1,11 +1,9 @@
-
-
 // 1. Import required libraries
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const User = require("./models/User");
-const Patient = require('./models/Patient');
+const Patient = require("./models/Patient");
 const DoctorModel = require("./models/Doctor");
 const BillingModel = require("./models/Billing");
 const AppointmentModel = require("./models/Appointment");
@@ -13,19 +11,21 @@ const Service = require("./models/Service");
 const ADMIN_EMAIL = "admin@onecare.com";
 const ADMIN_PASSWORD = "admin123";
 
+// to import logo
+const multer = require("multer");
+
 // PDF Libraries
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const QRCode = require("qrcode");
 const fs = require("fs");
 const path = require("path");
 
-
 // 2. Create an Express app
 const app = express();
 
 // 3. Middlewares: to understand JSON body + allow CORS
-app.use(cors());            // allow requests from frontend
-app.use(express.json());    // parse JSON request body
+app.use(cors()); // allow requests from frontend
+app.use(express.json()); // parse JSON request body
 
 // connect to MongoDB
 mongoose
@@ -37,18 +37,17 @@ mongoose
     console.error("❌ MongoDB connection error:", err);
   });
 
-
 // ===============================
 //             LOGIN
 // ===============================
 
 // 5. Login route (POST /login)
-app.post("/login", async(req, res) => {
+app.post("/login", async (req, res) => {
   try {
     // req.body will look like: { email: "...", password: "..." }
     const { email, password } = req.body;
 
-     // 0) Check if this is admin login (hardcoded)
+    // 0) Check if this is admin login (hardcoded)
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       return res.json({
         id: "admin-id",
@@ -57,10 +56,9 @@ app.post("/login", async(req, res) => {
         role: "admin",
       });
     }
-    
+
     // find user with this email
     const user = await User.findOne({ email });
-
 
     // if user not found OR password doesn't match -> error
     if (!user || user.password !== password) {
@@ -84,7 +82,7 @@ app.post("/login", async(req, res) => {
 //             SIGNUP
 // ===============================
 
-app.post("/signup", async(req, res) => {
+app.post("/signup", async (req, res) => {
   try {
     // 1. Get data sent from frontend
     const { name, email, password } = req.body;
@@ -103,9 +101,9 @@ app.post("/signup", async(req, res) => {
     // 3) create new user as PATIENT
     const newUser = await User.create({
       email,
-      password,          // plain for now
-      role: "patient",   // signup is only for patients
-      name
+      password, // plain for now
+      role: "patient", // signup is only for patients
+      name,
     });
 
     // 5. Send back success (without password)
@@ -163,21 +161,17 @@ app.get("/dashboard-stats", async (req, res) => {
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0"); // 01-12
-    const dd = String(today.getDate()).padStart(2, "0");      // 01-31
+    const dd = String(today.getDate()).padStart(2, "0"); // 01-31
     const todayStr = `${yyyy}-${mm}-${dd}`;
 
     // 2) Count in MongoDB
-    const [
-      totalPatients,
-      totalDoctors,
-      totalAppointments,
-      todayAppointments,
-    ] = await Promise.all([
-      PatientModel.countDocuments(),                 // all patients
-      DoctorModel.countDocuments(),                 // all doctors
-      AppointmentModel.countDocuments(),            // all appointments
-      AppointmentModel.countDocuments({ date: todayStr }), // only today's
-    ]);
+    const [totalPatients, totalDoctors, totalAppointments, todayAppointments] =
+      await Promise.all([
+        PatientModel.countDocuments(), // all patients
+        DoctorModel.countDocuments(), // all doctors
+        AppointmentModel.countDocuments(), // all appointments
+        AppointmentModel.countDocuments({ date: todayStr }), // only today's
+      ]);
 
     // 3) Send all numbers to frontend
     res.json({
@@ -191,7 +185,6 @@ app.get("/dashboard-stats", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 
 // ===============================
 //         DOCTOR APIs
@@ -220,10 +213,11 @@ app.delete("/doctors/:id", async (req, res) => {
     await DoctorModel.findByIdAndDelete(req.params.id);
     res.json({ message: "Doctor deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Error deleting doctor", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting doctor", error: err.message });
   }
 });
-
 
 // ===============================
 //          APPOINTMENTS
@@ -257,7 +251,7 @@ app.get("/appointments", async (req, res) => {
 app.get("/api/services", async (req, res) => {
   try {
     const all = await Service.find();
-    console.log("GET /api/services ->", all.length, "items");  // 👈 log how many
+    console.log("GET /api/services ->", all.length, "items"); // 👈 log how many
     res.json(all);
   } catch (err) {
     console.error("GET /api/services error:", err);
@@ -265,21 +259,19 @@ app.get("/api/services", async (req, res) => {
   }
 });
 
-
 // ADD service
 app.post("/api/services", async (req, res) => {
   try {
-    console.log("POST /api/services body:", req.body);   // 👈 log incoming data
+    console.log("POST /api/services body:", req.body); // 👈 log incoming data
     const data = new Service(req.body);
     const saved = await data.save();
-    console.log("Saved service:", saved);                // 👈 log saved doc
+    console.log("Saved service:", saved); // 👈 log saved doc
     res.json(saved);
   } catch (err) {
     console.error("Error saving service:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 
 // DELETE service
 app.delete("/api/services/:id", async (req, res) => {
@@ -299,7 +291,9 @@ app.put("/api/services/toggle/:id", async (req, res) => {
 app.put("/api/services/:id", async (req, res) => {
   try {
     // find and update, return the updated document
-    const updated = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await Service.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!updated) {
       return res.status(404).json({ message: "Service not found" });
     }
@@ -339,7 +333,9 @@ app.delete("/doctors/:id", async (req, res) => {
     await DoctorModel.findByIdAndDelete(req.params.id);
     res.json({ message: "Doctor deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Error deleting doctor", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting doctor", error: err.message });
   }
 });
 
@@ -362,13 +358,18 @@ app.get("/appointments", async (req, res) => {
     const q = {};
     // simple filtering - treat date as YYYY-MM-DD string
     if (req.query.date) q.date = req.query.date;
-    if (req.query.clinic) q.clinic = { $regex: req.query.clinic, $options: "i" };
-    if (req.query.patient) q.patientName = { $regex: req.query.patient, $options: "i" };
-    if (req.query.doctor) q.doctorName = { $regex: req.query.doctor, $options: "i" };
+    if (req.query.clinic)
+      q.clinic = { $regex: req.query.clinic, $options: "i" };
+    if (req.query.patient)
+      q.patientName = { $regex: req.query.patient, $options: "i" };
+    if (req.query.doctor)
+      q.doctorName = { $regex: req.query.doctor, $options: "i" };
     if (req.query.status) q.status = req.query.status;
 
     // add pagination later (limit/skip) if needed
-    const list = await AppointmentModel.find(q).sort({ createdAt: -1 }).limit(500);
+    const list = await AppointmentModel.find(q)
+      .sort({ createdAt: -1 })
+      .limit(500);
     res.json(list);
   } catch (err) {
     console.error("Error fetching appointments:", err);
@@ -394,7 +395,7 @@ app.delete("/appointments/:id", async (req, res) => {
   }
 });
 
-// Cancel appointment 
+// Cancel appointment
 app.put("/appointments/:id/cancel", async (req, res) => {
   try {
     const { id } = req.params;
@@ -405,7 +406,8 @@ app.put("/appointments/:id/cancel", async (req, res) => {
       { new: true }
     );
 
-    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+    if (!appt)
+      return res.status(404).json({ message: "Appointment not found" });
 
     res.json({ message: "Appointment cancelled", data: appt });
   } catch (err) {
@@ -472,9 +474,8 @@ app.delete("/bills/:id", async (req, res) => {
   }
 });
 
-
 // =======================================================
-//                     PDF ROUTE 
+//                     PDF ROUTE
 // =======================================================
 
 app.get("/bills/:id/pdf", async (req, res) => {
@@ -537,14 +538,29 @@ app.get("/bills/:id/pdf", async (req, res) => {
     // CLINIC EMAIL + PHONE
     // ============================
     y -= 20;
-    page.drawText(`Email: ${doctor?.email || "N/A"}`, { x: 130, y, size: 12, font });
+    page.drawText(`Email: ${doctor?.email || "N/A"}`, {
+      x: 130,
+      y,
+      size: 12,
+      font,
+    });
     y -= 16;
-    page.drawText(`Phone: ${doctor?.phone || "N/A"}`, { x: 130, y, size: 12, font });
+    page.drawText(`Phone: ${doctor?.phone || "N/A"}`, {
+      x: 130,
+      y,
+      size: 12,
+      font,
+    });
 
     // ============================
     // RIGHT SIDE - BILL INFO
     // ============================
-    page.drawText(`Invoice ID: ${bill._id}`, { x: 360, y: 740, size: 11, font });
+    page.drawText(`Invoice ID: ${bill._id}`, {
+      x: 360,
+      y: 740,
+      size: 11,
+      font,
+    });
     page.drawText(`Status: ${bill.status}`, { x: 360, y: 722, size: 11, font });
     page.drawText(`Date: ${bill.date}`, { x: 360, y: 705, size: 11, font });
 
@@ -612,9 +628,19 @@ app.get("/bills/:id/pdf", async (req, res) => {
     //   TOTAL SECTION
     // ============================
     y -= 40;
-    page.drawText(`Total: Rs ${bill.totalAmount}`, { x: 360, y, size: 12, font });
+    page.drawText(`Total: Rs ${bill.totalAmount}`, {
+      x: 360,
+      y,
+      size: 12,
+      font,
+    });
     y -= 20;
-    page.drawText(`Discount: Rs ${bill.discount}`, { x: 360, y, size: 12, font });
+    page.drawText(`Discount: Rs ${bill.discount}`, {
+      x: 360,
+      y,
+      size: 12,
+      font,
+    });
     y -= 25;
     page.drawText(`Amount Due: Rs ${bill.amountDue}`, {
       x: 360,
@@ -668,17 +694,133 @@ app.get("/bills/:id/pdf", async (req, res) => {
     // SEND FINAL PDF
     const pdfBytes = await pdf.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=bill-${bill._id}.pdf`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=bill-${bill._id}.pdf`
+    );
     res.send(Buffer.from(pdfBytes));
-
   } catch (err) {
     console.error("PDF ERROR:", err);
     res.status(500).json({ message: "PDF generation failed" });
   }
+  
+});
+
+// =============================
+// PDF TEMPLATE SETTINGS (ONECARE)
+// =============================
+
+// For uploading image as BASE64 we must increase body limit
+app.use(express.json({ limit: "10mb" }));
+
+// Storage folder
+const assetsDir = path.join(__dirname, "assets");
+if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir);
+
+// Save logo coming from BASE64
+app.post("/settings/upload-logo", async (req, res) => {
+  try {
+    const { filename, dataUrl } = req.body;
+
+    if (!filename || !dataUrl)
+      return res.status(400).json({ message: "Missing file data" });
+
+    const base64 = dataUrl.split(";base64,").pop();
+    const filePath = path.join(assetsDir, filename);
+
+    fs.writeFileSync(filePath, Buffer.from(base64, "base64"));
+
+    res.json({ path: `/assets/${filename}` });
+  } catch (err) {
+    console.error("Logo upload error:", err);
+    res.status(500).json({ message: "Failed to upload logo" });
+  }
+});
+
+// Template JSON file
+const TEMPLATE_FILE = path.join(assetsDir, "pdf_template.json");
+
+function readTemplate() {
+  if (!fs.existsSync(TEMPLATE_FILE)) return null;
+  return JSON.parse(fs.readFileSync(TEMPLATE_FILE, "utf8"));
+}
+
+function writeTemplate(data) {
+  fs.writeFileSync(TEMPLATE_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+// GET template
+app.get("/settings/pdf-template", (req, res) => {
+  const tpl = readTemplate();
+  res.json(tpl || {});
+});
+
+// CREATE template
+app.post("/settings/pdf-template", (req, res) => {
+  const template = { ...req.body, _id: "one-template" };
+  writeTemplate(template);
+  res.json({ message: "Template saved", data: template });
+});
+
+// UPDATE template
+app.put("/settings/pdf-template/:id", (req, res) => {
+  const template = { ...req.body, _id: req.params.id };
+  writeTemplate(template);
+  res.json({ message: "Template updated", data: template });
+});
+
+// DOWNLOAD PDF TEMPLATE (as JSON file)
+app.get("/settings/pdf-template/download", (req, res) => {
+  try {
+    if (!fs.existsSync(TEMPLATE_FILE)) {
+      return res.status(404).json({ message: "No template saved yet" });
+    }
+
+    res.download(TEMPLATE_FILE, "pdf-template.json");
+  } catch (err) {
+    console.error("Download template error:", err);
+    res.status(500).json({ message: "Failed to download template" });
+  }
 });
 
 
+// Expose static logos
+app.use("/assets", express.static(assetsDir));
 
+/* ---------------------------------------
+   DOWNLOAD TEMPLATE (ADD THIS BELOW)
+--------------------------------------- */
+app.get("/settings/pdf-template/download", async (req, res) => {
+  try {
+    const template = readTemplate();
+    if (!template) return res.status(404).json({ message: "No template saved" });
+
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([600, 780]);
+
+    const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+    page.drawText("TEMPLATE PREVIEW", { x: 180, y: 740, size: 18, font });
+
+    page.drawText(`Clinic: ${template.clinicName}`, { x: 40, y: 690, size: 12 });
+    page.drawText(`Address: ${template.clinicAddress}`, { x: 40, y: 670, size: 12 });
+    page.drawText(`Phone: ${template.clinicPhone}`, { x: 40, y: 650, size: 12 });
+    page.drawText(`Email: ${template.clinicEmail}`, { x: 40, y: 630, size: 12 });
+
+    if (template.footerMessage) {
+      page.drawText("Footer:", { x: 40, y: 580, size: 12 });
+      page.drawText(template.footerMessage, { x: 40, y: 560, size: 12 });
+    }
+
+    const pdfBytes = await pdf.save();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "attachment; filename=template-preview.pdf");
+    res.send(Buffer.from(pdfBytes));
+
+  } catch (err) {
+    console.error("Download error:", err);
+    res.status(500).json({ message: "Download failed" });
+  }
+});
 // ===================================================
 //                   START SERVER
 // ===================================================

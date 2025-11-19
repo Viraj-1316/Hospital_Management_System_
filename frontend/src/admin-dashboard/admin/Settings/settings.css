@@ -1,0 +1,48 @@
+.settings-container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+.settings-sidebar {
+  width: 260px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+  height: fit-content;
+}
+
+.settings-item {
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.settings-item:hover {
+  background: #eef4ff;
+}
+
+.settings-item.active {
+  background: #0d6efd;
+  color: white;
+}
+
+.settings-content {
+  flex: 1;
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+}
+
+.coming-soon-box {
+  padding: 40px;
+  text-align: center;
+  font-size: 20px;
+  color: #777;
+}
