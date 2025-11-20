@@ -1,0 +1,131 @@
+/* patient avatar */
+.patient-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e9eefc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #114bff;
+}
+
+/* placeholder initials */
+.patient-avatar.placeholder {
+  background: #f1f5ff;
+  color: #114bff;
+  font-size: 14px;
+}
+
+/* status badge */
+.status-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.status-badge.active {
+  background: #e9f7ee;
+  color: #14894c;
+  border: 1px solid rgba(20,137,76,0.08);
+}
+
+.status-badge.inactive {
+  background: #fff6e6;
+  color: #b66a00;
+  border: 1px solid rgba(182,106,0,0.06);
+}
+
+/* status toggle */
+.status-toggle {
+  width: 46px;
+  height: 24px;
+  border-radius: 16px;
+  background: #e9ecef;
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.18s ease;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.status-toggle.on {
+  background: #dff7e8;
+  border: 1px solid rgba(20,137,76,0.12);
+}
+
+.status-toggle.off {
+  background: #fff4eb;
+  border: 1px solid rgba(182,106,0.06);
+}
+
+.status-toggle.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.status-toggle .toggle-handle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  transform: translateY(-50%);
+  transition: left 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.status-toggle.on .toggle-handle {
+  left: 24px;
+}
+
+/* action buttons look */
+.action-buttons .btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.action-buttons .fa {
+  font-size: 14px;
+}
+
+.btn-outline-primary { color: #114bff; border-color: #dfe9ff; background: #fff; }
+.btn-outline-secondary { color: #6c757d; border-color: #efefef; background: #fff; }
+.btn-outline-info { color: #0ea5b7; border-color: #e6f7f9; background: #fff; }
+.btn-outline-success { color: #16a34a; border-color: #e8f6ec; background: #fff; }
+.btn-outline-dark { color: #222; border-color: #ddd; background: #fff; }
+.btn-outline-danger { color: #e53935; border-color: #ffebeb; background: #fff; }
+
+.action-buttons .btn:hover {
+  transform: translateY(-2px);
+  transition: all 0.12s ease;
+}
+
+/* responsive */
+@media (max-width: 768px) {
+  .doctor-patients-table th:nth-child(3),
+  .doctor-patients-table td:nth-child(3),
+  .doctor-patients-table th:nth-child(4),
+  .doctor-patients-table td:nth-child(4) {
+    display: none;
+  }
+
+  .action-buttons .btn {
+    width: 34px;
+    height: 34px;
+  }
+}

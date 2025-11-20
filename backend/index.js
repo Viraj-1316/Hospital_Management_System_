@@ -13,6 +13,10 @@ const TaxModel = require("./models/Tax");
 const ADMIN_EMAIL = "admin@onecare.com";
 const ADMIN_PASSWORD = "admin123";
 
+
+
+
+
 // PDF Libraries
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const QRCode = require("qrcode");
@@ -24,13 +28,14 @@ const multer = require("multer");
 const csv = require("csv-parser");
 const upload = multer({ dest: path.join(__dirname, "uploads") });
 
-
-
 const app = express();
 
+app.use(cors());
+app.use(express.json());
 
-app.use(cors());            
-app.use(express.json());    
+// PDF Editor section
+const pdfRoutes = require("./routes/pdfRoutes");
+app.use("/pdf", pdfRoutes);
 
 // connect to MongoDB
 mongoose
@@ -44,9 +49,8 @@ mongoose
 
 //             LOGIN
 
-
 // 5. Login route (POST /login)
-app.post("/login", async(req, res) => {
+app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -112,7 +116,6 @@ app.post("/signup", async (req, res) => {
       email,
     });
 
-
     res.status(201).json({
       id: newUser.id,
       email: newUser.email,
@@ -157,6 +160,39 @@ app.delete("/patients/:id", async (req, res) => {
   }
 });
 
+
+app.patch("/patients/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const update = {};
+
+    // Accept either boolean isActive or string status for compatibility
+    if (req.body.hasOwnProperty("isActive")) {
+      update.isActive = !!req.body.isActive;
+    }
+    if (req.body.status) {
+      update.status = req.body.status;
+    }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ message: "No updatable fields provided" });
+    }
+
+    const updated = await PatientModel.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updated) return res.status(404).json({ message: "Patient not found" });
+
+    return res.json({ success: true, patient: updated });
+  } catch (err) {
+    console.error("PATCH /patients/:id error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+// ---------------------------------------------------------------------------------------------
+
 // ===============================
 //     DASHBOARD STATISTICS
 // ===============================
@@ -195,11 +231,9 @@ app.get("/dashboard-stats", async (req, res) => {
   }
 });
 
-
 /* ===============================
  *         DOCTOR APIs
  * =============================== */
-
 
 app.post("/doctors", async (req, res) => {
   try {
@@ -347,7 +381,6 @@ app.delete("/doctor-sessions/:id", async (req, res) => {
   }
 });
 
-
 // ===============================
 //          APPOINTMENTS
 // ===============================
@@ -383,7 +416,6 @@ app.post("/appointments/import", upload.single("file"), async (req, res) => {
     fs.createReadStream(req.file.path)
       .pipe(csv())
       .on("data", (row) => {
-        
         results.push({
           date: row.date,
           clinic: row["Clinic name"],
@@ -428,9 +460,36 @@ app.put("/appointments/:id", async (req, res) => {
   }
 });
 
+app.get("/patients/:id/latest-appointment", async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    // find patient doc
+    const patient = await PatientModel.findById(id).lean();
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    const fullName = `${patient.firstName} ${patient.lastName}`.trim();
+
+    // find by either patientId or patientName
+    const appt = await AppointmentModel.findOne({
+      $or: [
+        { patientId: id },
+        { patientName: fullName }
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!appt)
+      return res.status(404).json({ message: "No appointment found" });
+
+    res.json(appt);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 // Appointments pdf  section
-
 
 app.get("/appointments/:id/pdf", async (req, res) => {
   try {
@@ -490,12 +549,11 @@ app.get("/appointments/:id/pdf", async (req, res) => {
     const serviceText = appt.services || "N/A";
     const totalBill = appt.charges ? `₹${appt.charges}/-` : "Not available";
 
-    // =========================================
-    //        CREATE A4 PORTRAIT PDF
-    // =========================================
+    //A4 PDF Creation
+
     const pdfDoc = await PDFDocument.create();
 
-    const pageWidth = 595;  // A4 portrait
+    const pageWidth = 595; // A4 portrait
     const pageHeight = 842;
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
@@ -729,8 +787,6 @@ app.get("/appointments/:id/pdf", async (req, res) => {
   }
 });
 
-
-
 // ===============================
 //         SERVICE APIs
 // ===============================
@@ -746,21 +802,19 @@ app.get("/api/services", async (req, res) => {
   }
 });
 
-
 // ADD service
 app.post("/api/services", async (req, res) => {
   try {
-    console.log("POST /api/services body:", req.body);   // 👈 log incoming data
+    console.log("POST /api/services body:", req.body); // 👈 log incoming data
     const data = new Service(req.body);
     const saved = await data.save();
-    console.log("Saved service:", saved);                // 👈 log saved doc
+    console.log("Saved service:", saved); // 👈 log saved doc
     res.json(saved);
   } catch (err) {
     console.error("Error saving service:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 
 // DELETE service
 app.delete("/api/services/:id", async (req, res) => {
@@ -809,7 +863,6 @@ app.get("/doctors", async (req, res) => {
     const doctors = await DoctorModel.find();
     res.json(doctors);
   } catch (err) {
-    console.error(" Error fetching doctors:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
@@ -1012,8 +1065,6 @@ app.delete("/appointments/:id", async (req, res) => {
   }
 });
 
-
-
 /* ===============================
  *         SERVICE APIs
  * =============================== */
@@ -1030,9 +1081,7 @@ app.get("/api/services", async (req, res) => {
   }
 });
 
-
 //Tax realted stuff
-
 
 // Get all taxes
 app.get("/taxes", async (req, res) => {
@@ -1084,7 +1133,7 @@ app.put("/taxes/:id", async (req, res) => {
     res.json({ message: "Tax updated", data: updated });
   } catch (err) {
     console.error("Error updating tax:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Error updating tax", error: err.message });
   }
 });
 
@@ -1102,7 +1151,6 @@ app.delete("/taxes/:id", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 
 // ===================================================
 //                      BILL APIs
@@ -1221,9 +1269,9 @@ app.put("/patients/by-user/:userId", async (req, res) => {
     }
 
     const patient = await PatientModel.findOneAndUpdate(
-      { userId },                          // find by userId (ObjectId)
+      { userId }, // find by userId (ObjectId)
       { $set: { ...updateData, userId } }, // update fields + ensure userId set
-      { new: true, upsert: true }          // create if not found
+      { new: true, upsert: true } // create if not found
     );
     return res.json(patient);
   } catch (err) {
@@ -1270,10 +1318,6 @@ app.get("/patients/by-user/:userId", async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 });
-
-
-
-
 
 // Start the server 
 const PORT = 3001;

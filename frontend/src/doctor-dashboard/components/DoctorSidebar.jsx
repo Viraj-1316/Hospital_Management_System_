@@ -32,7 +32,7 @@ const DoctorSidebar = ({ open = true }) => {
       {/* Logo */}
       <div className="d-flex align-items-center mb-4 doctor-brand">
         <img src={logo} alt="Logo" width="30" height="30" />
-        {open && <h4 className="m-0 fw-bold text-primary ms-2">KiviCare</h4>}
+        {open && <h4 className="m-0 fw-bold text-primary ms-2">OneCare</h4>}
       </div>
 
       <ul className="nav nav-pills flex-column">

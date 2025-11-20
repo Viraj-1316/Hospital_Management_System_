@@ -35,6 +35,11 @@ import DoctorServices from "./doctor-dashboard/doctor/DoctorServices";
 import DoctorAppointmentDetails from "./doctor-dashboard/doctor/DoctorAppointmentDetails";
 
 
+// Pdf Editor Section
+
+
+import PdfEditor from "./pdf-editor/PdfEditor";
+
 function App() {
 
   // Sidebar state lives here
@@ -82,8 +87,13 @@ function App() {
 
       {/*Doctor Session section */}
       <Route path="/DoctorSession" element={<DoctorSession sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+
+      {/* PDF Section */}
+
+       <Route path="/pdf-editor" element={<PdfEditor />} />
     </Routes>
 
+    
   );
 }
 
