@@ -85,7 +85,7 @@ export default function Sidebar({ collapsed = false }) {
           </li>
 
           <li className="nav-item mb-2">
-            <NavLink to="/clinic" className={linkClass}>
+            <NavLink to="/clinic-list" className={linkClass}>
               <FaClinicMedical style={{ minWidth: 20 }} />
               {!collapsed && <span>Clinic</span>}
             </NavLink>

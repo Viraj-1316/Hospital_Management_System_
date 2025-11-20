@@ -21,6 +21,8 @@ import EditBill from "./admin-dashboard/admin/EditBill";
 import Services from "./admin-dashboard/admin/Services";
 import Taxes from "./admin-dashboard/admin/Taxes";
 import DoctorSession from "./admin-dashboard/admin/DoctorSession";
+import ClinicList from "./admin-dashboard/admin/cliniclist";
+import AddClinic from "./admin-dashboard/admin/AddClinic";
 
 /* Patient */
 import PatientDashboard from "./patient-dashboard/Patient/PatientDashboard";
@@ -141,6 +143,12 @@ function App() {
         } />
         <Route path="/DoctorSession" element={
           <DoctorSession sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+        } />
+        <Route path="/clinic-list" element={
+          <ClinicList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+        } />
+        <Route path="/add-clinic" element={
+          <AddClinic sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
 
         {/* Doctor Section */}

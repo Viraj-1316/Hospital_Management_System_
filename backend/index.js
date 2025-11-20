@@ -16,7 +16,6 @@ const ADMIN_PASSWORD = "admin123";
 
 
 
-
 // PDF Libraries
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const QRCode = require("qrcode");
@@ -192,6 +191,20 @@ app.patch("/patients/:id", async (req, res) => {
   }
 });
 // ---------------------------------------------------------------------------------------------
+
+// Clinic 
+
+const clinicRoutes = require("./routes/clinicRoutes");
+
+// JSON + form parsing middleware (you probably already have these)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Static for uploaded images
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Mount clinic routes
+app.use("/api", clinicRoutes);
 
 // ===============================
 //     DASHBOARD STATISTICS

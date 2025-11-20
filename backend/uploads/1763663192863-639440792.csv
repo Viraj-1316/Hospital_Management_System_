@@ -1,0 +1,6 @@
+name,email,countryCallingCode,countryCode,contact,specialization,address,city,country,postalCode,adminFirstName,adminLastName,adminEmail,adminContact,adminDob,adminGender
+Valley Clinic,valleyclinic@onecare.com,+91,IN,9420530466,Family Medicine,"3/E, Naaz Bldg, Lamington Road",Mumbai,India,400004,Bhargav,Karande,bhargav.admin@onecare.com,9420530466,1998-05-12,Male
+City Care,citycare@onecare.com,+91,IN,9404304484,General Physician,"12 MG Road",Pune,India,411001,Aashish,Chopade,aashish.admin@onecare.com,9404304484,1996-02-18,Male
+Sunrise Hospital,sunrise@onecare.com,+1,US,4085552345,Cardiology,"742 Evergreen St",San Jose,USA,95112,Sarah,Johnson,sarah.j@onecare.com,4085559876,1989-09-21,Female
+Wellness Point,wellness@onecare.com,+44,UK,7441122334,Dermatology,"21 Baker Street",London,UK,NW13ER,James,Smith,james.smith@onecare.com,7446677889,1985-11-03,Male
+GreenLeaf Clinic,greenleaf@onecare.com,+61,AU,451224466,Neurology,"55 George Street",Sydney,Australia,2000,Emma,Brown,emma.brown@onecare.com,451889900,1992-03-14,Female
