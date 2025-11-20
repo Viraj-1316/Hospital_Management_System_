@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 
 
-export default function PatientAppointments() {
+export default function PatientAppointments() { 
   const navigate = useNavigate();
   const API_BASE = "http://localhost:3001";
   const token = localStorage.getItem("token") || localStorage.getItem("patientToken");

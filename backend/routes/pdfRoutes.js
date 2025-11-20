@@ -100,6 +100,42 @@ router.post("/preview", async (req, res) => {
       }
     }
 
+    // 🔁 Fallback: if no patientId or still missing info, try lookup by patientName
+    if (
+      (!appt.patientId || typeof appt.patientId !== "object") &&
+      appt.patientName
+    ) {
+      const nameParts = appt.patientName.trim().split(" ");
+      const first = nameParts[0];
+      const last = nameParts.slice(1).join(" ");
+
+      const query = last
+        ? { firstName: first, lastName: last }
+        : { firstName: first };
+
+      const patientDoc = await PatientModel.findOne(query).lean();
+
+      if (patientDoc) {
+        // keep original patientName from appointment (it's usually fine)
+        if (!patientEmail || patientEmail === "N/A") {
+          patientEmail = patientDoc.email || "N/A";
+        }
+        if (!patientPhone || patientPhone === "N/A") {
+          patientPhone = patientDoc.phone || "N/A";
+        }
+        if ((!patientDobText || patientDobText === "N/A") && patientDoc.dob) {
+          const dobDate = new Date(patientDoc.dob);
+          if (!isNaN(dobDate)) {
+            patientDobText = dobDate.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+          }
+        }
+      }
+    }
+
     // appointment info
     const apptDateObj = appt.date ? new Date(appt.date) : null;
     const apptDateFormatted = apptDateObj
