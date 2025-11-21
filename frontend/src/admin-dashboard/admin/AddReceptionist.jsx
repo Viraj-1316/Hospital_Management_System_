@@ -133,7 +133,7 @@ export default function AddReceptionist() {
       error: "Failed to save receptionist",
     });
 
-    navigate("/receptionist-list");
+    navigate("/receptionists");
   };
 
   return (
