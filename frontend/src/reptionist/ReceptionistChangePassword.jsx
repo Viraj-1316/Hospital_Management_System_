@@ -42,8 +42,7 @@ function ReceptionistChangePassword() {
     }
   }, [navigate]);
 
-  // src/pages/receptionist/ReceptionistChangePassword.jsx
-
+ 
 const handleSubmit = async (e) => {
   e.preventDefault();
   if (!authUser) return;

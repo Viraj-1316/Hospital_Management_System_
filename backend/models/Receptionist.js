@@ -1,4 +1,3 @@
-// models/Receptionist.js
 const mongoose = require("mongoose");
 
 const receptionistSchema = new mongoose.Schema(
@@ -31,13 +30,11 @@ const receptionistSchema = new mongoose.Schema(
       },
     ],
 
-    // Hashed password (used for login)
     password: {
       type: String,
       required: true,
     },
 
-  
     passwordPlain: {
       type: String,
       default: "",
@@ -47,10 +44,41 @@ const receptionistSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
     mustChangePassword: {
       type: Boolean,
       default: true,
-}
+    },
+
+    // extra profile fields
+    avatar: {
+      type: String,
+      default: "",
+    },
+    gender: {
+      type: String,
+      default: "",
+    },
+    dob: {
+      type: String,
+      default: "",
+    },
+    addressLine1: {
+      type: String,
+      default: "",
+    },
+    addressLine2: {
+      type: String,
+      default: "",
+    },
+    city: {
+      type: String,
+      default: "",
+    },
+    postalCode: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

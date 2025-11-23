@@ -9,7 +9,7 @@
   margin-bottom: 0.5rem;
 }
 .filter-panel.open {
-  max-height: 240px; /* adjust to fit filter content height */
+  max-height: 260px; /* enough for filter content */
 }
 
 /* add form panel */
@@ -23,10 +23,10 @@
   margin-bottom: 0.5rem;
 }
 .form-panel.open {
-  max-height: 680px; /* enough for the form layout */
+  max-height: 700px; /* enough for the form layout */
 }
 
-/* make appointment form spacing look like your screenshot */
+/* appointment form spacing */
 .appointments-form .available-slot-box {
   min-height: 200px;
   background: #ffffff;
@@ -42,17 +42,74 @@
   text-decoration: underline;
 }
 
-/* small tabs styling (ALL UPCOMING PAST) */
-.small-tab {
-  font-weight: 600;
-}
-.btn-group .btn.active {
-  background-color: #2b6ce4;
-  color: white;
-  border-color: #2b6ce4;
+/* header actions and tabs */
+.appointments-header {
+  align-items: center;
 }
 
-/* make Save button prominent at bottom-right within form */
+/* tabs (ALL / UPCOMING / PAST) */
+.appointments-tabs .btn {
+  min-width: 80px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border-width: 1px;
+}
+.appointments-tabs .btn-outline-primary {
+  background-color: #ffffff;
+  color: #0d6efd;
+}
+.appointments-tabs .btn-outline-primary:hover {
+  background-color: #e7f1ff;
+  color: #0d6efd;
+}
+.appointments-tabs .btn.btn-primary.active {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #ffffff;
+  box-shadow: 0 0 0 0.12rem rgba(13, 110, 253, 0.25);
+}
+
+/* header right side buttons */
+.appointments-header-actions .btn {
+  border-radius: 999px;
+  font-weight: 500;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+/* Add appointment = solid blue */
+.btn-add-appointment {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #ffffff;
+}
+.btn-add-appointment:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: #ffffff;
+  box-shadow: 0 0 0 0.14rem rgba(13, 110, 253, 0.3);
+}
+
+/* Filters + Import = outline blue that fills on hover */
+.btn-filter-toggle,
+.btn-import {
+  background-color: #ffffff;
+  border-color: #0d6efd;
+  color: #0d6efd;
+}
+.btn-filter-toggle:hover,
+.btn-import:hover,
+.btn-filter-toggle.active {
+  background-color: #0d6efd;
+  color: #ffffff;
+  box-shadow: 0 0 0 0.14rem rgba(13, 110, 253, 0.2);
+}
+.btn-import svg {
+  vertical-align: -1px;
+}
+
+/* make Save button at bottom of form stand out */
 .form-panel .btn-primary {
   min-width: 90px;
 }
@@ -61,6 +118,17 @@
 @media (max-width: 991px) {
   .available-slot-box {
     min-height: 140px;
+  }
+
+  .appointments-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .appointments-header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 
@@ -72,8 +140,72 @@
   box-sizing: border-box;
 }
 
-/* small spacing under labels like screenshot */
+/* small spacing under labels */
 .form-panel .form-label {
   margin-bottom: 0.4rem;
   font-weight: 500;
+}
+
+/* status pill look */
+.status-badge {
+  padding: 4px 12px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+/* strong colors for status */
+.status-badge.bg-primary {
+  background-color: #0d6efd !important;
+}
+
+.status-badge.bg-info {
+  background-color: #0dcaf0 !important;
+  color: #055160 !important;
+}
+
+.status-badge.bg-success {
+  background-color: #198754 !important;
+}
+
+.status-badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+/* action buttons in table */
+.appointments-actions .btn {
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* individual action button colors */
+.btn-edit {
+  background-color: #0d6efd;
+  color: #fff;
+  border: none;
+}
+.btn-edit:hover {
+  background-color: #0b5ed7;
+  color: #fff;
+}
+
+.btn-pdf {
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+}
+.btn-pdf:hover {
+  background-color: #5c636a;
+  color: #fff;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+}
+.btn-delete:hover {
+  background-color: #bb2d3b;
+  color: #fff;
 }

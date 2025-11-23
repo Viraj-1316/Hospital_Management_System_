@@ -57,6 +57,82 @@ mongoose
     console.error("❌ MongoDB connection error:", err);
   });
 
+// Profile Section
+
+// 1) by email – this MUST come first
+app.get("/api/user/email/:email", async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    const user = await User.findOne({ email }).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error("Profile GET by email error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 2) by id
+app.get("/api/user/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error("Profile GET error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 3) update by id (unchanged)
+app.put("/api/user/:id", async (req, res) => {
+  try {
+    const {
+      name,
+      avatar,
+      phone,
+      gender,
+      dob,
+      addressLine1,
+      addressLine2,
+      city,
+      postalCode,
+      qualification,
+      specialization,
+      experienceYears,
+      bloodGroup,
+    } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        name,
+        avatar,
+        phone,
+        gender,
+        dob,
+        addressLine1,
+        addressLine2,
+        city,
+        postalCode,
+        qualification,
+        specialization,
+        experienceYears,
+        bloodGroup,
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Profile UPDATE error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 /* ===============================
  *         PATIENT APIs

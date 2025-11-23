@@ -1,6 +1,7 @@
 // src/patient/PatientProfileSetup.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import PhoneInput from "react-phone-input-2";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -10,10 +11,11 @@ export default function PatientProfileSetup() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
+  const [clinics, setClinics] = useState([]);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
-    clinic: "Valley Clinic",
+    clinic: "",
     email: "",
     phone: "",
     dob: "",
@@ -29,7 +31,6 @@ export default function PatientProfileSetup() {
 
   useEffect(() => {
     const raw = localStorage.getItem("authUser");
-    console.log("🔍 ProfileSetup - localStorage authUser:", raw);
 
     if (!raw) {
       setError("No 'authUser' found in localStorage.");
@@ -38,7 +39,6 @@ export default function PatientProfileSetup() {
 
     try {
       const parsed = JSON.parse(raw);
-      console.log("🔍 Parsed authUser:", parsed);
 
       if (!parsed.role) {
         setError("User object has no role.");
@@ -58,15 +58,43 @@ export default function PatientProfileSetup() {
       const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
 
       setForm((prev) => ({
-        ...prev,
-        firstName,
-        lastName,
-        email: parsed.email || "",
-      }));
+  ...prev,
+  firstName,
+  lastName,
+  email: parsed.email || "",
+  phone: parsed.phone || "",   
+}));
+
     } catch (err) {
-      console.error("❌ Error parsing authUser:", err);
+      console.error("Error parsing authUser:", err);
       setError("Failed to parse 'authUser' from localStorage.");
     }
+  }, []);
+
+  useEffect(() => {
+    const loadClinics = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/clinics`);
+        const data = res.data;
+        if (data.success && Array.isArray(data.clinics)) {
+          setClinics(data.clinics);
+          if (!form.clinic && data.clinics.length > 0) {
+            setForm((prev) => ({
+              ...prev,
+              clinic: data.clinics[0].name,
+            }));
+          }
+        } else {
+          setClinics([]);
+        }
+      } catch (err) {
+        console.error("Error fetching clinics:", err);
+        setClinics([]);
+      }
+    };
+
+    loadClinics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e) => {
@@ -77,105 +105,79 @@ export default function PatientProfileSetup() {
     }));
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   setSaving(true);
-  //   setError("");
-
-  //   try {
-  //     if (!user) {
-  //       setError("User not loaded. Please login again.");
-  //       setSaving(false);
-  //       return;
-  //     }
-
-  //     const userId = user.id; // from your login response
-
-  //     await axios.put(`${API_BASE}/patients/by-user/${userId}`, form);
-
-  //     await axios.put(`${API_BASE}/users/${userId}/profile-completed`, {
-  //       profileCompleted: true,
-  //     });
-
-  //     const updatedUser = {
-  //       ...user,
-  //       profileCompleted: true,
-  //       name: `${form.firstName} ${form.lastName}`.trim(),
-  //       email: form.email,
-  //     };
-
-  //     localStorage.setItem("authUser", JSON.stringify(updatedUser));
-
-  //     alert("✅ Profile saved successfully!");
-  //     navigate("/patient-dashboard");
-  //   } catch (err) {
-  //     console.error("❌ Error saving patient profile:", err);
-  //     setError("Failed to save profile. Please try again.");
-  //   } finally {
-  //     setSaving(false);
-  //   }
-  // };
-
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setSaving(true);
-  setError("");
+    e.preventDefault();
+    setSaving(true);
+    setError("");
 
-  try {
-    if (!user) {
-      setError("User not loaded. Please login again.");
+    try {
+      if (!user) {
+        setError("User not loaded. Please login again.");
+        setSaving(false);
+        return;
+      }
+
+      if (!form.phone) {
+        setError("Mobile number is required.");
+        setSaving(false);
+        return;
+      }
+
+      const userId = user.id || user._id;
+      const fullPhone = form.phone.startsWith("+")
+        ? form.phone
+        : `+${form.phone}`;
+
+      const payload = {
+        ...form,
+        phone: fullPhone,
+      };
+
+      const patientRes = await axios.put(
+        `${API_BASE}/patients/by-user/${userId}`,
+        payload
+      );
+      const patientDoc = patientRes.data;
+
+      await axios.put(`${API_BASE}/users/${userId}/profile-completed`, {
+        profileCompleted: true,
+      });
+
+      const updatedUser = {
+        ...user,
+        profileCompleted: true,
+        name: `${form.firstName} ${form.lastName}`.trim(),
+        email: form.email,
+      };
+
+      localStorage.setItem("authUser", JSON.stringify(updatedUser));
+      localStorage.setItem(
+        "patient",
+        JSON.stringify({
+          id: patientDoc._id || patientDoc.id || userId,
+          _id: patientDoc._id || patientDoc.id || userId,
+          userId: patientDoc.userId || userId,
+          firstName: patientDoc.firstName || form.firstName,
+          lastName: patientDoc.lastName || form.lastName,
+          name: `${form.firstName} ${form.lastName}`.trim(),
+          email:
+            patientDoc.email || form.email || updatedUser.email || "",
+          phone: patientDoc.phone || fullPhone || "",
+          clinic: patientDoc.clinic || form.clinic || "",
+          dob: patientDoc.dob || form.dob || "",
+          address: patientDoc.address || form.address || "",
+        })
+      );
+
+      alert("✅ Profile saved successfully!");
+      navigate("/patient-dashboard");
+    } catch (err) {
+      console.error("Error saving patient profile:", err);
+      setError("Failed to save profile. Please try again.");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const userId = user.id || user._id;
-
-    // Save/update patient record on backend and get patient doc back
-    const patientRes = await axios.put(`${API_BASE}/patients/by-user/${userId}`, form);
-    // patientRes.data should be the saved patient document (because our backend upsert returns it)
-    const patientDoc = patientRes.data;
-
-    // Mark user profileCompleted = true
-    await axios.put(`${API_BASE}/users/${userId}/profile-completed`, {
-      profileCompleted: true,
-    });
-
-    // Update authUser (so UI still sees profileCompleted)
-    const updatedUser = {
-      ...user,
-      profileCompleted: true,
-      name: `${form.firstName} ${form.lastName}`.trim(),
-      email: form.email,
-    };
-
-    // IMPORTANT: save both keys so other pages can rely on either
-    localStorage.setItem("authUser", JSON.stringify(updatedUser));
-    localStorage.setItem("patient", JSON.stringify({
-      // Normalize patient storage to include id/_id, email, phone
-      id: patientDoc._id || patientDoc.id || userId,
-      _id: patientDoc._id || patientDoc.id || userId,
-      userId: patientDoc.userId || userId,
-      firstName: patientDoc.firstName || form.firstName,
-      lastName: patientDoc.lastName || form.lastName,
-      name: `${form.firstName} ${form.lastName}`.trim(),
-      email: patientDoc.email || form.email || updatedUser.email || "",
-      phone: patientDoc.phone || form.phone || "",
-      clinic: patientDoc.clinic || form.clinic || "",
-      // store whatever else might be useful later:
-      dob: patientDoc.dob || form.dob || "",
-      address: patientDoc.address || form.address || "",
-    }));
-
-    alert("✅ Profile saved successfully!");
-    navigate("/patient-dashboard");
-  } catch (err) {
-    console.error("❌ Error saving patient profile:", err);
-    setError("Failed to save profile. Please try again.");
-  } finally {
-    setSaving(false);
-  }
-};
-
+  };
 
   if (!user) {
     return (
@@ -207,8 +209,10 @@ export default function PatientProfileSetup() {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow-sm">
-        {/* Basic Details */}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-4 rounded shadow-sm"
+      >
         <h5 className="text-primary fw-bold mb-3">Basic Details</h5>
         <div className="row g-3">
           <div className="col-md-6">
@@ -236,13 +240,21 @@ export default function PatientProfileSetup() {
           </div>
 
           <div className="col-md-6">
-            <label className="form-label">Clinic</label>
-            <input
-              type="text"
-              className="form-control"
+            <label className="form-label">Clinic *</label>
+            <select
+              name="clinic"
+              className="form-select"
               value={form.clinic}
-              readOnly
-            />
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select clinic</option>
+              {clinics.map((clinic) => (
+                <option key={clinic._id} value={clinic.name}>
+                  {clinic.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="col-md-6">
@@ -259,13 +271,15 @@ export default function PatientProfileSetup() {
 
           <div className="col-md-6">
             <label className="form-label">Contact No *</label>
-            <input
-              type="tel"
-              name="phone"
-              className="form-control"
+            <PhoneInput
+              country={"in"}
               value={form.phone}
-              onChange={handleChange}
-              required
+              onChange={(value) =>
+                setForm((prev) => ({ ...prev, phone: value }))
+              }
+              inputStyle={{ width: "100%" }}
+              containerStyle={{ width: "100%" }}
+              enableSearch
             />
           </div>
 
@@ -341,7 +355,6 @@ export default function PatientProfileSetup() {
 
         <hr className="my-4" />
 
-        {/* Other Details */}
         <h5 className="text-primary fw-bold mb-3">Other Details</h5>
 
         <div className="mb-3">

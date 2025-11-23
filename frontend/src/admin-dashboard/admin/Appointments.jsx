@@ -4,32 +4,24 @@ import AdminLayout from "../layouts/AdminLayout";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FaDownload } from "react-icons/fa";
 import "../styles/appointments.css";
-import toast from "react-hot-toast"; 
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
-const SLOT_OPTIONS = [
-  "09:00 - 09:30 AM",
-  "09:30 - 10:00 AM",
-  "10:00 - 10:30 AM",
-  "11:00 - 11:30 AM",
-  "02:00 - 02:30 PM",
-  "03:00 - 03:30 PM",
-];
+const API_BASE = "http://localhost:3001";
 
 const Appointments = () => {
+  const navigate = useNavigate();
+
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // panels
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false); // add/edit panel
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  // tabs
-  const [tab, setTab] = useState("all"); // all | upcoming | past
+  const [tab, setTab] = useState("all");
 
-  // search
   const [searchTerm, setSearchTerm] = useState("");
 
-  // filters
   const [filters, setFilters] = useState({
     date: "",
     clinic: "",
@@ -38,12 +30,12 @@ const Appointments = () => {
     doctor: "",
   });
 
-  // dropdown data
   const [doctors, setDoctors] = useState([]);
   const [servicesList, setServicesList] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [doctorSessions, setDoctorSessions] = useState([]);
+  const [clinics, setClinics] = useState([]);
 
-  // add/edit form
   const [form, setForm] = useState({
     clinic: "",
     doctor: "",
@@ -55,9 +47,8 @@ const Appointments = () => {
     slot: "",
   });
 
-  const [editId, setEditId] = useState(null); // null = add, otherwise edit
+  const [editId, setEditId] = useState(null);
 
-  // import modal
   const [importOpen, setImportOpen] = useState(false);
   const [importType, setImportType] = useState("csv");
   const [importFile, setImportFile] = useState(null);
@@ -71,10 +62,10 @@ const Appointments = () => {
   const fetchAppointments = async (query = {}) => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:3001/appointments", {
+      const res = await axios.get(`${API_BASE}/appointments`, {
         params: query,
       });
-      setAppointments(res.data || []);
+      setAppointments(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Error fetching appointments:", err);
       setAppointments([]);
@@ -87,15 +78,27 @@ const Appointments = () => {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const [docRes, servRes, patRes] = await Promise.all([
-          axios.get("http://localhost:3001/doctors"),
-          axios.get("http://localhost:3001/api/services"),
-          axios.get("http://localhost:3001/patients"),
-        ]);
+        const [docRes, servRes, patRes, sessionRes, clinicRes] =
+          await Promise.all([
+            axios.get(`${API_BASE}/doctors`),
+            axios.get(`${API_BASE}/api/services`),
+            axios.get(`${API_BASE}/patients`),
+            axios.get(`${API_BASE}/doctor-sessions`),
+            axios.get(`${API_BASE}/api/clinics`),
+          ]);
 
         setDoctors(Array.isArray(docRes.data) ? docRes.data : []);
         setServicesList(Array.isArray(servRes.data) ? servRes.data : []);
         setPatients(Array.isArray(patRes.data) ? patRes.data : []);
+        setDoctorSessions(
+          Array.isArray(sessionRes.data) ? sessionRes.data : []
+        );
+
+        if (clinicRes.data?.success && Array.isArray(clinicRes.data.clinics)) {
+          setClinics(clinicRes.data.clinics);
+        } else {
+          setClinics([]);
+        }
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
       }
@@ -104,7 +107,6 @@ const Appointments = () => {
     fetchDropdownData();
   }, []);
 
-  // close panels when tab changes
   useEffect(() => {
     setFiltersOpen(false);
     setPanelOpen(false);
@@ -160,6 +162,34 @@ const Appointments = () => {
   // ------------------ FORM HANDLERS ------------------
   const handleFormChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "service") {
+      const selected = servicesList.find((s) => s.name === value);
+      let priceText = "";
+      if (selected) {
+        const price =
+          selected.price ??
+          selected.rate ??
+          selected.amount ??
+          selected.fees ??
+          selected.cost;
+        if (price !== undefined && price !== null) {
+          priceText = price.toString();
+        }
+      }
+      setForm((p) => ({
+        ...p,
+        service: value,
+        servicesDetail: priceText,
+      }));
+      return;
+    }
+
+    if (name === "date") {
+      setForm((p) => ({ ...p, date: value, slot: "" }));
+      return;
+    }
+
     setForm((p) => ({ ...p, [name]: value }));
   };
 
@@ -214,26 +244,25 @@ const Appointments = () => {
         slot: form.slot,
       };
 
-     if (editId) {
-  await toast.promise(
-    axios.put(`http://localhost:3001/appointments/${editId}`, payload),
-    {
-      loading: 'Updating appointment...',
-      success: 'Appointment updated',
-      error: 'Failed to update appointment',
-    }
-  );
-} else {
-  await toast.promise(
-    axios.post("http://localhost:3001/appointments", payload),
-    {
-      loading: 'Saving appointment...',
-      success: 'Appointment added',
-      error: 'Failed to add appointment',
-    }
-  );
-}
-
+      if (editId) {
+        await toast.promise(
+          axios.put(`${API_BASE}/appointments/${editId}`, payload),
+          {
+            loading: "Updating appointment...",
+            success: "Appointment updated",
+            error: "Failed to update appointment",
+          }
+        );
+      } else {
+        await toast.promise(
+          axios.post(`${API_BASE}/appointments`, payload),
+          {
+            loading: "Saving appointment...",
+            success: "Appointment added",
+            error: "Failed to add appointment",
+          }
+        );
+      }
 
       fetchAppointments();
       closePanel();
@@ -243,12 +272,12 @@ const Appointments = () => {
     }
   };
 
-  // ------------------ DELETE / CANCEL / PDF ------------------
+  // ------------------ DELETE / PDF ------------------
   const handleDelete = async (id) => {
     const ok = window.confirm("Are you sure you want to delete this?");
     if (!ok) return;
     try {
-      await axios.delete(`http://localhost:3001/appointments/${id}`);
+      await axios.delete(`${API_BASE}/appointments/${id}`);
       setAppointments((prev) => prev.filter((a) => a._id !== id));
     } catch (err) {
       console.error("Delete error:", err);
@@ -257,8 +286,9 @@ const Appointments = () => {
   };
 
   const handlePdf = (id) => {
-  window.open(`http://localhost:3001/appointments/${id}/pdf`, "_blank");
-};
+    window.open(`${API_BASE}/appointments/${id}/pdf`, "_blank");
+  };
+
   // ------------------ IMPORT MODAL HANDLERS ------------------
   const openImportModal = () => {
     setImportOpen(true);
@@ -290,7 +320,7 @@ const Appointments = () => {
       formData.append("type", importType);
 
       const res = await axios.post(
-        "http://localhost:3001/appointments/import",
+        `${API_BASE}/appointments/import`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -308,28 +338,100 @@ const Appointments = () => {
     }
   };
 
-  // ------------------ AVAILABLE SLOTS LOGIC ------------------
+  // ------------------ SLOT GENERATION (from DoctorSession) ------------------
   const isSunday =
     form.date && !Number.isNaN(new Date(form.date).getTime())
       ? new Date(form.date).getDay() === 0
       : false;
 
-  const showSlots =
-    form.service && form.date && !isSunday; // only show slots if service selected, date selected and not Sunday
+  const getDayCode = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return null;
+    const map = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return map[d.getDay()];
+  };
+
+  const formatTime = (totalMinutes) => {
+    let h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const suffix = h >= 12 ? "PM" : "AM";
+    if (h === 0) h = 12;
+    else if (h > 12) h = h - 12;
+    const hh = h.toString().padStart(2, "0");
+    const mm = m.toString().padStart(2, "0");
+    return `${hh}:${mm} ${suffix}`;
+  };
+
+  const formatSlot = (startMinutes, endMinutes) => {
+    return `${formatTime(startMinutes)} - ${formatTime(endMinutes)}`;
+  };
+
+  const generateTimeSlots = (session) => {
+    if (!session) return [];
+    const slots = [];
+    const step = session.timeSlotMinutes || 30;
+
+    const addRange = (startStr, endStr) => {
+      if (!startStr || !endStr) return;
+      const [sh, sm] = startStr.split(":").map(Number);
+      const [eh, em] = endStr.split(":").map(Number);
+      let startMinutes = sh * 60 + sm;
+      const endMinutes = eh * 60 + em;
+
+      while (startMinutes + step <= endMinutes) {
+        const endSlot = startMinutes + step;
+        slots.push(formatSlot(startMinutes, endSlot));
+        startMinutes = endSlot;
+      }
+    };
+
+    addRange(session.morningStart, session.morningEnd);
+    addRange(session.eveningStart, session.eveningEnd);
+
+    return slots;
+  };
+
+  const availableSlots = useMemo(() => {
+    if (!form.date || !form.doctor) return [];
+    if (isSunday) return [];
+
+    const dayCode = getDayCode(form.date);
+    if (!dayCode) return [];
+
+    const session = doctorSessions.find(
+      (s) =>
+        s.doctorName === form.doctor &&
+        (!form.clinic || s.clinic === form.clinic)
+    );
+
+    if (!session) return [];
+    if (Array.isArray(session.days) && !session.days.includes(dayCode)) {
+      return [];
+    }
+
+    return generateTimeSlots(session);
+  }, [form.date, form.doctor, form.clinic, doctorSessions, isSunday]);
+
+  const showSlots = form.service && availableSlots.length > 0;
 
   // ------------------ JSX ------------------
   return (
     <AdminLayout>
       <div className="container-fluid py-3">
         {/* header area */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex justify-content-between align-items-center mb-3 appointments-header">
           <div>
             <h4 className="fw-bold text-primary mb-1">Appointment</h4>
-            <div className="btn-group btn-sm" role="group" aria-label="tabs">
+            <div
+              className="btn-group btn-sm appointments-tabs"
+              role="group"
+              aria-label="tabs"
+            >
               <button
                 type="button"
-                className={`btn btn-outline-primary btn-sm ${
-                  tab === "all" ? "active small-tab" : ""
+                className={`btn btn-sm ${
+                  tab === "all" ? "btn-primary active" : "btn-outline-primary"
                 }`}
                 onClick={() => setTab("all")}
               >
@@ -337,8 +439,10 @@ const Appointments = () => {
               </button>
               <button
                 type="button"
-                className={`btn btn-outline-primary btn-sm ${
-                  tab === "upcoming" ? "active small-tab" : ""
+                className={`btn btn-sm ${
+                  tab === "upcoming"
+                    ? "btn-primary active"
+                    : "btn-outline-primary"
                 }`}
                 onClick={() => setTab("upcoming")}
               >
@@ -346,8 +450,10 @@ const Appointments = () => {
               </button>
               <button
                 type="button"
-                className={`btn btn-outline-primary btn-sm ${
-                  tab === "past" ? "active small-tab" : ""
+                className={`btn btn-sm ${
+                  tab === "past"
+                    ? "btn-primary active"
+                    : "btn-outline-primary"
                 }`}
                 onClick={() => setTab("past")}
               >
@@ -356,23 +462,28 @@ const Appointments = () => {
             </div>
           </div>
 
-          <div className="d-flex gap-2">
-            <button className="btn btn-sm btn-primary" onClick={openAddForm}>
+          <div className="d-flex gap-2 appointments-header-actions">
+            <button
+              className="btn btn-sm btn-add-appointment"
+              onClick={openAddForm}
+            >
               {panelOpen && !editId ? "Close form" : "Add appointment"}
             </button>
 
             <button
-              className="btn btn-outline-secondary btn-sm"
+              className={`btn btn-sm btn-filter-toggle ${
+                filtersOpen ? "active" : ""
+              }`}
               onClick={() => setFiltersOpen((s) => !s)}
             >
-              {filtersOpen ? "Close filter" : "Filters"}
+              Filters
             </button>
 
             <button
-              className="btn btn-outline-secondary btn-sm"
+              className="btn btn-sm btn-import"
               onClick={openImportModal}
             >
-              <FaDownload /> Import data
+              <FaDownload className="me-1" /> Import data
             </button>
           </div>
         </div>
@@ -395,35 +506,62 @@ const Appointments = () => {
 
               <div className="col-md-3">
                 <label className="form-label">Select Clinic</label>
-                <input
-                  className="form-control"
+                <select
+                  className="form-select"
                   value={filters.clinic}
                   onChange={(e) =>
                     setFilters((p) => ({ ...p, clinic: e.target.value }))
                   }
-                />
+                >
+                  <option value="">All</option>
+                  {clinics.map((c) => (
+                    <option key={c._id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="col-md-3">
                 <label className="form-label">Select Patient</label>
-                <input
-                  className="form-control"
+                <select
+                  className="form-select"
                   value={filters.patient}
                   onChange={(e) =>
                     setFilters((p) => ({ ...p, patient: e.target.value }))
                   }
-                />
+                >
+                  <option value="">All</option>
+                  {patients.map((p) => (
+                    <option
+                      key={p._id}
+                      value={`${p.firstName} ${p.lastName}`}
+                    >
+                      {p.firstName} {p.lastName}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="col-md-3">
                 <label className="form-label">Select Doctor</label>
-                <input
-                  className="form-control"
+                <select
+                  className="form-select"
                   value={filters.doctor}
                   onChange={(e) =>
                     setFilters((p) => ({ ...p, doctor: e.target.value }))
                   }
-                />
+                >
+                  <option value="">All</option>
+                  {doctors.map((d) => (
+                    <option
+                      key={d._id}
+                      value={`${d.firstName} ${d.lastName}`}
+                    >
+                      {d.firstName} {d.lastName}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="col-md-3">
@@ -455,7 +593,7 @@ const Appointments = () => {
           </div>
         </div>
 
-        {/* ADD / EDIT PANEL with 2 columns */}
+        {/* ADD / EDIT PANEL */}
         <div className={`form-panel appointments-form ${panelOpen ? "open" : ""}`}>
           <div className="p-3">
             <form onSubmit={handleSave}>
@@ -478,8 +616,11 @@ const Appointments = () => {
                         required
                       >
                         <option value="">Select</option>
-                        <option value="Valley Clinic">Valley Clinic</option>
-                        <option value="City Care">City Care</option>
+                        {clinics.map((c) => (
+                          <option key={c._id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -494,6 +635,13 @@ const Appointments = () => {
                           required
                         >
                           <option value="">Search</option>
+                          {form.doctor &&
+                            !doctors.some(
+                              (d) =>
+                                `${d.firstName} ${d.lastName}` === form.doctor
+                            ) && (
+                              <option value={form.doctor}>{form.doctor}</option>
+                            )}
                           {doctors.map((d) => (
                             <option
                               key={d._id}
@@ -517,19 +665,25 @@ const Appointments = () => {
                           required
                         >
                           <option value="">Service</option>
+                          {form.service &&
+                            !servicesList.some((s) => s.name === form.service) && (
+                              <option value={form.service}>
+                                {form.service}
+                              </option>
+                            )}
                           {servicesList.map((s) => (
                             <option key={s._id} value={s.name}>
                               {s.name}
                             </option>
                           ))}
                         </select>
-                        <a
-                          className="ms-2 small-link"
-                          href="#add-service"
-                          onClick={(e) => e.preventDefault()}
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 ms-2 small-link"
+                          onClick={() => navigate("/services")}
                         >
                           + Add Service
-                        </a>
+                        </button>
                       </div>
                     </div>
 
@@ -556,6 +710,15 @@ const Appointments = () => {
                           required
                         >
                           <option value="">Search</option>
+                          {form.patient &&
+                            !patients.some(
+                              (p) =>
+                                `${p.firstName} ${p.lastName}` === form.patient
+                            ) && (
+                              <option value={form.patient}>
+                                {form.patient}
+                              </option>
+                            )}
                           {patients.map((p) => (
                             <option
                               key={p._id}
@@ -565,13 +728,13 @@ const Appointments = () => {
                             </option>
                           ))}
                         </select>
-                        <a
-                          className="ms-2 small-link"
-                          href="#add-patient"
-                          onClick={(e) => e.preventDefault()}
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 ms-2 small-link"
+                          onClick={() => navigate("/patients")}
                         >
                           + Add patient
-                        </a>
+                        </button>
                       </div>
                     </div>
 
@@ -599,7 +762,7 @@ const Appointments = () => {
                   <div className="available-slot-box border rounded p-3 mb-3">
                     {showSlots ? (
                       <div className="d-flex flex-wrap gap-2">
-                        {SLOT_OPTIONS.map((slot) => (
+                        {availableSlots.map((slot) => (
                           <button
                             key={slot}
                             type="button"
@@ -628,11 +791,11 @@ const Appointments = () => {
                     )}
                   </div>
 
-                  <label className="form-label">Service Detail</label>
+                  <label className="form-label">Service Detail (Price)</label>
                   <input
                     name="servicesDetail"
                     className="form-control mb-3"
-                    placeholder="No service detail found.."
+                    placeholder="Service price"
                     value={form.servicesDetail}
                     onChange={handleFormChange}
                   />
@@ -701,14 +864,13 @@ const Appointments = () => {
                   </thead>
                   <tbody>
                     {filteredAppointments.map((a) => {
-                      const badgeClass =
-                        a.status === "upcoming"
-                          ? "bg-warning"
-                          : a.status === "completed"
-                          ? "bg-success"
-                          : a.status === "cancelled"
-                          ? "bg-danger"
-                          : "bg-secondary";
+                      let badgeClass = "bg-secondary";
+                      if (a.status === "booked") badgeClass = "bg-primary";
+                      else if (a.status === "upcoming") badgeClass = "bg-info";
+                      else if (a.status === "completed")
+                        badgeClass = "bg-success";
+                      else if (a.status === "cancelled")
+                        badgeClass = "bg-danger";
 
                       return (
                         <tr key={a._id}>
@@ -717,26 +879,28 @@ const Appointments = () => {
                           <td>{a.doctorName}</td>
                           <td>{a.date}</td>
                           <td>
-                            <span className={`badge ${badgeClass}`}>
+                            <span
+                              className={`badge rounded-pill status-badge ${badgeClass}`}
+                            >
                               {a.status || "booked"}
                             </span>
                           </td>
                           <td>
-                            <div className="d-flex gap-2">
+                            <div className="d-flex gap-2 appointments-actions">
                               <button
-                                className="btn btn-sm btn-outline-primary"
+                                className="btn btn-sm btn-edit"
                                 onClick={() => openEditForm(a)}
                               >
                                 Edit
                               </button>
                               <button
-                                className="btn btn-sm btn-outline-dark"
+                                className="btn btn-sm btn-pdf"
                                 onClick={() => handlePdf(a._id)}
                               >
                                 PDF
                               </button>
                               <button
-                                className="btn btn-sm btn-outline-danger"
+                                className="btn btn-sm btn-delete"
                                 onClick={() => handleDelete(a._id)}
                               >
                                 Delete
@@ -795,8 +959,6 @@ const Appointments = () => {
                           </div>
                         </div>
                       </div>
-
-                      
 
                       <p className="mb-2 fw-semibold">
                         Following field is required in csv file

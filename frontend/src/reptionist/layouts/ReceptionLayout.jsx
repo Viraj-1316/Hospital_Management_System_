@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { FaCalendarAlt, FaUserFriends, FaUserMd, FaStethoscope, FaFileInvoiceDollar, FaCog, FaClipboardList } from "react-icons/fa";
+import {
+  FaCalendarAlt,
+  FaUserFriends,
+  FaUserMd,
+  FaStethoscope,
+  FaFileInvoiceDollar,
+  FaCog,
+  FaClipboardList,
+} from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import "../styles/reception.css";
 
@@ -10,6 +18,8 @@ const ReceptionLayout = () => {
 
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
   const name = authUser?.name || "Receptionist";
+  const avatar = authUser?.avatar || "";
+  const initial = name ? name.charAt(0).toUpperCase() : "R";
 
   const handleLogout = () => {
     localStorage.removeItem("authUser");
@@ -19,7 +29,7 @@ const ReceptionLayout = () => {
 
   return (
     <div className="rc-wrapper">
-      {/* LEFT SIDEBAR (same style as doctor panel) */}
+      {/* LEFT SIDEBAR */}
       <aside className="rc-sidebar">
         <div className="rc-sidebar-logo">
           <span className="rc-logo-text">OneCare</span>
@@ -127,7 +137,6 @@ const ReceptionLayout = () => {
 
       {/* RIGHT SIDE */}
       <div className="rc-main">
-        {/* TOP BLUE BAR – same vibe as doctor header */}
         <header className="rc-topbar">
           <div className="rc-top-left">
             <button className="rc-menu-toggle">
@@ -145,8 +154,23 @@ const ReceptionLayout = () => {
               className="rc-profile"
               onClick={() => setOpenProfile((v) => !v)}
             >
-              <div className="rc-profile-avatar">
-                {name.charAt(0).toUpperCase()}
+              <div
+                className="rc-profile-avatar"
+                style={{ overflow: "hidden" }}
+              >
+                {avatar ? (
+                  <img
+                    src={avatar}
+                    alt={name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  initial
+                )}
               </div>
               <div className="rc-profile-text">
                 <div className="rc-profile-name">{name}</div>
@@ -172,7 +196,6 @@ const ReceptionLayout = () => {
           </div>
         </header>
 
-        {/* PAGE CONTENT (Dashboard etc.) */}
         <main className="rc-content">
           <Outlet />
         </main>

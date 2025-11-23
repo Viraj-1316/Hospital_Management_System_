@@ -162,7 +162,7 @@ const ReceptionDashboard = () => {
 
             {showProfileMenu && (
               <div className="rc-profile-menu">
-                <button onClick={() => navigate("/reception/my-profile")}>
+                <button onClick={() => navigate("/receptionist/profile")}>
                   My profile
                 </button>
                 <button
