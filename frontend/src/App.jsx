@@ -52,9 +52,9 @@ import DoctorFirstLoginChangePassword from "./doctor-dashboard/doctor/DoctorFirs
 import AddReceptionist from "./admin-dashboard/admin/AddReceptionist.jsx";
 import ReceptionistList from "./admin-dashboard/admin/ReceptionistList.jsx";
 import ReceptionistChangePassword from "./reptionist/ReceptionistChangePassword.jsx";
-import ReceptionLayout from "./reptionist/layouts/ReceptionLayout.jsx";
-import ReptionistDashboard from "./reptionist/ReptionistDashboard";
+import ReceptionistChangePasswordPage from "./reptionist/ReceptionistChangePasswordPage.jsx";
 import ReceptionistProfile from "./reptionist/ReceptionistProfile.jsx";
+import ReptionistDashboard from "./reptionist/ReptionistDashboard";
 
 /* PDF Editor */
 import PdfEditor from "./pdf-editor/PdfEditor";
@@ -195,7 +195,6 @@ function App() {
         <Route path="/doctor/profile" element={
           <DoctorProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
-        } />
         <Route path="/doctor/change-password" element={<DoctorChangePassword />} />
         <Route path="/doctor/change-password-first" element={<DoctorFirstLoginChangePassword />} />
 
@@ -231,7 +230,7 @@ function App() {
           <AddReceptionist sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
         <Route path="/receptionist/change-password" element={<ReceptionistChangePassword />} />
-        <Route path="/reception-dashboard" element={<ReptionistDashboard />} />
+        <Route path="/reception/change-password" element={<ReceptionistChangePasswordPage />} />
         <Route path="/receptionist/profile" element={
         <ReceptionistProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />

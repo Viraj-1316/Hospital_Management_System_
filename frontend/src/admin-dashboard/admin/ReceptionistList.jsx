@@ -443,6 +443,23 @@ export default function ReceptionistList({
                         onChange={(e) => setImportFile(e.target.files[0])}
                       />
 
+                      <div className="mb-3">
+                        <p className="fw-semibold mb-2">CSV Required Fields:</p>
+                        <ul className="small mb-0 text-muted">
+                          <li>name</li>
+                          <li>email</li>
+                          <li>mobile</li>
+                          <li>address</li>
+                          <li>clinics (comma separated names)</li>
+                          <li>status (active/inactive)</li>
+                          <li>gender</li>
+                          <li>dob</li>
+                          <li>country</li>
+                          <li>city</li>
+                          <li>postalCode</li>
+                        </ul>
+                      </div>
+
                       <div className="text-end">
                         <button
                           type="button"

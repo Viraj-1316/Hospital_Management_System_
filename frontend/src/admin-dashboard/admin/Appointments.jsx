@@ -435,7 +435,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
           {/* HEADER */}
           <div className="d-flex justify-content-between align-items-center mb-3 appointments-header">
             <div>
-              <h4 className="fw-bold text-primary mb-1">Appointment</h4>
+              <h4 className="fw-bold text-primary mb-0">Appointment</h4>
 
               <div className="btn-group btn-sm appointments-tabs">
                 <button

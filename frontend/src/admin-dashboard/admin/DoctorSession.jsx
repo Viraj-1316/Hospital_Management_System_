@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import { FaPlus, FaSearch, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus, FaSearch, FaEdit, FaTrash, FaFileImport } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/services.css";
 import "../styles/appointments.css";
@@ -40,6 +40,10 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
   // Form states
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
 
   const [form, setForm] = useState({
     doctorId: "",
@@ -183,6 +187,36 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
     }
   };
 
+  // Import CSV
+  const handleImport = async (e) => {
+    e.preventDefault();
+    if (!importFile) {
+      alert("Please select a CSV file");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", importFile);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3001/doctor-sessions/import",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      alert(`Successfully imported ${response.data.count} doctor sessions`);
+      setShowImportModal(false);
+      setImportFile(null);
+      fetchSessions();
+    } catch (err) {
+      console.error("Import error:", err);
+      alert("Import failed: " + (err.response?.data?.message || err.message));
+    }
+  };
+
   // FILTERING
   const filteredSessions = useMemo(() => {
     const q = searchTerm.toLowerCase();
@@ -230,12 +264,21 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
           <div className="services-topbar services-card d-flex justify-content-between">
             <h5 className="fw-bold text-white mb-0">Doctor Sessions</h5>
 
-            <button
-              className="btn btn-light btn-sm d-flex align-items-center gap-2"
-              onClick={openCreateForm}
-            >
-              <FaPlus /> Doctor Session
-            </button>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+                onClick={() => setShowImportModal(true)}
+              >
+                <FaFileImport /> Import data
+              </button>
+
+              <button
+                className="btn btn-light btn-sm d-flex align-items-center gap-2"
+                onClick={openCreateForm}
+              >
+                <FaPlus /> Doctor Session
+              </button>
+            </div>
           </div>
 
           {/* SEARCH BAR */}
@@ -499,6 +542,66 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
                     </div>
 
                   </form>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* IMPORT MODAL */}
+        {showImportModal && (
+          <>
+            <div className="modal-backdrop fade show" />
+            <div className="modal fade show d-block">
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title text-primary">Import Doctor Sessions</h5>
+                    <button
+                      className="btn-close"
+                      onClick={() => setShowImportModal(false)}
+                    />
+                  </div>
+
+                  <div className="modal-body">
+                    <form onSubmit={handleImport}>
+                      <label className="form-label">Upload CSV File</label>
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="form-control mb-3"
+                        onChange={(e) => setImportFile(e.target.files[0])}
+                      />
+
+                      <div className="mb-3">
+                        <p className="fw-semibold mb-2">CSV Required Fields:</p>
+                        <ul className="small text-muted">
+                          <li>doctorId</li>
+                          <li>doctorName</li>
+                          <li>clinic</li>
+                          <li>days (comma-separated: Mon,Tue,Wed,...)</li>
+                          <li>timeSlotMinutes</li>
+                          <li>morningStart (HH:MM format)</li>
+                          <li>morningEnd (HH:MM format)</li>
+                          <li>eveningStart (HH:MM format)</li>
+                          <li>eveningEnd (HH:MM format)</li>
+                        </ul>
+                      </div>
+
+                      <div className="text-end">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary me-2"
+                          onClick={() => setShowImportModal(false)}
+                        >
+                          Cancel
+                        </button>
+                        <button type="submit" className="btn btn-primary">
+                          Import
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>
