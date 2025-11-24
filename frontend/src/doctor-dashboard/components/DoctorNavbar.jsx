@@ -38,7 +38,7 @@ export default function DoctorNavbar({ onToggle, open }) {
           ☰
         </button>
 
-        <div className="doctor-title">One Care Doctor</div>
+        <h4 className="text-white fw-bold mb-0">One Care Doctor</h4>
       </div>
 
       {/* Right Section (Profile + Dropdown) */}

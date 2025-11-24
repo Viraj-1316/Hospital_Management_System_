@@ -15,6 +15,7 @@ const DoctorSchema = new mongoose.Schema({
   city: String,
   country: String,
   postalCode: String,
+  
   qualifications: [
     {
       degree: String,
