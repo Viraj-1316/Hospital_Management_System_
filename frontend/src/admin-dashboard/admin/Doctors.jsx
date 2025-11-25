@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import { FaSearch, FaPlus, FaTrash, FaEdit, FaDownload, FaEnvelope } from "react-icons/fa";
+import { FaSearch, FaPlus, FaTrash, FaEdit, FaDownload, FaEnvelope, FaCalendarAlt, FaBriefcaseMedical } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/services.css";
@@ -17,6 +17,22 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
   const [importType, setImportType] = useState("csv");
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
+
+  // Add Service modal
+  const [serviceModalOpen, setServiceModalOpen] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [serviceForm, setServiceForm] = useState({
+    name: "",
+    category: "",
+    charges: "",
+    duration: "00:30",
+    clinic: "",
+    isTelemedicine: false,
+    status: "Active",
+    allowMultiSelection: true,
+  });
+  const [clinics, setClinics] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   // Fetch doctors
   const fetchDoctors = async () => {
@@ -99,6 +115,95 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
       setImporting(false);
     }
   };
+
+  // Edit Doctor handlers
+  const handleEditClick = (doctor) => {
+    navigate("/AddDoctor", { state: { editDoctor: doctor } });
+  };
+
+  // Doctor Session navigation
+  const handleDoctorSession = (doctor) => {
+    navigate("/DoctorSession", { 
+      state: { doctorFilter: `${doctor.firstName} ${doctor.lastName}` } 
+    });
+  };
+
+  // Add Service handlers
+  const handleAddServiceClick = (doctor) => {
+    setSelectedDoctor(doctor);
+    setServiceForm({
+      name: "",
+      category: "",
+      charges: "",
+      duration: "00:30",
+      clinic: doctor.clinic || "",
+      isTelemedicine: false,
+      status: "Active",
+      allowMultiSelection: true,
+    });
+    setServiceModalOpen(true);
+  };
+
+  const handleServiceFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setServiceForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleServiceSubmit = async (e) => {
+    e.preventDefault();
+    if (!serviceForm.name || !serviceForm.category) {
+      return alert("Please fill required fields");
+    }
+
+    try {
+      const payload = {
+        ...serviceForm,
+        doctor: `${selectedDoctor.firstName} ${selectedDoctor.lastName}`,
+        doctorId: selectedDoctor._id,
+        clinicName: serviceForm.clinic,
+        active: serviceForm.status === "Active",
+      };
+
+      await axios.post("http://localhost:3001/services", payload);
+      alert("Service added successfully!");
+      setServiceModalOpen(false);
+    } catch (error) {
+      console.error("Error adding service:", error);
+      alert("Error adding service");
+    }
+  };
+
+  const closeServiceModal = () => {
+    setServiceModalOpen(false);
+    setSelectedDoctor(null);
+  };
+
+  // Load categories and clinics for service modal
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const categoriesData = [
+          "general dentistry",
+          "system service",
+          "checkup",
+          "telemed",
+          "physiotherapy",
+        ];
+        setCategories(categoriesData);
+
+        const clinicsRes = await axios.get("http://localhost:3001/api/clinics");
+        if (clinicsRes.data.success) {
+          setClinics(clinicsRes.data.clinics || []);
+        }
+      } catch (error) {
+        console.error("Error loading options:", error);
+      }
+    };
+    loadOptions();
+  }, []);
 
   // Filter doctors
   const filteredDoctors = doctors.filter((doc) => {
@@ -204,11 +309,30 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
                       </td>
                       <td>
                         <div className="d-flex justify-content-center gap-2">
-                          <button className="btn btn-sm btn-outline-primary">
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            title="Edit Doctor"
+                            onClick={() => handleEditClick(doctor)}
+                          >
                             <FaEdit />
                           </button>
                           <button
+                            className="btn btn-sm btn-outline-info"
+                            title="Doctor Sessions"
+                            onClick={() => handleDoctorSession(doctor)}
+                          >
+                            <FaCalendarAlt />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-success"
+                            title="Add Service"
+                            onClick={() => handleAddServiceClick(doctor)}
+                          >
+                            <FaBriefcaseMedical />
+                          </button>
+                          <button
                             className="btn btn-sm btn-outline-danger"
+                            title="Delete Doctor"
                             onClick={() => handleDelete(doctor._id)}
                           >
                             <FaTrash />
@@ -320,6 +444,245 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
 
                       <button type="submit" className="btn btn-primary" disabled={importing}>
                         {importing ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+
+                  </form>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ADD SERVICE MODAL */}
+        {serviceModalOpen && (
+          <>
+            <div className="modal-backdrop fade show" />
+
+            <div className="modal fade show d-block" tabIndex="-1">
+              <div className="modal-dialog modal-lg modal-dialog-centered">
+                <div className="modal-content">
+
+                  <div className="modal-header">
+                    <h5 className="modal-title text-primary">Add Service</h5>
+                    <button className="btn-close" onClick={closeServiceModal}></button>
+                  </div>
+
+                  <form onSubmit={handleServiceSubmit}>
+                    <div className="modal-body">
+                      
+                      {/* Service Image Upload Section */}
+                      <div className="row mb-4">
+                        <div className="col-12 text-center">
+                          <div className="d-inline-block position-relative">
+                            <div 
+                              className="rounded-circle bg-light d-flex align-items-center justify-content-center shadow-sm"
+                              style={{ 
+                                width: "130px", 
+                                height: "130px", 
+                                border: "3px solid #e0e0e0",
+                                cursor: "pointer",
+                                transition: "all 0.3s ease"
+                              }}
+                            >
+                              <div className="text-center">
+                                <i className="bi bi-camera" style={{ fontSize: "36px", color: "#999" }}></i>
+                                <div style={{ fontSize: "11px", color: "#999", marginTop: "5px" }}>Upload Image</div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-primary position-absolute d-flex align-items-center justify-content-center"
+                              style={{ 
+                                bottom: "5px", 
+                                right: "5px", 
+                                borderRadius: "50%",
+                                width: "36px",
+                                height: "36px",
+                                padding: "0",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
+                              }}
+                            >
+                              <i className="bi bi-pencil-fill"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label className="form-label">Service Category *</label>
+                          <select
+                            name="category"
+                            className="form-select"
+                            value={serviceForm.category}
+                            onChange={handleServiceFormChange}
+                            required
+                          >
+                            <option value="">Select service category</option>
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                          <small className="text-muted">Type and press enter to add new category</small>
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label">Service Name *</label>
+                          <input
+                            type="text"
+                            name="name"
+                            className="form-control"
+                            placeholder="Enter service name"
+                            value={serviceForm.name}
+                            onChange={handleServiceFormChange}
+                            required
+                          />
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label">Charges *</label>
+                          <div className="input-group">
+                            <span className="input-group-text">$</span>
+                            <input
+                              type="number"
+                              name="charges"
+                              className="form-control"
+                              placeholder="Enter charges"
+                              value={serviceForm.charges}
+                              onChange={handleServiceFormChange}
+                              required
+                            />
+                            <span className="input-group-text">/-</span>
+                          </div>
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label">Duration</label>
+                          <input
+                            type="time"
+                            name="duration"
+                            className="form-control"
+                            placeholder="HH:MM"
+                            value={serviceForm.duration}
+                            onChange={handleServiceFormChange}
+                          />
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Is this a telemedicine service? *</label>
+                          <div className="d-flex gap-3">
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="isTelemedicine"
+                                id="telemed-no"
+                                value="false"
+                                checked={!serviceForm.isTelemedicine}
+                                onChange={() => setServiceForm({ ...serviceForm, isTelemedicine: false })}
+                              />
+                              <label className="form-check-label" htmlFor="telemed-no">
+                                No
+                              </label>
+                            </div>
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="isTelemedicine"
+                                id="telemed-yes"
+                                value="true"
+                                checked={serviceForm.isTelemedicine}
+                                onChange={() => setServiceForm({ ...serviceForm, isTelemedicine: true })}
+                              />
+                              <label className="form-check-label" htmlFor="telemed-yes">
+                                Yes
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Clinic *</label>
+                          <select
+                            name="clinic"
+                            className="form-select"
+                            value={serviceForm.clinic}
+                            onChange={handleServiceFormChange}
+                            required
+                          >
+                            <option value="">Select clinic</option>
+                            {clinics.map((clinic) => (
+                              <option key={clinic._id} value={clinic.name}>
+                                {clinic.name}
+                              </option>
+                            ))}
+                          </select>
+                          <small className="text-muted">Select all</small>
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Status *</label>
+                          <select
+                            name="status"
+                            className="form-select"
+                            value={serviceForm.status}
+                            onChange={handleServiceFormChange}
+                            required
+                          >
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                          </select>
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Allow multi selection while booking *</label>
+                          <div className="d-flex gap-3">
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="allowMultiSelection"
+                                id="multi-yes"
+                                checked={serviceForm.allowMultiSelection}
+                                onChange={() => setServiceForm({ ...serviceForm, allowMultiSelection: true })}
+                              />
+                              <label className="form-check-label" htmlFor="multi-yes">
+                                Yes
+                              </label>
+                            </div>
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="allowMultiSelection"
+                                id="multi-no"
+                                checked={!serviceForm.allowMultiSelection}
+                                onChange={() => setServiceForm({ ...serviceForm, allowMultiSelection: false })}
+                              />
+                              <label className="form-check-label" htmlFor="multi-no">
+                                No
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={closeServiceModal}
+                      >
+                        Cancel
+                      </button>
+
+                      <button type="submit" className="btn btn-primary">
+                        Save
                       </button>
                     </div>
 

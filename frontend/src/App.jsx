@@ -13,6 +13,7 @@ import Signup from "./auth/Signup";
 /* Admin */
 import AdminDashboard from "./admin-dashboard/admin/AdminDashboard";
 import AddPatient from "./admin-dashboard/admin/AddPatient";
+import EditPatient from "./admin-dashboard/admin/EditPatient";
 import Patients from "./admin-dashboard/admin/Patients";
 import Doctors from "./admin-dashboard/admin/Doctors";
 import AddDoctor from "./admin-dashboard/admin/AddDoctor";
@@ -52,9 +53,9 @@ import DoctorFirstLoginChangePassword from "./doctor-dashboard/doctor/DoctorFirs
 import AddReceptionist from "./admin-dashboard/admin/AddReceptionist.jsx";
 import ReceptionistList from "./admin-dashboard/admin/ReceptionistList.jsx";
 import ReceptionistChangePassword from "./reptionist/ReceptionistChangePassword.jsx";
-import ReceptionLayout from "./reptionist/layouts/ReceptionLayout.jsx";
-import ReptionistDashboard from "./reptionist/ReptionistDashboard";
+import ReceptionistChangePasswordPage from "./reptionist/ReceptionistChangePasswordPage.jsx";
 import ReceptionistProfile from "./reptionist/ReceptionistProfile.jsx";
+import ReptionistDashboard from "./reptionist/ReptionistDashboard";
 
 /* PDF Editor */
 import PdfEditor from "./pdf-editor/PdfEditor";
@@ -143,6 +144,9 @@ function App() {
         <Route path="/AddPatient" element={
           <AddPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
+        <Route path="/EditPatient/:id" element={
+          <EditPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+        } />
         <Route path="/doctors" element={
           <Doctors sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
@@ -195,7 +199,6 @@ function App() {
         <Route path="/doctor/profile" element={
           <DoctorProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
-        } />
         <Route path="/doctor/change-password" element={<DoctorChangePassword />} />
         <Route path="/doctor/change-password-first" element={<DoctorFirstLoginChangePassword />} />
 
@@ -231,7 +234,7 @@ function App() {
           <AddReceptionist sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
         <Route path="/receptionist/change-password" element={<ReceptionistChangePassword />} />
-        <Route path="/reception-dashboard" element={<ReptionistDashboard />} />
+        <Route path="/reception/change-password" element={<ReceptionistChangePasswordPage />} />
         <Route path="/receptionist/profile" element={
         <ReceptionistProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />

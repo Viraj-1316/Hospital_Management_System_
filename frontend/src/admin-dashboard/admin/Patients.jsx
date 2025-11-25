@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/services.css"; // using the Services layout styling
-import { FaSearch, FaPlus } from "react-icons/fa";
+import { FaSearch, FaPlus, FaDownload } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { RiDeleteBinFill } from "react-icons/ri";
 import { MdEdit } from "react-icons/md";
@@ -14,8 +14,14 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
   const [patients, setPatients] = useState([]);
   const [search, setSearch] = useState("");
 
+  // Import modal state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importType, setImportType] = useState("csv");
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+
   const handleEdit = (id) => {
-    alert(`📝 Edit patient with ID: ${id}`);
+    navigate(`/EditPatient/${id}`);
   };
 
   const handleDelete = async (id) => {
@@ -31,14 +37,60 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
     }
   };
 
+  // Fetch patients
+  const fetchPatients = async () => {
+    try {
+      const res = await axios.get("http://localhost:3001/patients");
+      setPatients(res.data || []);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+    }
+  };
+
   useEffect(() => {
-    axios
-      .get("http://localhost:3001/patients")
-      .then((res) => {
-        setPatients(res.data);
-      })
-      .catch((err) => console.error("❌ Error fetching patients:", err));
+    fetchPatients();
   }, []);
+
+  // Import modal handlers
+  const openImportModal = () => {
+    setImportOpen(true);
+    setImportFile(null);
+  };
+
+  const closeImportModal = () => {
+    if (!importing) setImportOpen(false);
+  };
+
+  const handleFileChange = (e) => {
+    setImportFile(e.target.files[0] || null);
+  };
+
+  const handleImportSubmit = async (e) => {
+    e.preventDefault();
+    if (!importFile) return alert("Select a CSV file");
+
+    try {
+      setImporting(true);
+      const formData = new FormData();
+      formData.append("file", importFile);
+      formData.append("type", importType);
+
+      const res = await axios.post(
+        "http://localhost:3001/patients/import",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      alert(`Imported ${res.data?.count || 0} patients`);
+      setImportOpen(false);
+      fetchPatients();
+    } catch (err) {
+      console.error(err);
+      alert("Error importing patients");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const filteredPatients = patients.filter((p) =>
     `${p.firstName} ${p.lastName}`.toLowerCase().includes(search.toLowerCase())
@@ -67,12 +119,21 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
           <div className="services-topbar services-card d-flex justify-content-between align-items-center">
             <h5 className="fw-bold text-white mb-0">Patients List</h5>
 
-            <button
-              className="btn btn-light btn-sm d-flex align-items-center gap-2"
-              onClick={() => navigate("/AddPatient")}
-            >
-              <FaPlus /> Add Patient
-            </button>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+                onClick={openImportModal}
+              >
+                <FaDownload /> Import Patients
+              </button>
+
+              <button
+                className="btn btn-light btn-sm d-flex align-items-center gap-2"
+                onClick={() => navigate("/AddPatient")}
+              >
+                <FaPlus /> Add Patient
+              </button>
+            </div>
           </div>
 
           {/* SEARCH CARD */}
@@ -175,6 +236,85 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
             </div>
           </div>
         </div>
+
+        {/* IMPORT MODAL */}
+        {importOpen && (
+          <>
+            <div className="modal-backdrop fade show" />
+
+            <div className="modal fade show d-block" tabIndex="-1">
+              <div className="modal-dialog modal-lg modal-dialog-centered">
+                <div className="modal-content">
+
+                  <div className="modal-header">
+                    <h5 className="modal-title text-primary">Patients Import</h5>
+                    <button className="btn-close" onClick={closeImportModal}></button>
+                  </div>
+
+                  <form onSubmit={handleImportSubmit}>
+                    <div className="modal-body">
+
+                      <div className="row g-3 mb-3">
+                        <div className="col-md-4">
+                          <label className="form-label">Select Type</label>
+                          <select
+                            className="form-select"
+                            value={importType}
+                            onChange={(e) => setImportType(e.target.value)}
+                          >
+                            <option value="csv">CSV</option>
+                          </select>
+                        </div>
+
+                        <div className="col-md-8">
+                          <label className="form-label">Upload CSV File</label>
+                          <input
+                            type="file"
+                            className="form-control"
+                            accept=".csv"
+                            onChange={handleFileChange}
+                          />
+                        </div>
+                      </div>
+
+                      <p className="fw-semibold mb-2">CSV Required Fields:</p>
+                      <ul className="small mb-0">
+                        <li>firstName</li>
+                        <li>lastName</li>
+                        <li>clinic</li>
+                        <li>email</li>
+                        <li>phone</li>
+                        <li>dob</li>
+                        <li>bloodGroup (optional)</li>
+                        <li>gender</li>
+                        <li>address (optional)</li>
+                        <li>city (optional)</li>
+                        <li>country (optional)</li>
+                        <li>postalCode (optional)</li>
+                      </ul>
+                    </div>
+
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={closeImportModal}
+                        disabled={importing}
+                      >
+                        Cancel
+                      </button>
+
+                      <button type="submit" className="btn btn-primary" disabled={importing}>
+                        {importing ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+
+                  </form>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

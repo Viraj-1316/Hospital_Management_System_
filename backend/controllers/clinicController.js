@@ -8,9 +8,11 @@ const csv = require("csv-parser");
 
 // email section
 const { sendEmail } = require("../utils/emailService");
-const { clinicAddedTemplate } = require("../utils/emailTemplates");
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const generateRandomPassword = require("../utils/generatePassword");
+const { clinicAddedTemplate, credentialsTemplate } = require("../utils/emailTemplates");
 
-// Create clinic  POST /api/clinics
 // Create clinic  POST /api/clinics
 exports.createClinic = async (req, res) => {
   try {
@@ -64,20 +66,46 @@ exports.createClinic = async (req, res) => {
     // 1️⃣ Save clinic in DB
     await clinic.save();
 
-    // 2️⃣ Decide which email to send to:
-    //    Prefer adminEmail, else fall back to clinic email
+    // 2️⃣ Create User for Clinic Admin if not exists
     const targetEmail = adminEmail || email;
-
+    let password = generateRandomPassword();
+    
     if (targetEmail) {
-      const html = clinicAddedTemplate({
-        clinicName: name,
-        contactName: adminFirstName || "there",
-      });
+        let user = await User.findOne({ email: targetEmail });
+        if (!user) {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            user = new User({
+                email: targetEmail,
+                password: hashedPassword,
+                role: "clinic_admin", // Using a specific role
+                name: `${adminFirstName} ${adminLastName}`,
+                profileCompleted: true,
+            });
+            await user.save();
+        } else {
+            // If user exists, we don't overwrite password on create, 
+            // but we might want to ensure they have the role?
+            // For now, let's assume if they exist, they are handled.
+            password = null; // Don't send password if we didn't generate it
+        }
+    }
 
-      // 3️⃣ Fire email (do not block response if it fails)
+    // 3️⃣ Send email
+    if (targetEmail) {
+      const html = password 
+        ? credentialsTemplate({
+            name: adminFirstName || "Admin",
+            email: targetEmail,
+            password: password
+          })
+        : clinicAddedTemplate({
+            clinicName: name,
+            contactName: adminFirstName || "there",
+          });
+
       sendEmail({
         to: targetEmail,
-        subject: "Your Clinic has been added to OneCare",
+        subject: password ? "Your OneCare Credentials" : "Your Clinic has been added to OneCare",
         html,
       });
     } else {
@@ -225,11 +253,54 @@ exports.deleteClinic = async (req, res) => {
 // Resend credentials  POST /api/clinics/:id/resend-credentials
 exports.resendCredentials = async (req, res) => {
   try {
-    // In real app: send email / SMS here.
-    console.log("Resend credentials for clinic:", req.params.id);
+    const clinic = await Clinic.findById(req.params.id);
+    if (!clinic) {
+      return res.status(404).json({ success: false, message: "Clinic not found" });
+    }
+
+    const adminEmail = clinic.admin?.email || clinic.email;
+    if (!adminEmail) {
+      return res.status(400).json({ success: false, message: "No email associated with this clinic" });
+    }
+
+    // Generate new password
+    const newPassword = generateRandomPassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Find or Create User
+    let user = await User.findOne({ email: adminEmail });
+    if (user) {
+      user.password = hashedPassword;
+      // Ensure role is set if missing (optional)
+      if (!user.role) user.role = "clinic_admin";
+      await user.save();
+    } else {
+      user = new User({
+        email: adminEmail,
+        password: hashedPassword,
+        role: "clinic_admin",
+        name: `${clinic.admin?.firstName || "Clinic"} ${clinic.admin?.lastName || "Admin"}`,
+        profileCompleted: true,
+      });
+      await user.save();
+    }
+
+    // Send Email
+    const html = credentialsTemplate({
+      name: clinic.admin?.firstName || "Admin",
+      email: adminEmail,
+      password: newPassword,
+    });
+
+    await sendEmail({
+      to: adminEmail,
+      subject: "Your OneCare Credentials",
+      html,
+    });
+
     return res.json({
       success: true,
-      message: "Credentials resent (mock).",
+      message: `Credentials resent to ${adminEmail}`,
     });
   } catch (error) {
     console.error("ERROR RESEND CREDENTIALS:", error);

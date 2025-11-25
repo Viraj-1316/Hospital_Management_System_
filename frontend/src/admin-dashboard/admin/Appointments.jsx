@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FaDownload } from "react-icons/fa";
 import "../styles/appointments.css";
+import "../styles/services.css";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -429,29 +430,72 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
         <Navbar toggleSidebar={toggleSidebar} />
 
         <div className="container-fluid py-3">
-          {/* HEADER */}
-          <div className="services-topbar services-card d-flex justify-content-between align-items-center">
-            <div>
-              <h5 className="fw-bold text-white mb-0">Appointments</h5>
-            </div>
+  {/* TOP BLUE BAR LIKE PATIENTS PAGE */}
+  <div className="services-topbar services-card d-flex justify-content-between align-items-center mb-3">
+    <h5 className="fw-bold text-white mb-0">Appointments</h5>
 
-            <div className="d-flex gap-2 appointments-header-actions">
-              <button className="btn btn-outline-primary btn-sm" onClick={openAddForm}>
-                {panelOpen && !editId ? "Close form" : "Add Appointment"}
-              </button>
-              <button
-                className={`btn btn-outline-primary btn-sm ${
-                  filtersOpen ? "active" : ""
-                }`}
-                onClick={() => setFiltersOpen((s) => !s)} > Filters
-              </button>
-              <button
-                className="btn btn-outline-primary btn-sm"
-                onClick={openImportModal} >
-                <FaDownload className="me-1" /> Import Data
-              </button>
-            </div>
-          </div>
+    <div className="d-flex gap-2 appointments-header-actions">
+      {/* white button like Add Patient */}
+      <button
+        className="btn btn-light btn-sm"
+        onClick={openAddForm}
+      >
+        {panelOpen && !editId ? "Close form" : "Add Appointment"}
+      </button>
+
+      {/* blue-outline filter button */}
+      <button
+        className={`btn btn-filter-toggle btn-sm ${
+          filtersOpen ? "active" : ""
+        }`}
+        onClick={() => setFiltersOpen((s) => !s)}
+      >
+        Filters
+      </button>
+
+      {/* blue-outline import button with icon */}
+      <button
+        className="btn btn-import btn-sm"
+        onClick={openImportModal}
+      >
+        <FaDownload className="me-1" /> Import Data
+      </button>
+    </div>
+  </div>
+
+          {/* TABS UNDER THE BLUE BAR */}
+  <div className="d-flex justify-content-between align-items-center mb-3 appointments-header">
+    <div className="btn-group btn-sm appointments-tabs">
+      <button
+        type="button"
+        className={`btn btn-outline-primary ${
+          tab === "all" ? "active" : ""
+        }`}
+        onClick={() => setTab("all")}
+      >
+        ALL
+      </button>
+      <button
+        type="button"
+        className={`btn btn-outline-primary ${
+          tab === "upcoming" ? "active" : ""
+        }`}
+        onClick={() => setTab("upcoming")}
+      >
+        UPCOMING
+      </button>
+      <button
+        type="button"
+        className={`btn btn-outline-primary ${
+          tab === "past" ? "active" : ""
+        }`}
+        onClick={() => setTab("past")}
+      >
+        PAST
+            </button>
+           </div>
+          <div />
+        </div>
 
           <div className="btn-group btn-sm appointments-tabs">
             <button

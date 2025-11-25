@@ -143,6 +143,28 @@ app.get("/patients", (req, res) => {
     .catch((err) => res.status(500).json(err));
 });
 
+// Get patient by ID
+app.get("/patients/:id", async (req, res) => {
+  try {
+    const patient = await PatientModel.findById(req.params.id);
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+    res.json(patient);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Create patient (POST)
+app.post("/patients", async (req, res) => {
+  try {
+    const newPatient = await PatientModel.create(req.body);
+    res.json({ message: "Patient added", data: newPatient });
+  } catch (err) {
+    console.error("Error creating patient:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
 // Delete Patient
 app.delete("/patients/:id", async (req, res) => {
   try {
@@ -153,7 +175,25 @@ app.delete("/patients/:id", async (req, res) => {
   }
 });
 
+// Update patient (PUT for full update)
+app.put("/patients/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await PatientModel.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    });
 
+    if (!updated) return res.status(404).json({ message: "Patient not found" });
+
+    return res.json({ success: true, patient: updated });
+  } catch (err) {
+    console.error("PUT /patients/:id error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Patch patient (for partial updates like status)
 app.patch("/patients/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -182,6 +222,62 @@ app.patch("/patients/:id", async (req, res) => {
   } catch (err) {
     console.error("PATCH /patients/:id error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Import patients from CSV
+app.post("/patients/import", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (row) => {
+        results.push({
+          firstName: row.firstName || "",
+          lastName: row.lastName || "",
+          clinic: row.clinic || "",
+          email: row.email || "",
+          phone: row.phone || "",
+          dob: row.dob || "",
+          bloodGroup: row.bloodGroup || "",
+          gender: row.gender || "",
+          address: row.address || "",
+          city: row.city || "",
+          country: row.country || "",
+          postalCode: row.postalCode || "",
+        });
+      })
+      .on("end", async () => {
+        try {
+          await PatientModel.insertMany(results);
+          fs.unlinkSync(req.file.path); // Clean up uploaded file
+          res.json({ 
+            message: "Imported patients successfully", 
+            count: results.length 
+          });
+        } catch (err) {
+          console.error("Database insertion error:", err);
+          fs.unlinkSync(req.file.path); // Clean up even on error
+          res.status(500).json({ message: "Database insertion failed", error: err.message });
+        }
+      })
+      .on("error", (err) => {
+        console.error("CSV parse error:", err);
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ message: "CSV parse error", error: err.message });
+      });
+  } catch (err) {
+    console.error("Import error:", err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 // ---------------------------------------------------------------------------------------------
@@ -298,9 +394,66 @@ app.delete("/doctor-sessions/:id", async (req, res) => {
     res.json({ message: "Doctor session deleted" });
   } catch (err) {
     console.error("Error deleting doctor session:", err);
+  }
+});
+
+// Import doctor sessions from CSV
+app.post("/doctor-sessions/import", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (row) => {
+        // Parse days from comma-separated string
+        const daysString = row.days || "";
+        const daysArray = daysString.split(",").map(d => d.trim()).filter(d => d);
+
+        results.push({
+          doctorId: row.doctorId || "",
+          doctorName: row.doctorName || "",
+          clinic: row.clinic || "",
+          days: daysArray,
+          timeSlotMinutes: parseInt(row.timeSlotMinutes) || 30,
+          morningStart: row.morningStart || "",
+          morningEnd: row.morningEnd || "",
+          eveningStart: row.eveningStart || "",
+          eveningEnd: row.eveningEnd || "",
+        });
+      })
+      .on("end", async () => {
+        try {
+          await DoctorSessionModel.insertMany(results);
+          fs.unlinkSync(req.file.path); // Clean up uploaded file
+          res.json({ 
+            message: "Imported doctor sessions successfully", 
+            count: results.length 
+          });
+        } catch (err) {
+          console.error("Database insertion error:", err);
+          fs.unlinkSync(req.file.path); // Clean up even on error
+          res.status(500).json({ message: "Database insertion failed", error: err.message });
+        }
+      })
+      .on("error", (err) => {
+        console.error("CSV parse error:", err);
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ message: "CSV parse error", error: err.message });
+      });
+  } catch (err) {
+    console.error("Import error:", err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 // ===============================
 //          APPOINTMENTS

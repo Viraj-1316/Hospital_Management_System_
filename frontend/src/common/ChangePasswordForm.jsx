@@ -83,7 +83,7 @@ const ChangePasswordForm = () => {
         return;
       }
 
-      const res = await axios.post("http://localhost:3001/auth/change-password", {
+      const res = await axios.post("http://localhost:3001/change-password", {
         email,
         oldPassword,
         newPassword,
