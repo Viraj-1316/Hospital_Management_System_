@@ -254,14 +254,11 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
           }
         );
       } else {
-        await toast.promise(
-          axios.post(`${API_BASE}/appointments`, payload),
-          {
-            loading: "Saving appointment...",
-            success: "Appointment added",
-            error: "Failed to add appointment",
-          }
-        );
+        await toast.promise(axios.post(`${API_BASE}/appointments`, payload), {
+          loading: "Saving appointment...",
+          success: "Appointment added",
+          error: "Failed to add appointment",
+        });
       }
 
       fetchAppointments();
@@ -433,65 +430,58 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
 
         <div className="container-fluid py-3">
           {/* HEADER */}
-          <div className="d-flex justify-content-between align-items-center mb-3 appointments-header">
+          <div className="services-topbar services-card d-flex justify-content-between align-items-center">
             <div>
-              <h4 className="fw-bold text-primary mb-1">Appointment</h4>
-
-              <div className="btn-group btn-sm appointments-tabs">
-                <button
-                  type="button"
-                  className={`btn btn-sm btn-outline-primary ${
-                    tab === "all" ? "active" : ""
-                  }`}
-                  onClick={() => setTab("all")}
-                >
-                  ALL
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm btn-outline-primary ${
-                    tab === "upcoming" ? "active" : ""
-                  }`}
-                  onClick={() => setTab("upcoming")}
-                >
-                  UPCOMING
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm btn-outline-primary ${
-                    tab === "past" ? "active" : ""
-                  }`}
-                  onClick={() => setTab("past")}
-                >
-                  PAST
-                </button>
-              </div>
+              <h5 className="fw-bold text-white mb-0">Appointments</h5>
             </div>
 
             <div className="d-flex gap-2 appointments-header-actions">
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={openAddForm}
-              >
+              <button className="btn btn-outline-primary btn-sm" onClick={openAddForm}>
                 {panelOpen && !editId ? "Close form" : "Add Appointment"}
               </button>
               <button
-                className={`btn btn-outline-secondary btn-sm ${
+                className={`btn btn-outline-primary btn-sm ${
                   filtersOpen ? "active" : ""
                 }`}
-                onClick={() => setFiltersOpen((s) => !s)}
-              >
-                Filters
+                onClick={() => setFiltersOpen((s) => !s)} > Filters
               </button>
               <button
-                className="btn btn-outline-secondary btn-sm"
-                onClick={openImportModal}
-              >
+                className="btn btn-outline-primary btn-sm"
+                onClick={openImportModal} >
                 <FaDownload className="me-1" /> Import Data
               </button>
             </div>
           </div>
 
+          <div className="btn-group btn-sm appointments-tabs">
+            <button
+              type="button"
+              className={`btn btn-sm btn-outline-primary ${
+                tab === "all" ? "active" : ""
+              }`}
+              onClick={() => setTab("all")}
+            >
+              ALL
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm btn-outline-primary ${
+                tab === "upcoming" ? "active" : ""
+              }`}
+              onClick={() => setTab("upcoming")}
+            >
+              UPCOMING
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm btn-outline-primary ${
+                tab === "past" ? "active" : ""
+              }`}
+              onClick={() => setTab("past")}
+            >
+              PAST
+            </button>
+          </div>
           {/* FILTER PANEL */}
           <div className={`filter-panel ${filtersOpen ? "open" : ""}`}>
             <div className="p-3">
@@ -522,7 +512,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                       <option key={c._id} value={c.name}>
                         {c.name}
                       </option>
-                    ))}
+                    ))} 
                   </select>
                 </div>
 
@@ -650,8 +640,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                             {form.doctor &&
                               !doctors.some(
                                 (d) =>
-                                  `${d.firstName} ${d.lastName}` ===
-                                  form.doctor
+                                  `${d.firstName} ${d.lastName}` === form.doctor
                               ) && (
                                 <option value={form.doctor}>
                                   {form.doctor}
@@ -705,9 +694,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                       </div>
 
                       <div className="col-md-12">
-                        <label className="form-label">
-                          Appointment Date *
-                        </label>
+                        <label className="form-label">Appointment Date *</label>
                         <input
                           name="date"
                           type="date"
@@ -813,9 +800,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                       )}
                     </div>
 
-                    <label className="form-label">
-                      Service Detail (Price)
-                    </label>
+                    <label className="form-label">Service Detail (Price)</label>
                     <input
                       name="servicesDetail"
                       className="form-control mb-3"
@@ -969,9 +954,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                             <select
                               className="form-select"
                               value={importType}
-                              onChange={(e) =>
-                                setImportType(e.target.value)
-                              }
+                              onChange={(e) => setImportType(e.target.value)}
                             >
                               <option value="csv">CSV</option>
                             </select>
