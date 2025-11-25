@@ -496,36 +496,6 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
            </div>
           <div />
         </div>
-
-          <div className="btn-group btn-sm appointments-tabs">
-            <button
-              type="button"
-              className={`btn btn-sm btn-outline-primary ${
-                tab === "all" ? "active" : ""
-              }`}
-              onClick={() => setTab("all")}
-            >
-              ALL
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm btn-outline-primary ${
-                tab === "upcoming" ? "active" : ""
-              }`}
-              onClick={() => setTab("upcoming")}
-            >
-              UPCOMING
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm btn-outline-primary ${
-                tab === "past" ? "active" : ""
-              }`}
-              onClick={() => setTab("past")}
-            >
-              PAST
-            </button>
-          </div>
           {/* FILTER PANEL */}
           <div className={`filter-panel ${filtersOpen ? "open" : ""}`}>
             <div className="p-3">
