@@ -12,7 +12,19 @@ const csv = require("csvtojson");
 // ------------------------------------------------------------
 exports.addReceptionist = async (req, res) => {
   try {
-    const { name, email, mobile, address, clinicIds, status } = req.body;
+    const {
+      name,
+      email,
+      mobile,
+      address,
+      clinicIds,
+      status,
+      dob,
+      gender,
+      country,
+      city,
+      postalCode,
+    } = req.body;
 
     // Check duplicate email
     const existing = await Receptionist.findOne({ email });
@@ -33,6 +45,11 @@ exports.addReceptionist = async (req, res) => {
       status,
       password: hashedPassword,
       passwordPlain: plainPassword, // 🔑 store plain for resend
+      dob,
+      gender,
+      country,
+      city,
+      postalCode,
     });
 
     await newRecp.save();
@@ -101,6 +118,7 @@ exports.updateReceptionist = async (req, res) => {
       "addressLine1",
       "addressLine2",
       "city",
+      "country",
       "postalCode",
     ];
 
@@ -220,6 +238,11 @@ exports.importReceptionists = async (req, res) => {
         status: row.status?.toLowerCase() === "active",
         password: hashedPassword,
         passwordPlain: plainPassword, // 🔑 store for resend
+        dob: row.dob || "",
+        gender: row.gender || "",
+        country: row.country || "",
+        city: row.city || "",
+        postalCode: row.postalCode || "",
       });
     }
 

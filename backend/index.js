@@ -298,9 +298,66 @@ app.delete("/doctor-sessions/:id", async (req, res) => {
     res.json({ message: "Doctor session deleted" });
   } catch (err) {
     console.error("Error deleting doctor session:", err);
+  }
+});
+
+// Import doctor sessions from CSV
+app.post("/doctor-sessions/import", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (row) => {
+        // Parse days from comma-separated string
+        const daysString = row.days || "";
+        const daysArray = daysString.split(",").map(d => d.trim()).filter(d => d);
+
+        results.push({
+          doctorId: row.doctorId || "",
+          doctorName: row.doctorName || "",
+          clinic: row.clinic || "",
+          days: daysArray,
+          timeSlotMinutes: parseInt(row.timeSlotMinutes) || 30,
+          morningStart: row.morningStart || "",
+          morningEnd: row.morningEnd || "",
+          eveningStart: row.eveningStart || "",
+          eveningEnd: row.eveningEnd || "",
+        });
+      })
+      .on("end", async () => {
+        try {
+          await DoctorSessionModel.insertMany(results);
+          fs.unlinkSync(req.file.path); // Clean up uploaded file
+          res.json({ 
+            message: "Imported doctor sessions successfully", 
+            count: results.length 
+          });
+        } catch (err) {
+          console.error("Database insertion error:", err);
+          fs.unlinkSync(req.file.path); // Clean up even on error
+          res.status(500).json({ message: "Database insertion failed", error: err.message });
+        }
+      })
+      .on("error", (err) => {
+        console.error("CSV parse error:", err);
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ message: "CSV parse error", error: err.message });
+      });
+  } catch (err) {
+    console.error("Import error:", err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 // ===============================
 //          APPOINTMENTS

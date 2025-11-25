@@ -75,6 +75,10 @@ const receptionistSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    country: {
+      type: String,
+      default: "",
+    },
     postalCode: {
       type: String,
       default: "",

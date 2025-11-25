@@ -83,7 +83,10 @@ export default function AddReceptionist() {
           address: r.address || "",
           // these fields are UI-only; backend doesn't have them yet
           dob: r.dob || "",
-          gender: r.gender || "",
+          // Normalize gender to Title Case to match radio buttons
+          gender: r.gender
+            ? r.gender.charAt(0).toUpperCase() + r.gender.slice(1).toLowerCase()
+            : "",
           country: r.country || "",
           city: r.city || "",
           postalCode: r.postalCode || "",
@@ -119,8 +122,11 @@ export default function AddReceptionist() {
       address: form.address,
       clinicIds: [form.clinicId],
       status: form.status === "active",
-      // extra UI fields (dob, gender, etc) are NOT sent because backend
-      // schema/controller don't use them yet.
+      dob: form.dob,
+      gender: form.gender,
+      country: form.country,
+      city: form.city,
+      postalCode: form.postalCode,
     };
 
     const promise = isEdit

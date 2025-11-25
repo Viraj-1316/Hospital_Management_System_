@@ -54,5 +54,27 @@ function appointmentBookedTemplate({
 
 module.exports = {
   clinicAddedTemplate,      
-  appointmentBookedTemplate 
+  appointmentBookedTemplate,
+  credentialsTemplate
 };
+
+function credentialsTemplate({ name, email, password }) {
+  return `
+    <div style="font-family: Arial, sans-serif; color: #333; font-size: 14px;">
+      <h2 style="color:#2563eb;">Your OneCare Credentials 🔐</h2>
+      
+      <p>Hi ${name || "there"},</p>
+      <p>Here are your login credentials for the OneCare system:</p>
+
+      <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; display: inline-block; margin: 10px 0;">
+        <p style="margin: 4px 0;"><strong>Email:</strong> ${email}</p>
+        <p style="margin: 4px 0;"><strong>Password:</strong> ${password}</p>
+      </div>
+
+      <p>Please log in and change your password immediately.</p>
+
+      <br/>
+      <p>Regards,<br/>OneCare Team</p>
+    </div>
+  `;
+}

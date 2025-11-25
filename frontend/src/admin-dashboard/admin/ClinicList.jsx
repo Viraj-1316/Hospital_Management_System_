@@ -181,7 +181,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
 
     await toast.promise(promise, {
       loading: "Sending credentials...",
-      success: `Credentials resent to ${row.email}`,
+      success: `Credentials resent Successfully `,
       error: "Failed to resend credentials",
     });
   };
