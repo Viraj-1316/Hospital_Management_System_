@@ -3,7 +3,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 
 const BASE = "http://localhost:3001";
 
@@ -20,7 +20,7 @@ const AddBill = () => {
     amountDue: "",
     date: "",
     status: "unpaid",
-    notes: "",   // ADDED HERE
+    notes: "", // ADDED HERE
   });
 
   const [doctors, setDoctors] = useState([]);
@@ -35,6 +35,15 @@ const AddBill = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     let updatedForm = { ...form, [name]: value };
+
+    if (name === "doctorName") {
+  const selectedDoc = doctors.find((doc) => doc._id === value);
+
+  if (selectedDoc) {
+    updatedForm.clinicName = selectedDoc.clinic || "";
+  }
+}
+
 
     if (name === "totalAmount" || name === "discount") {
       const total = Number(
@@ -58,9 +67,16 @@ const AddBill = () => {
 
     try {
       setSaving(true);
+      const selectedDoc = doctors.find((doc) => doc._id === form.doctorName);
       const payload = {
         ...form,
-        services: form.services.split(","), // convert to array
+
+        // Convert doctor ID → doctor's full name
+        doctorName: selectedDoc
+          ? `${selectedDoc.firstName} ${selectedDoc.lastName}`
+          : "",
+
+        services: form.services.split(","),
       };
 
       await axios.post(`${BASE}/bills`, payload);
@@ -93,7 +109,7 @@ const AddBill = () => {
                 >
                   <option value="">-- Select Doctor --</option>
                   {doctors.map((doc) => (
-                    <option value={`${doc.firstName} ${doc.lastName}`}>
+                    <option value={doc._id} key={doc._id}>
                       {doc.firstName} {doc.lastName}
                     </option>
                   ))}
@@ -131,7 +147,7 @@ const AddBill = () => {
 
               {/* Services */}
               <div className="col-md-6 mb-3">
-                <label>Services (comma separated)</label>
+                <label className="form-label">Services (comma separated)</label>
                 <input
                   name="services"
                   className="form-control"
@@ -213,10 +229,19 @@ const AddBill = () => {
                 ></textarea>
               </div>
             </div>
+            <div className="d-flex gap-2">
+              <button className="btn btn-primary" disabled={saving}>
+                {saving ? "Saving..." : "Create Bill"}
+              </button>
 
-            <button className="btn btn-primary" disabled={saving}>
-              {saving ? "Saving..." : "Create Bill"}
-            </button>
+              <button
+                type="button"
+                className="btn btn-secondary "
+                onClick={() => navigate("/BillingRecords")}
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>

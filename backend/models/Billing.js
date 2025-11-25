@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 
 const BillingSchema = new mongoose.Schema(
   {
-    encounterId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "appointments",
-      required: false,
+    billNumber: {
+      type: Number,
+      required: true,
+      unique: true
     },
 
     doctorName: { type: String, required: true },

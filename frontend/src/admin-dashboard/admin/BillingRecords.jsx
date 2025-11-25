@@ -86,7 +86,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
 
         return true;
       })
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+      .sort((a, b) => a.billNumber - b.billNumber);
   }, [bills, searchTerm, filter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
@@ -174,8 +174,8 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                   <tbody>
                     {pageItems.length > 0 ? (
                       pageItems.map((bill, i) => (
-                        <tr key={bill._id || i}>
-                          <td>{bill._id}</td>
+                        <tr key={bill.billNumber || i}>
+                          <td>{bill.billNumber}</td>
                           <td>{bill.doctorName}</td>
                           <td>{bill.clinicName}</td>
                           <td>{bill.patientName}</td>
