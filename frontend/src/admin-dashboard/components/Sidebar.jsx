@@ -1,5 +1,6 @@
 // src/components/Sidebar.jsx
-import React from "react";
+import React, { useState } from "react";
+import { Collapse } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import logo from "../images/Logo.png";
 import { IoMdSettings } from "react-icons/io";
@@ -13,13 +14,16 @@ import {
   FaListAlt,
   FaCalendarCheck,
   FaMoneyBill,
-  FaFileInvoice
+  FaFileInvoice,
+  FaChevronDown,
+  FaChevronUp
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
 export default function Sidebar({ collapsed = false }) {
   const expandedWidth = 250;
   const collapsedWidth = 64;
+  const [isEncountersOpen, setIsEncountersOpen] = useState(false);
 
   const linkClass = ({ isActive }) =>
     "nav-link d-flex align-items-center gap-2 text-primary " + (isActive ? "active" : "");
@@ -78,10 +82,36 @@ export default function Sidebar({ collapsed = false }) {
           </li>
 
           <li className="nav-item mb-2">
-            <NavLink to="/encounters" className={linkClass}>
-              <FaCalendarCheck style={{ minWidth: 20 }} />
-              {!collapsed && <span>Encounters</span>}
-            </NavLink>
+            <div
+              className="nav-link d-flex align-items-center gap-2 text-primary"
+              style={{ cursor: "pointer", justifyContent: "space-between" }}
+              onClick={() => setIsEncountersOpen(!isEncountersOpen)}
+            >
+              <div className="d-flex align-items-center gap-2">
+                <FaCalendarCheck style={{ minWidth: 20 }} />
+                {!collapsed && <span>Encounters</span>}
+              </div>
+              {!collapsed && (isEncountersOpen ? <FaChevronUp /> : <FaChevronDown />)}
+            </div>
+
+            {!collapsed && (
+              <Collapse in={isEncountersOpen}>
+                <ul className="nav flex-column ms-3">
+                  <li className="nav-item mb-2">
+                    <NavLink to="/encounter-list" className={linkClass}>
+                      <FaListAlt style={{ minWidth: 20 }} />
+                      <span>Encounter List</span>
+                    </NavLink>
+                  </li>
+                  <li className="nav-item mb-2">
+                    <NavLink to="/encounter-templates" className={linkClass}>
+                      <FaCalendarAlt style={{ minWidth: 20 }} />
+                      <span>Encounter Templates</span>
+                    </NavLink>
+                  </li>
+                </ul>
+              </Collapse>
+            )}
           </li>
 
           <li className="nav-item mb-2">
