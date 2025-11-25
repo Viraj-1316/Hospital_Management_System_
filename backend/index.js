@@ -19,6 +19,7 @@ const taxRoutes = require("./routes/taxRoutes");
 const billingRoutes = require("./routes/billingRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const userRoutes = require("./routes/userRoutes");
+const encounterRoutes = require("./routes/encounterRoutes");
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/taxes", taxRoutes);
 app.use("/bills", billingRoutes);
 app.use("/dashboard-stats", dashboardRoutes);
 app.use("/", userRoutes); 
+app.use("/encounters", encounterRoutes);
 
 
 // Start the server

@@ -28,6 +28,8 @@ import ClinicList from "./admin-dashboard/admin/cliniclist";
 import AddClinic from "./admin-dashboard/admin/AddClinic";
 import AdminProfile from "./admin-dashboard/admin/AdminProfile";
 import AdminChangePassword from "./admin-dashboard/admin/AdminChangePassword";
+import EncounterList from "./admin-dashboard/admin/EncounterList";
+import EncounterTemplateList from "./admin-dashboard/admin/EncounterTemplateList";
 
 /* Patient */
 import PatientDashboard from "./patient-dashboard/Patient/PatientDashboard";
@@ -179,6 +181,12 @@ function App() {
         } />
         <Route path="/add-clinic" element={
           <AddClinic sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+        } />
+        <Route path="/encounter-list" element={
+          <EncounterList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+        } />
+        <Route path="/encounter-templates" element={
+          <EncounterTemplateList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
 
         {/* Doctor Section */}
