@@ -1,6 +1,6 @@
 // src/pages/admin/AddDoctor.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FaArrowLeft, FaSave, FaPlus, FaTrash } from "react-icons/fa";
 import { toast } from "react-hot-toast";
@@ -10,9 +10,12 @@ const API_BASE = "http://localhost:3001";
 
 const AddDoctor = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const qualificationRef = useRef(null);
 
   const [showQualificationForm, setShowQualificationForm] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editDoctorId, setEditDoctorId] = useState(null);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -44,6 +47,34 @@ const AddDoctor = () => {
   const [clinicsLoading, setClinicsLoading] = useState(false);
   const [clinicsError, setClinicsError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if we're in edit mode and populate form
+  useEffect(() => {
+    if (location.state?.editDoctor) {
+      const doctor = location.state.editDoctor;
+      setIsEditMode(true);
+      setEditDoctorId(doctor._id);
+      setFormData({
+        firstName: doctor.firstName || "",
+        lastName: doctor.lastName || "",
+        email: doctor.email || "",
+        clinic: doctor.clinic || "",
+        phone: doctor.phone || "",
+        dob: doctor.dob || "",
+        specialization: doctor.specialization || "",
+        experience: doctor.experience || "",
+        gender: doctor.gender || "",
+        status: doctor.status || "Active",
+        address: doctor.address || "",
+        city: doctor.city || "",
+        country: doctor.country || "",
+        postalCode: doctor.postalCode || "",
+      });
+      if (doctor.qualifications && Array.isArray(doctor.qualifications)) {
+        setQualifications(doctor.qualifications);
+      }
+    }
+  }, [location.state]);
 
   // load clinics from backend: GET /api/clinics -> { success, clinics }
   useEffect(() => {
@@ -126,20 +157,40 @@ const AddDoctor = () => {
     try {
       const doctorData = { ...formData, qualifications };
 
-      const res = await fetch(`${API_BASE}/doctors`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(doctorData),
-      });
+      if (isEditMode && editDoctorId) {
+        // Update existing doctor
+        const res = await fetch(`${API_BASE}/doctors/${editDoctorId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(doctorData),
+        });
 
-      const data = await res.json();
-      console.log("✅ Doctor added:", data);
+        const data = await res.json();
+        console.log("✅ Doctor updated:", data);
 
-      if (res.ok) {
-        toast.success("Doctor added successfully!");
-        navigate("/doctors");
+        if (res.ok) {
+          toast.success("Doctor updated successfully!");
+          navigate("/doctors");
+        } else {
+          toast.error(data.message || "Something went wrong!");
+        }
       } else {
-        toast.error(data.message || "Something went wrong!");
+        // Create new doctor
+        const res = await fetch(`${API_BASE}/doctors`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(doctorData),
+        });
+
+        const data = await res.json();
+        console.log("✅ Doctor added:", data);
+
+        if (res.ok) {
+          toast.success("Doctor added successfully!");
+          navigate("/doctors");
+        } else {
+          toast.error(data.message || "Something went wrong!");
+        }
       }
     } catch (err) {
       console.error("❌ Error saving doctor:", err);
@@ -154,7 +205,9 @@ const AddDoctor = () => {
       <div className="container bg-white p-4 rounded shadow-sm">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4 className="fw-bold text-primary mb-0">Add Doctor</h4>
+          <h4 className="fw-bold text-primary mb-0">
+            {isEditMode ? "Edit Doctor" : "Add Doctor"}
+          </h4>
           <button
             className="btn btn-outline-primary d-flex align-items-center gap-2"
             onClick={() => navigate("/doctors")}
@@ -513,7 +566,11 @@ const AddDoctor = () => {
               className="btn btn-primary d-flex align-items-center gap-2"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : <><FaSave /> Save</>}
+              {isSubmitting ? (isEditMode ? "Updating..." : "Saving...") : (
+                <>
+                  <FaSave /> {isEditMode ? "Update Doctor" : "Save Doctor"}
+                </>
+              )}
             </button>
           </div>
         </form>
