@@ -60,7 +60,7 @@ export default function PatientSidebar({ isOpen = true }) {
             <h4 className="m-0 fw-bold text-primary ms-2">One Care</h4>
           )}
         </div>
-
+        
         {/* MENU */}
         <ul className="nav nav-pills flex-column">
           <li className="nav-item mb-2">
