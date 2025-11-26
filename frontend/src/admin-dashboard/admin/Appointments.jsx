@@ -437,7 +437,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
     <div className="d-flex gap-2 appointments-header-actions">
       {/* white button like Add Patient */}
       <button
-        className="btn btn-light btn-sm"
+        className="btn btn-light-toggle btn-sm"
         onClick={openAddForm}
       >
         {panelOpen && !editId ? "Close form" : "Add Appointment"}

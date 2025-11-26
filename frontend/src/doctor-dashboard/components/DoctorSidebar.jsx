@@ -13,13 +13,15 @@ import {
 import { NavLink } from "react-router-dom";
 import "../styles/DoctorSidebar.css";
 
-const DoctorSidebar = ({ open = true }) => {
+export default function DoctorSidebar({ open = true }) {
+  const expandedWidth = 250;
+  const collapsedWidth = 64;
+
   const [encountersOpen, setEncountersOpen] = useState(false);
 
   const linkClass = ({ isActive }) =>
-    isActive
-      ? "nav-link active d-flex align-items-center gap-2"
-      : "nav-link text-primary d-flex align-items-center gap-2";
+    "nav-link d-flex align-items-center gap-2 text-primary " +
+    (isActive ? "active" : "");
 
   return (
     <div
@@ -99,4 +101,62 @@ const DoctorSidebar = ({ open = true }) => {
   );
 };
 
-export default DoctorSidebar;
+            {/* Submenu ONLY visible when expanded */}
+            {open && encountersOpen && (
+              <ul className="nav flex-column ms-3">
+                <li className="nav-item mb-2">
+                  <NavLink to="/doctor/encounters/list" className={linkClass}>
+                    <FaListAlt style={{ minWidth: 20 }} />
+                    <span>Encounter List</span>
+                  </NavLink>
+                </li>
+              </ul>
+            )}
+          </li>
+
+          <li className="nav-item mb-2">
+            <NavLink to="/doctor/patients" className={linkClass}>
+              <FaUserInjured style={{ minWidth: 20 }} />
+              {open && <span>Patients</span>}
+            </NavLink>
+          </li>
+
+          <li className="nav-item mb-2">
+            <NavLink to="/doctor/services" className={linkClass}>
+              <FaListAlt style={{ minWidth: 20 }} />
+              {open && <span>Services</span>}
+            </NavLink>
+          </li>
+
+          <li className="nav-item mb-2">
+            <NavLink to="/doctor/billing" className={linkClass}>
+              <FaFileInvoice style={{ minWidth: 20 }} />
+              {open && <span>Billing Records</span>}
+            </NavLink>
+          </li>
+
+          {/* SETTINGS AT BOTTOM */}
+          <li className="nav-item mb-2 mt-auto">
+            <NavLink to="/doctor/settings" className={linkClass}>
+              <IoMdSettings style={{ minWidth: 20 }} />
+              {open && <span>Settings</span>}
+            </NavLink>
+          </li>
+        </ul>
+
+        {/* FOOTER */}
+        <div
+          style={{
+            marginTop: "auto",
+            padding: 12,
+            fontSize: 12,
+            color: "#6c757d",
+            textAlign: open ? "left" : "center"
+          }}
+        >
+          {open ? "© One Care" : "©"}
+        </div>
+      </div>
+    </>
+  );
+}
