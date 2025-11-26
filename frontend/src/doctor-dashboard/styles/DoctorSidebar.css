@@ -12,27 +12,19 @@
   padding-right: 8px !important;
 }
 
-/* brand */
-.doctor-sidebar .doctor-brand {
-  padding-left: 2px;
-}
-
-.doctor-sidebar .doctor-brand img {
-  display: block;
-}
-
 /* nav links */
 .doctor-sidebar .nav-link {
   color: #1560ff !important;
   font-weight: 500;
   border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
 }
 
 .doctor-sidebar .nav-link.active {
   background: #1560ff !important;
   color: #fff !important;
-  box-shadow: 0 3px 10px rgba(21,96,255,0.12);
+  box-shadow: 0 3px 10px rgba(21, 96, 255, 0.12);
 }
 
 /* center icons when closed */
@@ -75,7 +67,7 @@
 }
 
 .encounter-submenu .sub-link.active {
-  background: rgba(21,96,255,0.12);
+  background: rgba(21, 96, 255, 0.12);
   color: #1560ff;
 }
 

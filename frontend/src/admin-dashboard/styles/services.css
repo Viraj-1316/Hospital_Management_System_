@@ -129,3 +129,13 @@
 .dp-item button { text-align:left; padding:6px 8px; border-radius:4px; background:transparent; border:0; }
 .dp-item button:hover { background:#f1f5f9; }
 .dp-item.active button { background:#e7f0ff; color:#0b5ed7; font-weight:600; }
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
