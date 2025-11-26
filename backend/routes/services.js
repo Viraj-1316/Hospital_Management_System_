@@ -1,12 +1,13 @@
 // backend/routes/services.js
 const express = require("express");
 const router = express.Router();
-const Service = require("../models/Service"); 
+const Service = require("../models/Service");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const csv = require("csv-parser"); // <--- IMPORT CSV-PARSER
 
-// --- 1. CONFIGURATION FOR IMAGE UPLOAD ---
+// --- 1. CONFIGURATION FOR IMAGE/FILE UPLOAD ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, "../uploads");
@@ -23,24 +24,37 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// --- DEFINING CSV HEADERS FOR VALIDATION ---
+// These must match the columns in your CSV file
+const REQUIRED_HEADERS = [
+  "category",
+  "name",
+  "charges",
+  "isTelemed",
+  "clinicName",
+  "doctor",
+  "duration",
+  "active", // or 'status', depending on your CSV header name
+  "allowMulti"
+];
+
 // --- 2. ROUTES ---
 
-// GET /services (Updated for Granular Filtering)
+// GET /services (Existing Code)
 router.get("/", async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      sort = "createdAt", 
-      order = "desc", 
-      q = "", 
-      // Extract specific filters
+    const {
+      page = 1,
+      limit = 10,
+      sort = "createdAt",
+      order = "desc",
+      q = "",
       serviceId, name, clinicName, doctor, charges, duration, category, status
     } = req.query;
 
     const filter = {};
 
-    // 1. Global Search (if user uses the top search bar)
+    // 1. Global Search
     if (q) {
       filter.$or = [
         { name: new RegExp(q, "i") },
@@ -50,16 +64,15 @@ router.get("/", async (req, res) => {
       ];
     }
 
-    // 2. Specific Column Filters (AND logic)
+    // 2. Specific Filters
     if (serviceId) filter.serviceId = new RegExp(serviceId, "i");
     if (name) filter.name = new RegExp(name, "i");
     if (clinicName) filter.clinicName = new RegExp(clinicName, "i");
     if (doctor) filter.doctor = new RegExp(doctor, "i");
     if (charges) filter.charges = new RegExp(charges, "i");
     if (duration) filter.duration = new RegExp(duration, "i");
-    if (category && category !== "Filter Name") filter.category = new RegExp(category, "i"); // Dropdown handling
-    
-    // Status Filter
+    if (category && category !== "Filter Name") filter.category = new RegExp(category, "i");
+
     if (status && status !== "Filter status") {
       if (status.toLowerCase() === "active") filter.active = true;
       if (status.toLowerCase() === "inactive") filter.active = false;
@@ -77,12 +90,86 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /services (Create)
+// --- NEW ROUTE: POST /services/import (CSV Import) ---
+router.post("/import", upload.single("file"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  const results = [];
+  const errors = [];
+  let headersValidated = false;
+
+  // Read the uploaded file
+  fs.createReadStream(req.file.path)
+    .pipe(csv())
+    .on("headers", (headers) => {
+      // Clean headers (remove BOM, trim whitespace)
+      const fileHeaders = headers.map((h) => h.trim().replace(/^"|"$/g, ""));
+      
+      // Check if required headers exist
+      const missingHeaders = REQUIRED_HEADERS.filter(
+        (reqHeader) => !fileHeaders.includes(reqHeader)
+      );
+
+      if (missingHeaders.length > 0) {
+        errors.push(`Invalid CSV. Missing columns: ${missingHeaders.join(", ")}`);
+      } else {
+        headersValidated = true;
+      }
+    })
+    .on("data", (data) => {
+      if (headersValidated) {
+        // Map CSV string data to Mongoose Schema types
+        results.push({
+          serviceId: data.serviceId || "", // Optional in CSV
+          name: data.name,
+          category: data.category,
+          clinicName: data.clinicName,
+          doctor: data.doctor,
+          charges: data.charges,
+          duration: data.duration,
+          // Convert "ACTIVE" or "Yes" to Boolean true
+          active: (data.active === "ACTIVE" || data.active === "true" || data.active === "Yes"),
+          isTelemed: (data.isTelemed === "Yes" || data.isTelemed === "true"),
+          allowMulti: (data.allowMulti === "Yes" || data.allowMulti === "true"),
+          imageUrl: "" // CSV usually doesn't carry images, set default
+        });
+      }
+    })
+    .on("end", async () => {
+      // Clean up the temp file
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+      if (errors.length > 0) {
+        return res.status(400).json({ message: errors[0] });
+      }
+
+      if (results.length === 0) {
+        return res.status(400).json({ message: "File is empty or contains no data." });
+      }
+
+      try {
+        // Bulk Insert into MongoDB
+        await Service.insertMany(results);
+        res.status(200).json({ message: `Successfully imported ${results.length} services.` });
+      } catch (err) {
+        console.error("Import Error:", err);
+        res.status(500).json({ message: "Database error during import.", error: err.message });
+      }
+    })
+    .on("error", (err) => {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(500).json({ message: "Error parsing CSV file.", error: err.message });
+    });
+});
+
+// POST /services (Create - Existing Code)
 router.post("/", upload.single("image"), async (req, res) => {
   try {
     const payload = {
       ...req.body,
-      active: req.body.active === "true", 
+      active: req.body.active === "true",
       isTelemed: req.body.isTelemed === "true",
       allowMulti: req.body.allowMulti === "true",
     };
@@ -100,10 +187,11 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-// PUT /services/:id (Update)
+// PUT /services/:id (Update - Existing Code)
 router.put("/:id", upload.single("image"), async (req, res) => {
   try {
     const payload = { ...req.body };
+    // Handle Boolean conversions if sending as FormData strings
     if (payload.active !== undefined) payload.active = payload.active === "true";
     if (payload.isTelemed !== undefined) payload.isTelemed = payload.isTelemed === "true";
     if (payload.allowMulti !== undefined) payload.allowMulti = payload.allowMulti === "true";
@@ -122,6 +210,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
   }
 });
 
+// DELETE /services/:id (Existing Code)
 router.delete("/:id", async (req, res) => {
   try {
     await Service.findByIdAndDelete(req.params.id);

@@ -407,6 +407,115 @@ app.post("/doctor-sessions/import", upload.single("file"), async (req, res) => {
   }
 });
 
+// ===============================
+//   DYNAMIC SLOT GENERATION LOGIC (FIXED)
+// ===============================
+
+// Helper: Convert "10:00 am" string to a Date object
+const parseTime = (timeStr, dateStr) => {
+  if (!timeStr) return null;
+  const d = new Date(dateStr);
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':');
+  if (hours === '12') hours = '00';
+  if (modifier && modifier.toLowerCase() === 'pm') hours = parseInt(hours, 10) + 12;
+  d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+  return d;
+};
+
+// Helper: Convert Date object back to "10:00 am" string
+const formatTime = (date) => {
+  return date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', minute: '2-digit', hour12: true 
+  }).toLowerCase();
+};
+
+// API: Get Real-Time Slots
+app.get("/doctor-sessions/available-slots", async (req, res) => {
+  try {
+    const { doctorId, date } = req.query; 
+    console.log(`\n🔍 Checking Slots for Doctor: ${doctorId} on Date: ${date}`);
+
+    if (!doctorId || !date) {
+      return res.status(400).json({ message: "Missing parameters" });
+    }
+
+    // 1. Fetch Session
+    const session = await DoctorSessionModel.findOne({ doctorId });
+    if (!session) {
+      console.log("❌ No session found for this doctor ID.");
+      return res.json([]); 
+    }
+
+    // 2. Robust Day Checking
+    // Parse date safely to avoid timezone shifting to previous day
+    // We append T00:00:00 to force local time parsing if just YYYY-MM-DD is sent
+    const inputDate = new Date(date.includes("T") ? date : date + "T00:00:00"); 
+    
+    const daysMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayIndex = inputDate.getDay();
+    const longDay = daysMap[dayIndex];       // e.g., "Tuesday"
+    const shortDay = longDay.substring(0, 3); // e.g., "Tue"
+
+    console.log(`📅 Date Calculation: ${date} is a ${longDay} (${shortDay})`);
+    console.log(`👨‍⚕️ Doctor works on:`, session.days);
+
+    // Check if doctor works today (Matches "Tuesday" OR "Tue")
+    const isWorkingDay = session.days.some(d => {
+      const cleanDay = d.trim();
+      return cleanDay.toLowerCase() === longDay.toLowerCase() || 
+             cleanDay.toLowerCase() === shortDay.toLowerCase();
+    });
+
+    if (!isWorkingDay) {
+      console.log("❌ Doctor does not work on this day.");
+      return res.json([]);
+    }
+
+    // 3. Generate Slots
+    const allSlots = [];
+    const interval = parseInt(session.timeSlotMinutes) || 30;
+
+    const ranges = [
+      { start: session.morningStart, end: session.morningEnd },
+      { start: session.eveningStart, end: session.eveningEnd }
+    ];
+
+    ranges.forEach(range => {
+      if (range.start && range.end && range.start !== "-" && range.end !== "-") {
+        let current = parseTime(range.start, date);
+        let endTime = parseTime(range.end, date);
+
+        // Handle crossing midnight or bad parsing
+        if (current && endTime && current < endTime) {
+           while (current < endTime) {
+            allSlots.push(formatTime(current));
+            current.setMinutes(current.getMinutes() + interval);
+          }
+        }
+      }
+    });
+
+    console.log(`✅ Generated ${allSlots.length} potential slots.`);
+
+    // 4. Filter Booked Slots
+    const bookedApps = await AppointmentModel.find({
+      doctorId,
+      date: date, 
+      status: { $ne: "cancelled" }
+    }).select("time");
+
+    const bookedTimes = bookedApps.map(a => a.time);
+    const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
+
+    console.log(`🎉 Returning ${availableSlots.length} available slots.`);
+    res.json(availableSlots);
+
+  } catch (err) {
+    console.error("🔥 Slot Error:", err);
+    res.status(500).json({ message: "Error generating slots" });
+  }
+});
 
 // ===============================
 //       APPOINTMENTS

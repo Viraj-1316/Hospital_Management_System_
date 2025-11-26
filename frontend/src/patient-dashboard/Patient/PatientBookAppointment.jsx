@@ -1,30 +1,16 @@
-// src/patient/PatientBookAppointment.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import PatientLayout from "../layouts/PatientLayout";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const API_BASE = "http://localhost:3001";
-
-// fallback services (if /services API is not ready)
-const FALLBACK_SERVICES = [
-  { id: "telemed", name: "Telemed", price: 100 },
-  { id: "checkup", name: "Checkup", price: 100 },
-];
-
-// static time slots
-const DEFAULT_SLOTS = [
-  "11:30 am", "12:00 pm", "12:30 pm", "1:00 pm", "1:30 pm",
-  "2:00 pm", "2:30 pm", "3:00 pm", "3:30 pm", "4:30 pm", "5:00 pm",
-  "5:30 pm", "6:00 pm", "6:30 pm", "7:00 pm", "7:30 pm", "8:00 pm",
-  "8:30 pm", "9:00 pm", "9:30 pm", "10:00 pm", "10:30 pm", "11:00 pm",
-];
+// Use 127.0.0.1 to prevent connection refused errors
+const API_BASE = "http://127.0.0.1:3001";
 
 export default function PatientBookAppointment() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Read patient from localStorage (try "patient" first, fallback to "authUser")
+  // --- Auth & Patient Logic ---
   const storedPatient = (() => {
     try {
       const p = localStorage.getItem("patient");
@@ -32,154 +18,169 @@ export default function PatientBookAppointment() {
       const a = localStorage.getItem("authUser");
       if (a) return JSON.parse(a);
       return null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   })();
 
-  // Pre-fill patient name from storage (if available)
-  const patientName =
-    storedPatient?.name ||
-    (storedPatient?.firstName ? `${storedPatient.firstName} ${storedPatient.lastName || ""}`.trim() : "") ||
-    "Patient";
-
-  // get preselected date from query (?date=...)
+  const patientName = storedPatient?.name || (storedPatient?.firstName ? `${storedPatient.firstName} ${storedPatient.lastName || ""}`.trim() : "") || "Patient";
   const params = new URLSearchParams(location.search);
   const preselectedDate = params.get("date") || "";
 
-  const [doctors, setDoctors] = useState([]);
+  // --- State ---
   const [clinics, setClinics] = useState([]);
-  const [services, setServices] = useState(FALLBACK_SERVICES);
+  const [allDoctors, setAllDoctors] = useState([]);
+  const [availableDoctors, setAvailableDoctors] = useState([]);
 
-  const [loadingDoctors, setLoadingDoctors] = useState(true);
-  const [loadingServices, setLoadingServices] = useState(true);
+  const [allServices, setAllServices] = useState([]);
+  const [availableServices, setAvailableServices] = useState([]);
 
-  const [selectedServices, setSelectedServices] = useState([]); // ids
+  const [selectedServices, setSelectedServices] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState("");
+
+  const [dynamicSlots, setDynamicSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  const [loadingData, setLoadingData] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     clinic: "",
     doctor: "",
+    doctorLabel: "",
     date: preselectedDate,
     patient: patientName,
     status: "booked",
-    servicesDetail: "",
   });
 
-  const [submitting, setSubmitting] = useState(false);
-
-  // --- 0) If storedPatient is missing but authUser exists, try to fetch patient doc and save it to localStorage
-  useEffect(() => {
-    let mounted = true;
-    // If we already have a patient object, nothing to do
-    const localP = localStorage.getItem("patient");
-    if (localP) return;
-
-    // Try to read authUser and fetch patient doc by userId
-    try {
-      const authRaw = localStorage.getItem("authUser");
-      const auth = authRaw ? JSON.parse(authRaw) : null;
-      const userId = auth?.id || auth?._id || null;
-      if (!userId) return;
-
-      axios.get(`${API_BASE}/patients/by-user/${userId}`)
-        .then(res => {
-          if (!mounted) return;
-          const p = res.data;
-
-          // Normalize patient object and save in localStorage
-          const patientObj = {
-            id: p._id || p.id || userId,
-            _id: p._id || p.id || userId,
-            userId: p.userId || userId,
-            firstName: p.firstName || "",
-            lastName: p.lastName || "",
-            name: (p.firstName || p.lastName) ? `${p.firstName || ""} ${p.lastName || ""}`.trim() : (p.name || auth.name || ""),
-            email: p.email || auth.email || "",
-            phone: p.phone || "",
-            clinic: p.clinic || "",
-            dob: p.dob || "",
-            address: p.address || "",
-          };
-
-          localStorage.setItem("patient", JSON.stringify(patientObj));
-
-          // update form.patient (force a re-render)
-          setForm(prev => ({ ...prev, patient: patientObj.name || prev.patient }));
-        })
-        .catch(err => {
-          // It's okay if no patient exists yet; profile setup will create it
-          console.warn("No patient doc found for authUser or fetch failed:", err?.response?.status || err?.message);
-        });
-    } catch (err) {
-      // ignore
-    }
-
-    return () => { mounted = false; };
-  }, []); // run once on mount
-
-  // Fetch doctors and services
+  // --- 1. Fetch Initial Data ---
   useEffect(() => {
     let mounted = true;
 
-    const fetchDoctors = async () => {
+    const loadData = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/doctors`);
-        if (!mounted) return;
-        const docs = Array.isArray(res.data) ? res.data : [];
-        setDoctors(docs);
-        const clinicNames = Array.from(new Set(docs.map((d) => d.clinic).filter(Boolean)));
-        setClinics(clinicNames);
-      } catch (err) {
-        console.error("Error loading doctors:", err);
+        setLoadingData(true);
+        console.log("🚀 Fetching booking data...");
+
+        // A. Fetch Clinics
+        const clinicRes = await axios.get(`${API_BASE}/api/clinics`);
+        const clinicData = Array.isArray(clinicRes.data)
+          ? clinicRes.data
+          : (clinicRes.data?.data || clinicRes.data?.clinics || []);
+
+        // B. Fetch Doctors
+        const docRes = await axios.get(`${API_BASE}/doctors`);
+        const docData = Array.isArray(docRes.data)
+          ? docRes.data
+          : (docRes.data?.data || docRes.data?.doctors || []);
+
+        // C. Fetch Services
+        const servRes = await axios.get(`${API_BASE}/services`);
+        const servData = Array.isArray(servRes.data)
+          ? servRes.data
+          : (servRes.data?.data || servRes.data?.services || servRes.data?.rows || []);
+
         if (mounted) {
-          setDoctors([]);
-          setClinics([]);
-        }
-      } finally {
-        if (mounted) setLoadingDoctors(false);
-      }
-    };
+          setClinics(clinicData);
+          setAllDoctors(docData);
 
-    const fetchServices = async () => {
-      try {
-        const res = await axios.get(`${API_BASE}/services`);
-        const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        if (!mounted) return;
-        if (data.length) {
-          const mapped = data.map((s) => ({
-            id: s._id || s.id || s.name,
-            name: s.name || s.serviceName || "Service",
-            price: s.price || s.amount || s.fee || 0,
+          // --- UPDATED MAPPING LOGIC ---
+          setAllServices(servData.map(s => {
+            // Log specific item if name is missing to help debug
+            if (!s.name) console.warn("Service missing name:", s);
+
+            return {
+              id: s._id || s.id,
+              // Fallback chain: Try 'name', then 'serviceName', then 'serviceId', then 'Unknown'
+              name: s.name || s.serviceName || s.serviceId,
+              price: s.charges || s.price || 0,
+              doctorName: s.doctor || ""
+            };
           }));
-          setServices(mapped);
         }
       } catch (err) {
-        console.warn("Using fallback services, /services not available.");
-        setServices(FALLBACK_SERVICES);
+        console.error("❌ Error loading data:", err);
       } finally {
-        if (mounted) setLoadingServices(false);
+        if (mounted) setLoadingData(false);
       }
     };
 
-    fetchDoctors();
-    fetchServices();
-
+    loadData();
     return () => { mounted = false; };
   }, []);
 
-  // filter doctors by selected clinic
-  const filteredDoctors = form.clinic ? doctors.filter((d) => d.clinic === form.clinic) : doctors;
+  // --- 2. Filter Doctors when Clinic Changes ---
+  useEffect(() => {
+    if (form.clinic) {
+      const filtered = allDoctors.filter(d =>
+        (d.clinic || "").toLowerCase() === form.clinic.toLowerCase()
+      );
+      setAvailableDoctors(filtered);
+    } else {
+      setAvailableDoctors([]);
+    }
+  }, [form.clinic, allDoctors]);
 
+  // --- 3. Handle Slots & Services when Doctor/Date Changes ---
+  useEffect(() => {
+
+    if (form.doctor) {
+      const docObj = allDoctors.find(d => (d._id || d.id) === form.doctor);
+      const docName = docObj ? `${docObj.firstName} ${docObj.lastName}` : "";
+
+      // Filter services: Doctor match OR Generic services
+      const filteredServices = allServices.filter(s => {
+        if (!s.doctorName) return true;
+        const sDoc = s.doctorName.toLowerCase();
+        const dName = docName.toLowerCase();
+        return sDoc.includes(dName) || dName.includes(sDoc);
+      });
+
+      setAvailableServices(filteredServices);
+      setSelectedServices([]);
+    } else {
+      setAvailableServices([]);
+    }
+
+    // B. FETCH SLOTS LOGIC
+    const fetchSlots = async () => {
+      if (form.doctor && form.date) {
+        setLoadingSlots(true);
+        setSelectedSlot("");
+        try {
+          const res = await axios.get(`${API_BASE}/doctor-sessions/available-slots`, {
+            params: { doctorId: form.doctor, date: form.date }
+          });
+          setDynamicSlots(res.data || []);
+        } catch (err) {
+          console.error("Error fetching slots:", err);
+          setDynamicSlots([]);
+        } finally {
+          setLoadingSlots(false);
+        }
+      } else {
+        setDynamicSlots([]);
+      }
+    };
+
+    fetchSlots();
+
+  }, [form.doctor, form.date, allDoctors, allServices]);
+
+  // --- Handlers ---
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    if (name === "clinic") {
+      setForm(prev => ({ ...prev, clinic: value, doctor: "", doctorLabel: "" }));
+    } else if (name === "doctor") {
+      const docObj = allDoctors.find(d => (d._id || d.id) === value);
+      const label = docObj ? `${docObj.firstName} ${docObj.lastName}` : "";
+      setForm(prev => ({ ...prev, doctor: value, doctorLabel: label }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const toggleService = (id) => {
-    setSelectedServices((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
+    setSelectedServices(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
   };
 
   const handleSlotClick = (slot) => {
@@ -187,109 +188,53 @@ export default function PatientBookAppointment() {
   };
 
   const selectedServiceDetails = selectedServices
-    .map((id) => services.find((s) => s.id === id))
+    .map(id => allServices.find(s => s.id === id))
     .filter(Boolean);
 
-  const totalAmount = selectedServiceDetails.reduce((sum, s) => sum + (s.price || 0), 0);
-
-  // Helper: find doctor object matching current selection label
-  const findDoctorByLabel = (label) => {
-    if (!label) return null;
-    return doctors.find((d) => {
-      const docLabel = d.firstName
-        ? `${d.firstName} ${d.lastName || ""} ${d.specialization ? `(${d.specialization})` : ""}`.trim()
-        : d.name || d.email || "";
-      return docLabel === label;
-    }) || null;
-  };
+  const totalAmount = selectedServiceDetails.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!form.clinic || !form.doctor || !form.date) {
-      alert("Please fill all required fields (*)");
-      return;
-    }
-    if (!selectedSlot) {
-      alert("Please select an available time slot.");
-      return;
-    }
-    if (selectedServices.length === 0) {
-      alert("Please select at least one service.");
+    if (!form.clinic || !form.doctor || !form.date || !selectedSlot || selectedServices.length === 0) {
+      alert("Please complete all required fields (*).");
       return;
     }
 
     setSubmitting(true);
-
     try {
-      // prepare service text
       const servicesNames = selectedServiceDetails.map((s) => s.name).join(", ");
-      const servicesDetailText = selectedServiceDetails.map((s) => `${s.name} - $${s.price || 0}/-`).join(" | ");
+      const servicesDetailText = selectedServiceDetails.map((s) => `${s.name} - ₹${s.price}`).join(" | ");
 
-      // resolve doctor object & id
-      const selectedDoctorObj = findDoctorByLabel(form.doctor);
-      const doctorId = selectedDoctorObj ? (selectedDoctorObj._id || selectedDoctorObj.id) : null;
-      const doctorName = form.doctor;
-
-      // resolve patient info from localStorage (try patient, then authUser)
       let stored = null;
-      try { stored = JSON.parse(localStorage.getItem("patient") || "null"); } catch { stored = null; }
-      if (!stored) {
-        try { stored = JSON.parse(localStorage.getItem("authUser") || "null"); } catch { stored = null; }
-      }
+      try { stored = JSON.parse(localStorage.getItem("patient") || localStorage.getItem("authUser")); } catch { }
 
-      const patientId = stored ? (stored.id || stored._id || null) : null;
-      const patientEmail = stored ? (stored.email || "") : "";
-      const patientPhone = stored ? (stored.phone || "") : "";
-
-      // Build payload and include patient contact & id
       const payload = {
-        patientId: patientId,
-        patientName: form.patient || (stored?.name || "Patient"),
-        patientEmail: patientEmail,
-        patientPhone: patientPhone,
-
-        doctorId: doctorId,
-        doctorName: doctorName,
-
+        patientId: stored?.id || stored?._id || null,
+        patientName: form.patient,
+        patientEmail: stored?.email || "",
+        patientPhone: stored?.phone || "",
+        doctorId: form.doctor,
+        doctorName: form.doctorLabel,
         clinic: form.clinic,
         date: form.date,
         time: selectedSlot,
         services: servicesNames,
-        status: form.status,
+        status: "booked",
         servicesDetail: servicesDetailText,
         charges: totalAmount,
         paymentMode: "Manual",
         createdAt: new Date(),
       };
 
-      // POST to backend
-      const res = await axios.post(`${API_BASE}/appointments`, payload);
-
-      if (res.status === 201 || (res.data && (res.data._id || res.data.id || res.data.data))) {
-        alert("Appointment booked successfully!");
-        navigate("/patient/appointments");
-      } else if (res.data) {
-        // fallback
-        alert("Appointment booked successfully!");
-        navigate("/patient/appointments");
-      } else {
-        alert("Unexpected response from server.");
-      }
+      await axios.post(`${API_BASE}/appointments`, payload);
+      alert("Appointment booked successfully!");
+      navigate("/patient/appointments");
     } catch (err) {
-      console.error("Error creating appointment:", err);
-      alert("Failed to book appointment. Please try again.");
+      console.error(err);
+      alert("Failed to book appointment.");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  // Helper to format date safely
-  const formatDate = (d) => {
-    if (!d) return "N/A";
-    const parsed = new Date(d);
-    if (isNaN(parsed.getTime())) return d;
-    return parsed.toLocaleDateString();
   };
 
   return (
@@ -298,174 +243,124 @@ export default function PatientBookAppointment() {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div>
             <h4 className="fw-bold text-primary mb-1">Appointment</h4>
-            <span className="badge bg-primary me-2">UPCOMING</span>
+            <span className="badge bg-primary">UPCOMING</span>
           </div>
-
-          <button
-            className="btn btn-outline-secondary btn-sm"
-            onClick={() => navigate("/patient/appointments")}
-          >
-            Close form
-          </button>
+          <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate("/patient/appointments")}>Close form</button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="row g-3">
             {/* LEFT COLUMN */}
             <div className="col-lg-6">
+
               <div className="mb-3">
-                <label className="form-label">
-                  Select Clinic <span className="text-danger">*</span>
-                </label>
-                <select
-                  name="clinic"
-                  className="form-select"
-                  value={form.clinic}
-                  onChange={(e) => {
-                    handleChange(e);
-                    // reset doctor when clinic changes
-                    setForm((prev) => ({ ...prev, doctor: "" }));
-                  }}
-                  required
-                >
+                <label className="form-label">Select Clinic <span className="text-danger">*</span></label>
+                <select name="clinic" className="form-select" value={form.clinic} onChange={handleChange} required>
                   <option value="">Select clinic</option>
-                  {loadingDoctors ? (
-                    <option>Loading clinics…</option>
-                  ) : clinics.length === 0 ? (
-                    <option>No clinics found</option>
+                  {loadingData ? <option disabled>Loading...</option> :
+                    clinics.map((c, idx) => {
+                      const cName = c.name || c.clinicName || "Clinic " + (idx + 1);
+                      return <option key={c._id || idx} value={cName}>{cName}</option>;
+                    })
+                  }
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Doctor <span className="text-danger">*</span></label>
+                <select name="doctor" className="form-select" value={form.doctor} onChange={handleChange} required disabled={!form.clinic}>
+                  <option value="">{form.clinic ? "Select doctor" : "Select clinic first"}</option>
+                  {availableDoctors.map(d => (
+                    <option key={d._id || d.id} value={d._id || d.id}>
+                      {d.firstName} {d.lastName} {d.specialization ? `(${d.specialization})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Service <span className="text-danger">*</span></label>
+                <div className="border rounded p-2 d-flex flex-wrap gap-2" style={{ minHeight: '50px', backgroundColor: '#fff' }}>
+                  {availableServices.length === 0 ? (
+                    <span className="text-muted small p-1">No services found.</span>
                   ) : (
-                    clinics.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                    availableServices.map(s => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`btn btn-sm ${selectedServices.includes(s.id) ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => toggleService(s.id)}
+                      >
+                        {s.name}
+                      </button>
                     ))
-                  )}
-                </select>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">
-                  Doctor <span className="text-danger">*</span>
-                </label>
-                <select
-                  name="doctor"
-                  className="form-select"
-                  value={form.doctor}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select doctor</option>
-                  {loadingDoctors ? (
-                    <option>Loading doctors…</option>
-                  ) : filteredDoctors.length === 0 ? (
-                    <option>No doctors found</option>
-                  ) : (
-                    filteredDoctors.map((d) => {
-                      const label = d.firstName
-                        ? `${d.firstName} ${d.lastName || ""} ${d.specialization ? `(${d.specialization})` : ""}`.trim()
-                        : d.name || d.email || "";
-                      return <option key={d._id || d.id} value={label}>{label}</option>;
-                    })
-                  )}
-                </select>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">
-                  Service <span className="text-danger">*</span>
-                </label>
-                <div className="border rounded p-2 d-flex flex-wrap gap-2">
-                  {loadingServices ? (
-                    <span className="text-muted small">Loading services…</span>
-                  ) : services.length === 0 ? (
-                    <span className="text-muted small">No services found.</span>
-                  ) : (
-                    services.map((s) => {
-                      const active = selectedServices.includes(s.id);
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className={active ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-primary"}
-                          onClick={() => toggleService(s.id)}
-                        >
-                          {s.name}
-                        </button>
-                      );
-                    })
                   )}
                 </div>
               </div>
 
               <div className="mb-3">
-                <label className="form-label">
-                  Appointment Date <span className="text-danger">*</span>
-                </label>
-                <input
-                  name="date"
-                  type="date"
-                  className="form-control"
-                  value={form.date}
-                  onChange={handleChange}
-                  required
-                />
+                <label className="form-label">Appointment Date <span className="text-danger">*</span></label>
+                <input name="date" type="date" className="form-control" value={form.date} onChange={handleChange} required />
               </div>
             </div>
 
             {/* RIGHT COLUMN */}
             <div className="col-lg-6">
               <div className="mb-3">
-                <label className="form-label">
-                  Available Slot <span className="text-danger">*</span>
-                </label>
-                <div className="border rounded p-3">
-                  <div className="text-center mb-2 fw-semibold">Session 1</div>
-                  <div className="d-flex flex-wrap gap-2">
-                    {DEFAULT_SLOTS.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        className={selectedSlot === slot ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-primary"}
-                        onClick={() => handleSlotClick(slot)}
-                      >
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">Service Detail</label>
-                <div className="border rounded p-3">
-                  {selectedServiceDetails.length === 0 ? (
-                    <div className="text-muted small">No service selected yet.</div>
+                <label className="form-label">Available Slot <span className="text-danger">*</span></label>
+                <div className="border rounded p-3 bg-white">
+                  {!form.doctor || !form.date ? (
+                    <div className="text-center text-muted small p-2">Select Doctor and Date first.</div>
+                  ) : loadingSlots ? (
+                    <div className="text-center text-muted small p-2">Loading slots...</div>
+                  ) : dynamicSlots.length === 0 ? (
+                    <div className="text-center text-danger small p-2">No slots available.</div>
                   ) : (
                     <>
-                      <ul className="small mb-2">
-                        {selectedServiceDetails.map((s) => (
-                          <li key={s.id}><strong>{s.name}</strong> – ${s.price || 0}/-</li>
+                      <div className="text-center mb-2 fw-semibold">Select a Time</div>
+                      <div className="d-flex flex-wrap gap-2 justify-content-center">
+                        {dynamicSlots.map((slot, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            className={`btn btn-sm ${selectedSlot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                            onClick={() => handleSlotClick(slot)}
+                          >
+                            {slot}
+                          </button>
                         ))}
-                      </ul>
-                      <div className="fw-semibold">Total: ₹{totalAmount || 0}</div>
+                      </div>
                     </>
                   )}
                 </div>
               </div>
 
-              <div>
+              <div className="mb-3">
+                <label className="form-label">Service Detail</label>
+                <div className="border rounded p-3 bg-light">
+                  {selectedServiceDetails.length === 0 ? (
+                    <div className="text-muted small">No service selected.</div>
+                  ) : (
+                    <>
+                      <ul className="small mb-2 ps-3">
+                        {selectedServiceDetails.map(s => <li key={s.id}>{s.name} – ₹{s.price}</li>)}
+                      </ul>
+                      <div className="fw-bold border-top pt-2 mt-2">Total: ₹{totalAmount}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-3">
                 <label className="form-label">Tax</label>
-                <div className="border rounded p-3 text-muted small">No tax found.</div>
+                <div className="border rounded p-3 text-muted small bg-light">No tax found.</div>
               </div>
             </div>
           </div>
 
-          {/* bottom actions */}
           <div className="d-flex justify-content-end gap-2 mt-3">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate("/patient/appointments")} disabled={submitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? "Saving..." : "Save"}
-            </button>
+            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate("/patient/appointments")}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? "Booking..." : "Save"}</button>
           </div>
         </form>
       </div>

@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const ServiceSchema = new mongoose.Schema(
   {
     serviceId: { type: String, default: "" }, // Changed to String as it often comes as string from forms
+    name: { type: String, required: true },
     clinicName: { type: String, default: "" },
     doctor: { type: String, default: "" },
     charges: { type: String, default: "$0/-" },
