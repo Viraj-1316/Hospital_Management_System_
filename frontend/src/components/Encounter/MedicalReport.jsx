@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { FaPlus, FaTimes, FaEdit, FaEye, FaTrash } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -7,10 +7,15 @@ import "../../admin-dashboard/styles/services.css";
 
 export default function MedicalReport({ role }) {
   const { id } = useParams();
+
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const patientId = searchParams.get("patientId");
+
   const [medicalReports, setMedicalReports] = useState([]);
   const [isReportFormOpen, setIsReportFormOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState(null);
+  const [currentEncounterId, setCurrentEncounterId] = useState(null); // Store encounter ID for the report being edited/added
   const [reportData, setReportData] = useState({
     name: "",
     date: new Date().toISOString().split('T')[0],
@@ -20,14 +25,25 @@ export default function MedicalReport({ role }) {
 
   useEffect(() => {
     fetchEncounterDetails();
-  }, [id]);
+  }, [id, patientId]);
 
   const fetchEncounterDetails = async () => {
     try {
       const res = await axios.get(`http://localhost:3001/encounters`);
-      const found = res.data.find(e => e._id === id);
-      if (found) {
-        setMedicalReports(found.medicalReports || []);
+      
+      if (id) {
+        // Single encounter mode
+        const found = res.data.find(e => e._id === id);
+        if (found) {
+          setMedicalReports(found.medicalReports || []);
+        }
+      } else if (patientId) {
+        // Patient mode: aggregate all reports
+        const patientEncounters = res.data.filter(e => e.patientId === patientId || e.patient?._id === patientId);
+        const allReports = patientEncounters.flatMap(e => 
+          (e.medicalReports || []).map(r => ({ ...r, encounterId: e._id, encounterDate: e.date }))
+        );
+        setMedicalReports(allReports);
       }
     } catch (err) {
       console.error("Error fetching encounter details:", err);
@@ -67,21 +83,32 @@ export default function MedicalReport({ role }) {
 
     try {
       let res;
+      // Use the specific encounter ID for this report, or the global ID if in single encounter mode
+      const targetEncounterId = currentEncounterId || id;
+
+      if (!targetEncounterId) {
+        toast.error("Encounter ID missing");
+        return;
+      }
+
       if (editingReportId) {
-         res = await axios.put(`http://localhost:3001/encounters/${id}/reports/${editingReportId}`, formData, {
+         res = await axios.put(`http://localhost:3001/encounters/${targetEncounterId}/reports/${editingReportId}`, formData, {
             headers: { "Content-Type": "multipart/form-data" }
          });
          toast.success("Report updated successfully");
       } else {
-         res = await axios.post(`http://localhost:3001/encounters/${id}/reports`, formData, {
+         res = await axios.post(`http://localhost:3001/encounters/${targetEncounterId}/reports`, formData, {
             headers: { "Content-Type": "multipart/form-data" }
          });
          toast.success("Report added successfully");
       }
       
-      setMedicalReports(res.data.medicalReports);
+      // Refresh data
+      fetchEncounterDetails();
+      
       setIsReportFormOpen(false);
       setEditingReportId(null);
+      setCurrentEncounterId(null);
       setReportData({ name: "", date: new Date().toISOString().split('T')[0], file: null });
     } catch (err) {
       console.error("Error saving report:", err);
@@ -96,20 +123,32 @@ export default function MedicalReport({ role }) {
         file: null 
     });
     setEditingReportId(report._id);
+    // If we are in patient mode, the report object should have encounterId (added during fetch)
+    // If in single encounter mode, use the global id
+    setCurrentEncounterId(report.encounterId || id);
     setIsReportFormOpen(true);
   };
 
   const handleCancelReport = () => {
     setIsReportFormOpen(false);
     setEditingReportId(null);
+    setCurrentEncounterId(null);
     setReportData({ name: "", date: new Date().toISOString().split('T')[0], file: null });
   };
 
-  const handleDeleteReport = async (reportId) => {
+  const handleDeleteReport = async (report) => {
     if (!window.confirm("Are you sure you want to delete this report?")) return;
+    
+    const targetEncounterId = report.encounterId || id;
+    if (!targetEncounterId) {
+        toast.error("Encounter ID missing");
+        return;
+    }
+
     try {
-      const res = await axios.delete(`http://localhost:3001/encounters/${id}/reports/${reportId}`);
-      setMedicalReports(res.data.medicalReports);
+      await axios.delete(`http://localhost:3001/encounters/${targetEncounterId}/reports/${report._id}`);
+      // Refresh data
+      fetchEncounterDetails();
       toast.success("Report deleted");
     } catch (err) {
       console.error("Error deleting report:", err);
@@ -124,11 +163,12 @@ export default function MedicalReport({ role }) {
        <div className="services-topbar services-card d-flex justify-content-between align-items-center mb-3">
          <h5 className="fw-bold text-white mb-0">Medical Report</h5>
          <div className="d-flex gap-2">
-             {!isReportFormOpen ? (
+             {!isReportFormOpen && id ? (
                 <button 
                   className="btn btn-light btn-sm d-flex align-items-center gap-1 text-primary"
                   onClick={() => {
                     setEditingReportId(null);
+                    setCurrentEncounterId(id); // Only allow adding if we have a global ID (single encounter mode)
                     setReportData({ name: "", date: new Date().toISOString().split('T')[0], file: null });
                     setIsReportFormOpen(true);
                   }}
@@ -213,12 +253,12 @@ export default function MedicalReport({ role }) {
               </form>
             </div>
          )}
-
          <div className="table-responsive">
            <table className="table align-middle">
              <thead className="table-light">
                <tr>
                  <th className="text-muted small fw-bold text-uppercase">Name</th>
+                 {!id && <th className="text-muted small fw-bold text-uppercase text-center">Encounter Date</th>}
                  <th className="text-muted small fw-bold text-uppercase text-center">Date</th>
                  <th className="text-muted small fw-bold text-uppercase text-center">Action</th>
                </tr>
@@ -226,12 +266,17 @@ export default function MedicalReport({ role }) {
              <tbody>
                {medicalReports.length === 0 ? (
                  <tr>
-                   <td colSpan="3" className="text-center text-danger py-4">No patient report found</td>
+                   <td colSpan={id ? "3" : "4"} className="text-center text-danger py-4">No patient report found</td>
                  </tr>
                ) : (
                  medicalReports.map((report, index) => (
                    <tr key={index}>
                      <td className="fw-semibold text-primary">{report.name}</td>
+                     {!id && (
+                        <td className="text-center">
+                          {report.encounterDate ? new Date(report.encounterDate).toLocaleDateString() : "-"}
+                        </td>
+                      )}
                      <td className="text-center">
                         {new Date(report.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                      </td>
@@ -240,6 +285,7 @@ export default function MedicalReport({ role }) {
                          <button 
                            className="btn btn-sm btn-outline-primary"
                            onClick={() => handleEditReport(report)}
+                           title="Edit"
                          >
                            <FaEdit />
                          </button>
@@ -253,7 +299,8 @@ export default function MedicalReport({ role }) {
                          </a>
                          <button 
                            className="btn btn-sm btn-outline-danger"
-                           onClick={() => handleDeleteReport(report._id)}
+                           onClick={() => handleDeleteReport(report)}
+                           title="Delete"
                          >
                            <FaTrash />
                          </button>

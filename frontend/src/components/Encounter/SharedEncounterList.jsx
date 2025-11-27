@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { FaSearch, FaFilter, FaPlus, FaTimes, FaSave, FaEdit, FaTrash, FaColumns } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -7,11 +7,24 @@ import "../../admin-dashboard/styles/services.css";
 
 export default function SharedEncounterList({ role, doctorId }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const patientIdParam = searchParams.get("patientId");
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [encounters, setEncounters] = useState([]);
   const [clinics, setClinics] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
+  
+  // Filter State
+  const [filters, setFilters] = useState({
+    id: "",
+    doctor: "",
+    clinic: "",
+    patient: "",
+    date: "",
+    status: ""
+  });
   
   // Form State
   const [formData, setFormData] = useState({
@@ -30,7 +43,28 @@ export default function SharedEncounterList({ role, doctorId }) {
     fetchClinics();
     fetchDoctors();
     fetchPatients();
+    fetchPatients();
   }, [doctorId]); // Re-fetch if doctorId changes
+
+  // Handle patientId param
+  useEffect(() => {
+    if (patientIdParam && patients.length > 0) {
+      const p = patients.find(pat => pat._id === patientIdParam);
+      if (p) {
+        setFilters(prev => ({ ...prev, patient: `${p.firstName} ${p.lastName}` }));
+      }
+    }
+  }, [patientIdParam, patients]);
+
+  // Handle patientId param
+  useEffect(() => {
+    if (patientIdParam && patients.length > 0) {
+      const p = patients.find(pat => pat._id === patientIdParam);
+      if (p) {
+        setFilters(prev => ({ ...prev, patient: `${p.firstName} ${p.lastName}` }));
+      }
+    }
+  }, [patientIdParam, patients]);
 
   const fetchEncounters = async () => {
     try {
@@ -190,6 +224,23 @@ export default function SharedEncounterList({ role, doctorId }) {
       }
     }
   };
+
+
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const filteredEncounters = encounters.filter(enc => {
+    const matchId = filters.id ? enc._id.includes(filters.id) : true;
+    const matchDoctor = filters.doctor ? (enc.doctor || "").toLowerCase().includes(filters.doctor.toLowerCase()) : true;
+    const matchClinic = filters.clinic ? (enc.clinic || "").toLowerCase().includes(filters.clinic.toLowerCase()) : true;
+    const matchPatient = filters.patient ? (enc.patient || "").toLowerCase().includes(filters.patient.toLowerCase()) : true;
+    const matchDate = filters.date ? enc.date.startsWith(filters.date) : true;
+    const matchStatus = filters.status ? enc.status === filters.status : true;
+    return matchId && matchDoctor && matchClinic && matchPatient && matchDate && matchStatus;
+  });
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -361,13 +412,13 @@ export default function SharedEncounterList({ role, doctorId }) {
               {/* Filter Row */}
               <tr>
                 <td></td>
-                <td><input type="text" className="form-control form-control-sm" placeholder="ID" /></td>
-                <td><input type="text" className="form-control form-control-sm" placeholder="Filter by doctor" /></td>
-                <td><input type="text" className="form-control form-control-sm" placeholder="Filter by clinic" /></td>
-                <td><input type="text" className="form-control form-control-sm" placeholder="Filter by patient" /></td>
-                <td><input type="date" className="form-control form-control-sm" /></td>
+                <td><input type="text" className="form-control form-control-sm" placeholder="ID" name="id" value={filters.id} onChange={handleFilterChange} /></td>
+                <td><input type="text" className="form-control form-control-sm" placeholder="Filter by doctor" name="doctor" value={filters.doctor} onChange={handleFilterChange} /></td>
+                <td><input type="text" className="form-control form-control-sm" placeholder="Filter by clinic" name="clinic" value={filters.clinic} onChange={handleFilterChange} /></td>
+                <td><input type="text" className="form-control form-control-sm" placeholder="Filter by patient" name="patient" value={filters.patient} onChange={handleFilterChange} /></td>
+                <td><input type="date" className="form-control form-control-sm" name="date" value={filters.date} onChange={handleFilterChange} /></td>
                 <td>
-                  <select className="form-select form-select-sm">
+                  <select className="form-select form-select-sm" name="status" value={filters.status} onChange={handleFilterChange}>
                     <option value="">Filter by status</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -377,12 +428,12 @@ export default function SharedEncounterList({ role, doctorId }) {
               </tr>
 
               {/* Data Rows */}
-              {encounters.length === 0 ? (
+              {filteredEncounters.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="text-center py-4 text-muted">No Data Found</td>
                 </tr>
               ) : (
-                encounters.map((enc, index) => (
+                filteredEncounters.map((enc, index) => (
                   <tr key={enc._id}>
                     <td><input type="checkbox" /></td>
                     <td>{index + 1}</td>
@@ -438,7 +489,7 @@ export default function SharedEncounterList({ role, doctorId }) {
             </select>
           </div>
           <div className="d-flex align-items-center gap-2">
-             <span className="text-muted small">Page 1 of {Math.ceil(encounters.length / 10) || 1}</span>
+             <span className="text-muted small">Page 1 of {Math.ceil(filteredEncounters.length / 10) || 1}</span>
              <button className="btn btn-sm btn-outline-secondary" disabled>Prev</button>
              <button className="btn btn-sm btn-outline-secondary" disabled>Next</button>
           </div>

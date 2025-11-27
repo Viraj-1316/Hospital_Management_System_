@@ -4,6 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import AdminLayout from "../layouts/AdminLayout";
 import { FaArrowLeft, FaSave } from "react-icons/fa";
 import axios from "axios";
+import { toast } from "react-hot-toast";
 
 const EditPatient = () => {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ const EditPatient = () => {
         setLoading(false);
       } catch (error) {
         console.error("Error fetching patient:", error);
-        alert("Error loading patient data");
+        toast.error("Error loading patient data");
         navigate("/patients");
       }
     };
@@ -67,14 +68,14 @@ const EditPatient = () => {
     try {
       const res = await axios.put(`http://localhost:3001/patients/${id}`, formData);
       if (res.data) {
-        alert("✅ Patient updated successfully!");
+        toast.success("Patient updated successfully!");
         navigate("/patients");
       } else {
-        alert("Something went wrong!");
+        toast.error("Something went wrong!");
       }
     } catch (error) {
       console.error("Error updating patient:", error);
-      alert("Error updating patient. Check console for details.");
+      toast.error("Error updating patient. Check console for details.");
     }
   };
 

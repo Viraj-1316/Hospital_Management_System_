@@ -6,6 +6,8 @@ import Sidebar from "../components/Sidebar";
 import DurationPicker from "../components/DurationPicker";
 import "../styles/services.css";
 import { FaEdit, FaTrash } from "react-icons/fa";
+import { toast } from "react-hot-toast";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
   const [services, setServices] = useState([]);
@@ -51,6 +53,15 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showForm, setShowForm] = useState(true);
+  
+  const [confirmModal, setConfirmModal] = useState({ 
+    show: false, 
+    title: "", 
+    message: "", 
+    action: null,
+    confirmText: "Delete",
+    confirmVariant: "danger"
+  });
 
   const loadServices = async () => {
     try {
@@ -60,7 +71,8 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
       setServices(res.data || []);
     } catch (err) {
       console.error("loadServices error", err);
-      alert("Unable to load services. Check backend.");
+      console.error("loadServices error", err);
+      toast.error("Unable to load services. Check backend.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +95,7 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
   // Add service
   const addService = async () => {
     if (!form.name || !form.name.trim()) {
-      alert("Please enter patient name");
+      toast.error("Please enter patient name");
       return;
     }
 
@@ -94,8 +106,9 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
       window.scrollTo({ top: 300, behavior: "smooth" });
     } catch (err) {
       console.error("addService error", err);
-      if (err.response) alert("Server error: " + JSON.stringify(err.response.data));
-      else alert("Network error: " + err.message);
+      console.error("addService error", err);
+      if (err.response) toast.error("Server error: " + JSON.stringify(err.response.data));
+      else toast.error("Network error: " + err.message);
     }
   };
 
@@ -119,7 +132,7 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
   const updateService = async () => {
     if (!editId) return;
     if (!form.name || !form.name.trim()) {
-      alert("Please enter service name");
+      toast.error("Please enter service name");
       return;
     }
 
@@ -130,7 +143,8 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
       clearForm();
     } catch (err) {
       console.error("updateService", err);
-      alert("Update failed");
+      console.error("updateService", err);
+      toast.error("Update failed");
     }
   };
 
@@ -140,15 +154,32 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
   };
 
   // Delete
-  const deleteService = async (id) => {
-    if (!window.confirm("Delete this service?")) return;
+  const deleteService = (id) => {
+    setConfirmModal({
+      show: true,
+      title: "Delete Service",
+      message: "Delete this service?",
+      action: () => executeDelete(id),
+      confirmText: "Delete",
+      confirmVariant: "danger"
+    });
+  };
+
+  const executeDelete = async (id) => {
     try {
       await api.delete(`/services/${id}`);
       setServices((prev) => prev.filter((s) => s._id !== id));
+      toast.success("Service deleted");
     } catch (err) {
       console.error("deleteService", err);
-      alert("Delete failed");
+      toast.error("Delete failed");
+    } finally {
+      closeConfirmModal();
     }
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({ show: false, title: "", message: "", action: null });
   };
 
   // Toggle active
@@ -158,7 +189,8 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
       setServices((prev) => prev.map((s) => (s._id === id ? res.data : s)));
     } catch (err) {
       console.error("toggleActive", err);
-      alert("Toggle failed");
+      console.error("toggleActive", err);
+      toast.error("Toggle failed");
     }
   };
 
@@ -450,6 +482,15 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
             </div>
           </div>
         </div>
+        <ConfirmationModal
+          show={confirmModal.show}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.action}
+          onCancel={closeConfirmModal}
+          confirmText={confirmModal.confirmText}
+          confirmVariant={confirmModal.confirmVariant}
+        />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import PatientLayout from "../layouts/PatientLayout";
 import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 const API_BASE = "http://localhost:3001";
 
@@ -207,15 +208,15 @@ export default function PatientBookAppointment() {
     e.preventDefault();
 
     if (!form.clinic || !form.doctor || !form.date) {
-      alert("Please fill all required fields (*)");
+      toast.error("Please fill all required fields (*)");
       return;
     }
     if (!selectedSlot) {
-      alert("Please select an available time slot.");
+      toast.error("Please select an available time slot.");
       return;
     }
     if (selectedServices.length === 0) {
-      alert("Please select at least one service.");
+      toast.error("Please select at least one service.");
       return;
     }
 
@@ -267,18 +268,18 @@ export default function PatientBookAppointment() {
       const res = await axios.post(`${API_BASE}/appointments`, payload);
 
       if (res.status === 201 || (res.data && (res.data._id || res.data.id || res.data.data))) {
-        alert("Appointment booked successfully!");
+        toast.success("Appointment booked successfully!");
         navigate("/patient/appointments");
       } else if (res.data) {
         // fallback
-        alert("Appointment booked successfully!");
+        toast.success("Appointment booked successfully!");
         navigate("/patient/appointments");
       } else {
-        alert("Unexpected response from server.");
+        toast.error("Unexpected response from server.");
       }
     } catch (err) {
       console.error("Error creating appointment:", err);
-      alert("Failed to book appointment. Please try again.");
+      toast.error("Failed to book appointment. Please try again.");
     } finally {
       setSubmitting(false);
     }

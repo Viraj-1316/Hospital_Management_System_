@@ -6,6 +6,8 @@ import { FaPlus, FaSearch, FaEdit, FaTrash, FaFileImport } from "react-icons/fa"
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/services.css";
 import "../styles/appointments.css";
+import { toast } from "react-hot-toast";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const DAYS_OPTIONS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -44,6 +46,15 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
   // Import states
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
+  
+  const [confirmModal, setConfirmModal] = useState({ 
+    show: false, 
+    title: "", 
+    message: "", 
+    action: null,
+    confirmText: "Delete",
+    confirmVariant: "danger"
+  });
 
   const [form, setForm] = useState({
     doctorId: "",
@@ -160,10 +171,10 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
           `http://localhost:3001/doctor-sessions/${editingId}`,
           payload
         );
-        alert("Doctor session updated");
+        toast.success("Doctor session updated");
       } else {
         await axios.post("http://localhost:3001/doctor-sessions", payload);
-        alert("Doctor session created");
+        toast.success("Doctor session created");
       }
 
       closeForm();
@@ -171,27 +182,43 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
     } catch (err) {
       console.error(err);
-      alert("Error saving session");
+      toast.error("Error saving session");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this session?")) return;
+  const handleDelete = (id) => {
+    setConfirmModal({
+      show: true,
+      title: "Delete Session",
+      message: "Delete this session?",
+      action: () => executeDelete(id),
+      confirmText: "Delete",
+      confirmVariant: "danger"
+    });
+  };
 
+  const executeDelete = async (id) => {
     try {
       await axios.delete(`http://localhost:3001/doctor-sessions/${id}`);
       setSessions((prev) => prev.filter((s) => s._id !== id));
+      toast.success("Session deleted");
     } catch (err) {
       console.error(err);
-      alert("Delete failed");
+      toast.error("Delete failed");
+    } finally {
+      closeConfirmModal();
     }
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({ show: false, title: "", message: "", action: null });
   };
 
   // Import CSV
   const handleImport = async (e) => {
     e.preventDefault();
     if (!importFile) {
-      alert("Please select a CSV file");
+      toast.error("Please select a CSV file");
       return;
     }
 
@@ -207,13 +234,13 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
         }
       );
 
-      alert(`Successfully imported ${response.data.count} doctor sessions`);
+      toast.success(`Successfully imported ${response.data.count} doctor sessions`);
       setShowImportModal(false);
       setImportFile(null);
       fetchSessions();
     } catch (err) {
       console.error("Import error:", err);
-      alert("Import failed: " + (err.response?.data?.message || err.message));
+      toast.error("Import failed: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -608,6 +635,17 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
           </>
         )}
 
+
+
+        <ConfirmationModal
+          show={confirmModal.show}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.action}
+          onCancel={closeConfirmModal}
+          confirmText={confirmModal.confirmText}
+          confirmVariant={confirmModal.confirmVariant}
+        />
       </div>
     </div>
   );

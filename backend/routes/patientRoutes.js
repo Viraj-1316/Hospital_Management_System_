@@ -6,6 +6,11 @@ const PatientModel = require("../models/Patient");
 const AppointmentModel = require("../models/Appointment");
 const upload = require("../middleware/upload");
 const mongoose = require("mongoose");
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const generateRandomPassword = require("../utils/generatePassword");
+const { sendEmail } = require("../utils/emailService");
+const { credentialsTemplate } = require("../utils/emailTemplates");
 
 // Get all patients
 router.get("/", (req, res) => {
@@ -226,6 +231,66 @@ router.get("/by-user/:userId", async (req, res) => {
   } catch (err) {
     console.error("GET /patients/by-user/:userId error:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Resend credentials
+router.post("/:id/resend-credentials", async (req, res) => {
+  try {
+    const patient = await PatientModel.findById(req.params.id);
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    const email = patient.email;
+    if (!email) {
+      return res.status(400).json({ message: "Patient has no email address" });
+    }
+
+    // Generate new password
+    const newPassword = generateRandomPassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Find or Create User
+    let user = await User.findOne({ email });
+    if (user) {
+      user.password = hashedPassword;
+      await user.save();
+    } else {
+      // If user doesn't exist for this patient, create one
+      user = new User({
+        email,
+        password: hashedPassword,
+        role: "patient",
+        name: `${patient.firstName} ${patient.lastName}`,
+        profileCompleted: true, // Assuming basic profile is done
+      });
+      await user.save();
+      
+      // Link patient to user if not linked
+      if (!patient.userId) {
+        patient.userId = user._id;
+        await patient.save();
+      }
+    }
+
+    // Send Email
+    const html = credentialsTemplate({
+      name: `${patient.firstName} ${patient.lastName}`,
+      email,
+      password: newPassword,
+    });
+
+    await sendEmail({
+      to: email,
+      subject: "Your OneCare Credentials",
+      html,
+    });
+
+    res.json({ message: `Credentials sent to ${email}` });
+  } catch (err) {
+    console.error("Error resending credentials:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 

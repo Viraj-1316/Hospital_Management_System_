@@ -6,6 +6,8 @@ import { MdEditCalendar } from "react-icons/md";
 import "../styles/DoctorPatients.css";
 import PdfPreviewModal from "../components/PdfPreviewModal"; // <- fixed import
 import "../styles/PdfPreviewModal.css"; // modal styles
+import { toast } from "react-hot-toast";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function DoctorPatients() {
   const [patients, setPatients] = useState([]);
@@ -15,6 +17,15 @@ export default function DoctorPatients() {
   const navigate = useNavigate();
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [selectedAppointmentForPdf, setSelectedAppointmentForPdf] = useState(null);
+  
+  const [confirmModal, setConfirmModal] = useState({ 
+    show: false, 
+    title: "", 
+    message: "", 
+    action: null,
+    confirmText: "Delete",
+    confirmVariant: "danger"
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -74,17 +85,34 @@ export default function DoctorPatients() {
   }, []);
 
   // delete with optimistic UI
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this patient?")) return;
+  const handleDelete = (id) => {
+    setConfirmModal({
+      show: true,
+      title: "Delete Patient",
+      message: "Delete this patient?",
+      action: () => executeDelete(id),
+      confirmText: "Delete",
+      confirmVariant: "danger"
+    });
+  };
+
+  const executeDelete = async (id) => {
     const prev = patients;
     setPatients((p) => p.filter((x) => (x._id || x.id) !== id));
     try {
       await axios.delete(`http://localhost:3001/patients/${id}`);
+      toast.success("Patient deleted");
     } catch (err) {
       console.error("Delete failed:", err);
-      alert("Failed to delete. Reverting.");
+      toast.error("Failed to delete. Reverting.");
       setPatients(prev);
+    } finally {
+      closeConfirmModal();
     }
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({ show: false, title: "", message: "", action: null });
   };
 
   // Toggle isActive with fallback endpoints and optimistic UI + rollback
@@ -132,7 +160,7 @@ export default function DoctorPatients() {
     if (!success) {
       setPatients(prevPatients);
       console.error("Failed to update status on all endpoints:", lastError);
-      alert("Failed to update status. See console for details.");
+      toast.error("Failed to update status. See console for details.");
     }
 
     setToggling((s) => {
@@ -152,7 +180,7 @@ export default function DoctorPatients() {
     setSelectedAppointmentForPdf(appt._id);
     setPdfModalOpen(true);
   } catch (err) {
-    alert("No appointment found for this patient.");
+    toast.error("No appointment found for this patient.");
   }
 };
 
@@ -330,6 +358,16 @@ export default function DoctorPatients() {
           navigate(`/pdf-editor?appointmentId=${id}`);
           setPdfModalOpen(false);
         }}
+      />
+      
+      <ConfirmationModal
+        show={confirmModal.show}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.action}
+        onCancel={closeConfirmModal}
+        confirmText={confirmModal.confirmText}
+        confirmVariant={confirmModal.confirmVariant}
       />
     </DoctorLayout>
   );

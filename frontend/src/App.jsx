@@ -166,6 +166,9 @@ function App() {
         <Route path="/Appointments" element={
           <Appointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
+        <Route path="/admin/appointments" element={
+          <Appointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+        } />
         <Route path="/BillingRecords" element={
           <BillingRecords sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
@@ -204,6 +207,9 @@ function App() {
         } />
         <Route path="/admin/encounters" element={
           <EncounterList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+        } />
+        <Route path="/admin/reports" element={
+          <MedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         } />
         <Route path="/encounters/:id/reports" element={
           <MedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />

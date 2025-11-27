@@ -11,6 +11,7 @@ import {
 } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import "../styles/reception.css";
+import PageTransition from "../../components/PageTransition";
 
 const ReceptionLayout = () => {
   const navigate = useNavigate();
@@ -220,8 +221,12 @@ const ReceptionLayout = () => {
           </div>
         </header>
 
+
+
         <main className="rc-content">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>
