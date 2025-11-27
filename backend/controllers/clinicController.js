@@ -83,9 +83,6 @@ exports.createClinic = async (req, res) => {
             });
             await user.save();
         } else {
-            // If user exists, we don't overwrite password on create, 
-            // but we might want to ensure they have the role?
-            // For now, let's assume if they exist, they are handled.
             password = null; // Don't send password if we didn't generate it
         }
     }
@@ -311,10 +308,6 @@ exports.resendCredentials = async (req, res) => {
 };
 
 
-// Import clinics from CSV  POST /api/clinics/import
-// Expected CSV headers:
-// name,email,contact,status,specialties,address,city,country,postalCode,
-// adminFirstName,adminLastName,adminEmail,adminContact,dob,gender
 exports.importClinics = async (req, res) => {
   try {
     if (!req.file) {

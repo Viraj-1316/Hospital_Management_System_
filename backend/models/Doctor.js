@@ -29,7 +29,7 @@ const DoctorSchema = new mongoose.Schema({
   ],
   createdAt: { type: Date, default: Date.now },
   password: { type: String },
-  passwordPlain: { type: String }, // Optional: store temp password if needed for resend (security risk, but requested pattern)
+  passwordPlain: { type: String }, 
   mustChangePassword: { type: Boolean, default: true },
 });
 

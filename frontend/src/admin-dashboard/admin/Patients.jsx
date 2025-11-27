@@ -4,10 +4,11 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/services.css"; // using the Services layout styling
-import { FaSearch, FaPlus, FaDownload } from "react-icons/fa";
+import { FaSearch, FaPlus, FaDownload, FaCalendarAlt, FaFileMedical, FaFileAlt, FaEnvelope } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { RiDeleteBinFill } from "react-icons/ri";
 import { MdEdit } from "react-icons/md";
+import { toast } from "react-hot-toast";
 
 const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
@@ -20,20 +21,38 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
 
+  const [deleteModal, setDeleteModal] = useState({ show: false, id: null });
+
   const handleEdit = (id) => {
     navigate(`/EditPatient/${id}`);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this patient?")) {
-      try {
-        await axios.delete(`http://localhost:3001/patients/${id}`);
-        alert("🗑️ Patient deleted successfully!");
-        setPatients((prev) => prev.filter((p) => p._id !== id));
-      } catch (error) {
-        console.error("Error deleting patient:", error);
-        alert("❌ Failed to delete patient.");
-      }
+  const confirmDelete = (id) => {
+    setDeleteModal({ show: true, id });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteModal.id) return;
+    try {
+      await axios.delete(`http://localhost:3001/patients/${deleteModal.id}`);
+      toast.success("Patient deleted successfully!");
+      setPatients((prev) => prev.filter((p) => p._id !== deleteModal.id));
+    } catch (error) {
+      console.error("Error deleting patient:", error);
+      toast.error("Failed to delete patient.");
+    } finally {
+      setDeleteModal({ show: false, id: null });
+    }
+  };
+
+  const handleResendCredentials = async (id) => {
+    try {
+      toast.loading("Sending credentials...", { id: "resend" });
+      await axios.post(`http://localhost:3001/patients/${id}/resend-credentials`);
+      toast.success("Credentials sent successfully!", { id: "resend" });
+    } catch (error) {
+      console.error("Error resending credentials:", error);
+      toast.error("Failed to send credentials.", { id: "resend" });
     }
   };
 
@@ -67,7 +86,7 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
 
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    if (!importFile) return alert("Select a CSV file");
+    if (!importFile) return toast.error("Select a CSV file");
 
     try {
       setImporting(true);
@@ -81,12 +100,12 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      alert(`Imported ${res.data?.count || 0} patients`);
+      toast.success(`Imported ${res.data?.count || 0} patients`);
       setImportOpen(false);
       fetchPatients();
     } catch (err) {
       console.error(err);
-      alert("Error importing patients");
+      toast.error("Error importing patients");
     } finally {
       setImporting(false);
     }
@@ -196,16 +215,46 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
                         </span>
                       </td>
                       <td>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-1">
                           <button
                             className="btn btn-sm btn-outline-primary"
+                            title="Edit"
                             onClick={() => handleEdit(p._id)}
                           >
                             <MdEdit />
                           </button>
                           <button
+                            className="btn btn-sm btn-outline-info"
+                            title="Appointments"
+                            onClick={() => navigate(`/admin/appointments?patientId=${p._id}`)}
+                          >
+                            <FaCalendarAlt />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            title="Encounter"
+                            onClick={() => navigate(`/admin/encounters?patientId=${p._id}`)}
+                          >
+                            <FaFileMedical />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-success"
+                            title="Reports"
+                            onClick={() => navigate(`/admin/reports?patientId=${p._id}`)}
+                          >
+                            <FaFileAlt />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-warning"
+                            title="Resend Credentials"
+                            onClick={() => handleResendCredentials(p._id)}
+                          >
+                            <FaEnvelope />
+                          </button>
+                          <button
                             className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleDelete(p._id)}
+                            title="Delete"
+                            onClick={() => confirmDelete(p._id)}
                           >
                             <RiDeleteBinFill />
                           </button>
@@ -310,6 +359,42 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
                     </div>
 
                   </form>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* DELETE CONFIRMATION MODAL */}
+        {deleteModal.show && (
+          <>
+            <div className="modal-backdrop fade show" style={{ zIndex: 1050 }} />
+            <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1055 }}>
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title">Confirm Delete</h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      onClick={() => setDeleteModal({ show: false, id: null })}
+                    ></button>
+                  </div>
+                  <div className="modal-body">
+                    <p>Are you sure you want to delete this patient? This action cannot be undone.</p>
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setDeleteModal({ show: false, id: null })}
+                    >
+                      Cancel
+                    </button>
+                    <button type="button" className="btn btn-danger" onClick={executeDelete}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

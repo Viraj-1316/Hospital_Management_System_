@@ -570,6 +570,15 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
 
           {modalOpen && <ServiceForm initial={editing} onClose={() => setModalOpen(false)} onSave={save} />}
         </div>
+        <ConfirmationModal
+          show={confirmModal.show}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.action}
+          onCancel={closeConfirmModal}
+          confirmText={confirmModal.confirmText}
+          confirmVariant={confirmModal.confirmVariant}
+        />
       </div>
     </div>
   );

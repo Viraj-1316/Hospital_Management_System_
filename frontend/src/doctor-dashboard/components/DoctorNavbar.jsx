@@ -1,21 +1,24 @@
 import React, { useState, useRef, useEffect } from "react";
-import "../styles/DoctorLayout.css"; 
+import "bootstrap/dist/css/bootstrap.min.css";
+import { FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-export default function DoctorNavbar({ onToggle, open }) {
+export default function DoctorNavbar({ onToggle }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [profileData, setProfileData] = useState({ name: "Doctor", avatar: "" });
-  const menuRef = useRef();
+  const [profileData, setProfileData] = useState({
+    name: "Doctor",
+    avatar: ""
+  });
+
   const navigate = useNavigate();
+  const menuRef = useRef();
 
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
   const userId = authUser?.id;
 
-  // Fetch doctor profile on mount
+  // Fetch doctor profile
   useEffect(() => {
-    if (userId) {
-      fetchProfile();
-    }
+    if (userId) fetchProfile();
   }, [userId]);
 
   const fetchProfile = async () => {
@@ -25,7 +28,7 @@ export default function DoctorNavbar({ onToggle, open }) {
         const data = await res.json();
         setProfileData({
           name: data.name || "Doctor",
-          avatar: data.avatar || "",
+          avatar: data.avatar || ""
         });
       }
     } catch (err) {
@@ -44,7 +47,6 @@ export default function DoctorNavbar({ onToggle, open }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Logout logic
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
@@ -52,76 +54,62 @@ export default function DoctorNavbar({ onToggle, open }) {
     navigate("/");
   };
 
-  // Get first letter for avatar fallback
   const letter = profileData.name?.trim()?.charAt(0)?.toUpperCase() || "D";
 
   return (
-    <div className="doctor-navbar" ref={menuRef}>
-      {/* Left Section */}
-      <div className="doctor-nav-left">
-        <button
-          className="doctor-hamburger"
-          onClick={onToggle}
-          aria-label="toggle sidebar"
-        >
-          ☰
+    <nav className="navbar navbar-dark bg-primary px-3 d-flex justify-content-between align-items-center">
+      {/* LEFT SECTION */}
+      <div className="d-flex align-items-center gap-2">
+        <button className="btn btn-outline-light border-0" onClick={onToggle}>
+          <FaBars size={22} />
         </button>
-
         <h4 className="text-white fw-bold mb-0">One Care Doctor</h4>
       </div>
 
-      {/* Right Section (Profile + Dropdown) */}
-      <div className="doctor-nav-right">
+      {/* RIGHT SECTION */}
+      <div className="position-relative" ref={menuRef}>
         <div
-          className="doctor-profile"
+          className="d-flex align-items-center"
           style={{ cursor: "pointer" }}
           onClick={() => setDropdownOpen(!dropdownOpen)}
         >
           {profileData.avatar ? (
-            <img 
-              src={profileData.avatar} 
-              alt="doctor" 
-              className="doctor-avatar"
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                objectFit: "cover",
-              }}
+            <img
+              src={profileData.avatar}
+              width="35"
+              height="35"
+              alt="doctor"
+              className="rounded-circle"
+              style={{ objectFit: "cover" }}
             />
           ) : (
             <div
-              className="doctor-avatar"
+              className="rounded-circle bg-white text-primary fw-bold d-flex align-items-center justify-content-center"
               style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontWeight: "600",
-                fontSize: "18px",
+                width: 35,
+                height: 35,
+                fontSize: 18
               }}
             >
               {letter}
             </div>
           )}
-          <span className="doctor-name">{profileData.name}</span>
+
+          <span className="text-white ms-2 fw-semibold">{profileData.name}</span>
         </div>
 
         {dropdownOpen && (
           <div
-            className="doctor-dropdown shadow"
+            className="admin-dropdown"
             style={{
               position: "absolute",
-              top: "60px",
-              right: "20px",
+              top: "48px",
+              right: 0,
+              zIndex: 2000,
               background: "white",
               borderRadius: "8px",
-              width: "180px",
-              zIndex: 1000,
+              overflow: "hidden",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.15)"
             }}
           >
             <button
@@ -153,6 +141,6 @@ export default function DoctorNavbar({ onToggle, open }) {
           </div>
         )}
       </div>
-    </div>
+    </nav>
   );
 }

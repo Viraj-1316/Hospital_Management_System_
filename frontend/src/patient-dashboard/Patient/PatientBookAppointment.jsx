@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import PatientLayout from "../layouts/PatientLayout";
 import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 // Use 127.0.0.1 to prevent connection refused errors
 const API_BASE = "http://127.0.0.1:3001";

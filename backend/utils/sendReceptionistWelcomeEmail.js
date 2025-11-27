@@ -1,14 +1,14 @@
-// utils/sendReceptionistWelcomeEmail.js
-
 const nodemailer = require("nodemailer");
 
 async function sendReceptionistWelcomeEmail(to, name, email, password) {
   try {
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: process.env.EMAIL_HOST || "smtp-relay.brevo.com",
+      port: Number(process.env.EMAIL_PORT) || 587,
+      secure: false,
       auth: {
-        user: process.env.EMAIL_USER,     
-        pass: process.env.EMAIL_PASS,     
+        user: process.env.EMAIL_USER, // Brevo SMTP login (xxxx@smtp-brevo.com)
+        pass: process.env.EMAIL_PASS, // Brevo SMTP key
       },
     });
 
@@ -29,7 +29,7 @@ async function sendReceptionistWelcomeEmail(to, name, email, password) {
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,  
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to,
       subject: "Your Receptionist Account Credentials",
       html: htmlTemplate,

@@ -3,8 +3,16 @@ import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import "../styles/services.css"; // reuse same styles as Services page
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaUpload, FaPlus } from "react-icons/fa";
 import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
+
+const fadeInKeyframes = `
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+`;
 
 function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
   const [taxes, setTaxes] = useState([]);
@@ -32,6 +40,16 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
     serviceName: "",
     active: true,
   });
+
+  // Import modal state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importType, setImportType] = useState("csv");
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [taxToDelete, setTaxToDelete] = useState(null);
 
   // ---------- FETCH TAXES ----------
   const fetchTaxes = async () => {
@@ -150,36 +168,47 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
           payload
         );
         if (res.data?.message) {
-          alert("Tax updated");
+          toast.success("Tax updated successfully");
         }
       } else {
         const res = await axios.post("http://localhost:3001/taxes", payload);
         if (res.data?.message) {
-          alert("Tax created");
+          toast.success("Tax created successfully");
         }
       }
       closeModal();
       fetchTaxes();
     } catch (err) {
       console.error("Save tax error:", err);
-      alert("Error saving tax. Check console.");    
+      toast.error("Error saving tax.");    
     }
   };
 
   // ---------- DELETE ----------
-  const handleDelete = async (tax) => {
-    if (!window.confirm(`Delete tax "${tax.name}"?`)) return;
+  const openDeleteModal = (tax) => {
+    setTaxToDelete(tax);
+    setDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setTaxToDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!taxToDelete) return;
     try {
       const res = await axios.delete(
-        `http://localhost:3001/taxes/${tax._id}`
+        `http://localhost:3001/taxes/${taxToDelete._id}`
       );
       if (res.data?.message) {
-        alert("Tax deleted");
+        toast.success("Tax deleted successfully");
       }
-      setTaxes((prev) => prev.filter((t) => t._id !== tax._id));
+      setTaxes((prev) => prev.filter((t) => t._id !== taxToDelete._id));
+      closeDeleteModal();
     } catch (err) {
       console.error("Delete tax error:", err);
-      alert("Error deleting tax. Check console.");
+      toast.error("Error deleting tax.");
     }
   };
 
@@ -196,12 +225,56 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
       );
     } catch (err) {
       console.error("Toggle active error:", err);
-      alert("Error updating status. Check console.");
+      toast.error("Error updating status.");
+    }
+  };
+
+  // Import modal handlers
+  const openImportModal = () => {
+    setImportOpen(true);
+    setImportFile(null);
+  };
+
+  const closeImportModal = () => {
+    if (!importing) setImportOpen(false);
+  };
+
+  const handleImportFileChange = (e) => {
+    setImportFile(e.target.files[0] || null);
+  };
+
+  const handleImportSubmit = async (e) => {
+    e.preventDefault();
+    if (!importFile) return toast.error("Select a CSV file");
+
+    try {
+      setImporting(true);
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const res = await axios.post(
+        "http://localhost:3001/taxes/import",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      if (res.data?.message) {
+        toast.success(res.data.message);
+        fetchTaxes();
+        closeImportModal();
+      }
+    } catch (err) {
+      console.error("Import error:", err);
+      toast.error("Error importing taxes.");
+    } finally {
+      setImporting(false);
     }
   };
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
+      <style>{fadeInKeyframes}</style>
+      <Toaster position="top-right" reverseOrder={false} />
       {/* Sidebar */}
       <Sidebar collapsed={sidebarCollapsed} />
 
@@ -223,12 +296,12 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
             <div className="services-actions">
               <button
                 className="btn btn-outline-light btn-sm"
-                onClick={() => alert("Next step: Tax CSV import")}
+                onClick={openImportModal}
               >
-                <i className="bi bi-upload me-1"></i> Import data
+                <FaUpload className="me-1" /> Import data
               </button>
               <button className="btn btn-light btn-sm" onClick={openNewTax}>
-                <i className="bi bi-plus-lg me-1"></i> New Tax
+                <FaPlus className="me-1" /> New Tax
               </button>
             </div>
           </div>
@@ -347,7 +420,14 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
                       </tr>
                     ) : (
                       filtered.map((t, index) => (
-                        <tr key={t._id}>
+                        <tr 
+                          key={t._id} 
+                          style={{ 
+                            animation: "fadeIn 0.5s ease-out forwards",
+                            animationDelay: `${index * 0.05}s`,
+                            opacity: 0 // Start invisible for animation
+                          }}
+                        >
                           <td>
                             <input type="checkbox" />
                           </td>
@@ -390,7 +470,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
                               <button
                                 className="icon-btn bg-white"
                                 title="Delete"
-                                onClick={() => handleDelete(t)}
+                                onClick={() => openDeleteModal(t)}
                               >
                                 <FaTrash style={{ color: "red" }} />
                               </button>
@@ -445,6 +525,110 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
           </div>
         </div>
       </div>
+
+      {/* DELETE MODAL */}
+      {deleteModalOpen && (
+        <>
+          <div className="modal-backdrop fade show" />
+          <div className="modal fade show d-block" tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Delete Tax</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={closeDeleteModal}
+                  />
+                </div>
+                <div className="modal-body">
+                  <p>Are you sure you want to delete tax "{taxToDelete?.name}"?</p>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={closeDeleteModal}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={confirmDelete}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* IMPORT MODAL */}
+      {importOpen && (
+        <>
+          <div className="modal-backdrop fade show" />
+          <div className="modal fade show d-block" tabIndex="-1">
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title text-primary">Taxes Import</h5>
+                  <button className="btn-close" onClick={closeImportModal}></button>
+                </div>
+                <form onSubmit={handleImportSubmit}>
+                  <div className="modal-body">
+                    <div className="row g-3 mb-3">
+                      <div className="col-md-4">
+                        <label className="form-label">Select Type</label>
+                        <select
+                          className="form-select"
+                          value={importType}
+                          onChange={(e) => setImportType(e.target.value)}
+                        >
+                          <option value="csv">CSV</option>
+                        </select>
+                      </div>
+                      <div className="col-md-8">
+                        <label className="form-label">Upload CSV File</label>
+                        <input
+                          type="file"
+                          className="form-control"
+                          accept=".csv"
+                          onChange={handleImportFileChange}
+                        />
+                      </div>
+                    </div>
+                    <p className="fw-semibold mb-2">CSV Required Fields:</p>
+                    <ul className="small mb-0">
+                      <li>name</li>
+                      <li>taxRate</li>
+                      <li>clinicName</li>
+                      <li>doctor</li>
+                      <li>serviceName</li>
+                      <li>active (true/false)</li>
+                    </ul>
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={closeImportModal}
+                      disabled={importing}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary" disabled={importing}>
+                      {importing ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* MODAL: Add / Edit Tax */}
       {modalOpen && (

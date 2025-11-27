@@ -4,6 +4,8 @@ import DoctorSidebar from "../components/DoctorSidebar";
 import DoctorNavbar from "../components/DoctorNavbar";
 import "../styles/DoctorLayout.css";
 
+import PageTransition from "../../components/PageTransition";
+
 export default function DoctorLayout({ children }) {
   const [open, setOpen] = useState(true); 
 
@@ -12,7 +14,9 @@ export default function DoctorLayout({ children }) {
       <DoctorSidebar open={open} />
       <div className={open ? "doctor-main open" : "doctor-main closed"}>
         <DoctorNavbar onToggle={() => setOpen((v) => !v)} open={open} />
-        <div className="doctor-content">{children}</div>
+        <div className="doctor-content">
+          <PageTransition>{children}</PageTransition>
+        </div>
       </div>
     </div>
   );

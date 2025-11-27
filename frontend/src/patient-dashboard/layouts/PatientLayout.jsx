@@ -5,6 +5,8 @@ import PatientNavbar from "../components/PatientNavbar";
 import "../styles/PatientSidebar.css";
 import "../styles/PatientNavbar.css";
 
+import PageTransition from "../../components/PageTransition";
+
 export default function PatientLayout({
   children,
   sidebarCollapsed,
@@ -44,7 +46,7 @@ export default function PatientLayout({
               borderRadius: "8px",
             }}
           >
-            {children}
+            <PageTransition>{children}</PageTransition>
           </div>
         </div>
       </div>

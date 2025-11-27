@@ -85,6 +85,34 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Update Doctor
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    
+    if (updateData.qualifications && !Array.isArray(updateData.qualifications)) {
+     
+    }
+
+    const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedDoctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    res.json({ message: "Doctor updated successfully", data: updatedDoctor });
+  } catch (err) {
+    console.error("Error updating doctor:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
 // Resend Credentials (Regenerate password and email)
 router.post("/:id/resend-credentials", async (req, res) => {
   try {

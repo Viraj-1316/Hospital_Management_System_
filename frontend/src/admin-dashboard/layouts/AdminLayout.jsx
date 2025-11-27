@@ -3,6 +3,8 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import "../styles/AdminLayout.css";
 
+import PageTransition from "../../components/PageTransition";
+
 const AdminLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const toggleSidebar = () => setIsOpen((s) => !s);
@@ -32,7 +34,7 @@ const AdminLayout = ({ children }) => {
 
       {/* Page content */}
       <div className="content-container p-4">
-        {children}
+        <PageTransition>{children}</PageTransition>
       </div>
     </div>
   );

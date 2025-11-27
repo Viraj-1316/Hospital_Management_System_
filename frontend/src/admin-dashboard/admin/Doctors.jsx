@@ -6,6 +6,8 @@ import { FaSearch, FaPlus, FaTrash, FaEdit, FaDownload, FaEnvelope, FaCalendarAl
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/services.css";
+import { toast } from "react-hot-toast";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
   const [doctors, setDoctors] = useState([]);
@@ -33,6 +35,15 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
   });
   const [clinics, setClinics] = useState([]);
   const [categories, setCategories] = useState([]);
+  
+  const [confirmModal, setConfirmModal] = useState({ 
+    show: false, 
+    title: "", 
+    message: "", 
+    action: null,
+    confirmText: "Delete",
+    confirmVariant: "danger"
+  });
 
   // Fetch doctors
   const fetchDoctors = async () => {
@@ -49,30 +60,56 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
   }, []);
 
   // Delete doctor
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this doctor?")) {
-      try {
-        await axios.delete(`http://localhost:3001/doctors/${id}`);
-        setDoctors((prev) => prev.filter((doc) => doc._id !== id));
-        alert("Doctor deleted successfully!");
-      } catch (error) {
-        console.error("Error deleting doctor:", error);
-        alert("Error deleting doctor");
-      }
+  const handleDelete = (id) => {
+    setConfirmModal({
+      show: true,
+      title: "Delete Doctor",
+      message: "Are you sure you want to delete this doctor?",
+      action: () => executeDelete(id),
+      confirmText: "Delete",
+      confirmVariant: "danger"
+    });
+  };
+
+  const executeDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:3001/doctors/${id}`);
+      setDoctors((prev) => prev.filter((doc) => doc._id !== id));
+      toast.success("Doctor deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting doctor:", error);
+      toast.error("Error deleting doctor");
+    } finally {
+      closeConfirmModal();
     }
   };
 
   // Resend Credentials
-  const handleResendCredentials = async (id) => {
-    if (window.confirm("Resend login credentials to this doctor? This will reset their password.")) {
-      try {
-        await axios.post(`http://localhost:3001/doctors/${id}/resend-credentials`);
-        alert("Credentials resent successfully!");
-      } catch (error) {
-        console.error("Error resending credentials:", error);
-        alert("Failed to resend credentials.");
-      }
+  const handleResendCredentials = (id) => {
+    setConfirmModal({
+      show: true,
+      title: "Resend Credentials",
+      message: "Resend login credentials to this doctor? This will reset their password.",
+      action: () => executeResend(id),
+      confirmText: "Resend",
+      confirmVariant: "warning"
+    });
+  };
+
+  const executeResend = async (id) => {
+    try {
+      await axios.post(`http://localhost:3001/doctors/${id}/resend-credentials`);
+      toast.success("Credentials resent successfully!");
+    } catch (error) {
+      console.error("Error resending credentials:", error);
+      toast.error("Failed to resend credentials.");
+    } finally {
+      closeConfirmModal();
     }
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({ show: false, title: "", message: "", action: null });
   };
 
   // Import modal handlers
@@ -91,7 +128,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
 
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    if (!importFile) return alert("Select a CSV file");
+    if (!importFile) return toast.error("Select a CSV file");
 
     try {
       setImporting(true);
@@ -105,12 +142,12 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      alert(`Imported ${res.data?.count || 0} doctors`);
+      toast.success(`Imported ${res.data?.count || 0} doctors`);
       setImportOpen(false);
       fetchDoctors();
     } catch (err) {
       console.error(err);
-      alert("Error importing doctors");
+      toast.error("Error importing doctors");
     } finally {
       setImporting(false);
     }
@@ -155,7 +192,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
   const handleServiceSubmit = async (e) => {
     e.preventDefault();
     if (!serviceForm.name || !serviceForm.category) {
-      return alert("Please fill required fields");
+      return toast.error("Please fill required fields");
     }
 
     try {
@@ -168,11 +205,11 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
       };
 
       await axios.post("http://localhost:3001/services", payload);
-      alert("Service added successfully!");
+      toast.success("Service added successfully!");
       setServiceModalOpen(false);
     } catch (error) {
       console.error("Error adding service:", error);
-      alert("Error adding service");
+      toast.error("Error adding service");
     }
   };
 
@@ -692,6 +729,16 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
             </div>
           </>
         )}
+
+        <ConfirmationModal
+          show={confirmModal.show}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.action}
+          onCancel={closeConfirmModal}
+          confirmText={confirmModal.confirmText}
+          confirmVariant={confirmModal.confirmVariant}
+        />
       </div>
     </div>
   );
