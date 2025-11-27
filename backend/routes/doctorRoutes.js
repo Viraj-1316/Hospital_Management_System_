@@ -91,9 +91,9 @@ router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-  
+    
     if (updateData.qualifications && !Array.isArray(updateData.qualifications)) {
-      
+     
     }
 
     const updatedDoctor = await DoctorModel.findByIdAndUpdate(

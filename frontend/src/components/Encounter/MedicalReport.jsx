@@ -175,18 +175,10 @@ export default function MedicalReport({ role }) {
                 >
                   <FaPlus /> Add Medical Report
                 </button>
-             ) : (
-                <button 
-                  className="btn btn-light btn-sm d-flex align-items-center gap-1 text-danger"
-                  onClick={handleCancelReport}
-                >
-                  <FaTimes /> Close form
-                </button>
-             )}
+             ) : null }
               <button 
                 className="btn btn-light btn-sm d-flex align-items-center gap-1 text-dark"
-                onClick={() => navigate(-1)}
-              >
+                onClick={() => navigate(-1)}>
                 Back
               </button>
          </div>
