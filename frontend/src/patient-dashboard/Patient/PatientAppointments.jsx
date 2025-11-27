@@ -12,8 +12,6 @@ import {
   FaStop,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function PatientAppointments({ sidebarCollapsed, toggleSidebar }) {
   const navigate = useNavigate();
@@ -45,15 +43,6 @@ export default function PatientAppointments({ sidebarCollapsed, toggleSidebar })
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDoctor, setFilterDoctor] = useState("");
-  
-  const [confirmModal, setConfirmModal] = useState({ 
-    show: false, 
-    title: "", 
-    message: "", 
-    action: null,
-    confirmText: "Delete",
-    confirmVariant: "danger"
-  });
 
   const [page, setPage] = useState(1);
   const perPage = 10;
@@ -142,18 +131,8 @@ export default function PatientAppointments({ sidebarCollapsed, toggleSidebar })
   }, [filterDate, filterStatus, filterDoctor, appointments]);
 
   // Cancel / delete appointment
-  const handleCancel = (id) => {
-    setConfirmModal({
-      show: true,
-      title: "Cancel Appointment",
-      message: "Cancel this appointment?",
-      action: () => executeCancel(id),
-      confirmText: "Cancel Appointment",
-      confirmVariant: "warning"
-    });
-  };
-
-  const executeCancel = async (id) => {
+  const handleCancel = async (id) => {
+    if (!window.confirm("Cancel this appointment?")) return;
     try {
       await axios.put(
         `${API_BASE}/appointments/${id}/cancel`,
@@ -170,12 +149,10 @@ export default function PatientAppointments({ sidebarCollapsed, toggleSidebar })
             : p
         )
       );
-      toast.success("Appointment cancelled");
+      alert("Appointment cancelled");
     } catch (err) {
       console.error("Cancel error:", err);
-      toast.error("Failed to cancel. Check console.");
-    } finally {
-      closeConfirmModal();
+      alert("Failed to cancel. Check console.");
     }
   };
 
@@ -568,16 +545,6 @@ export default function PatientAppointments({ sidebarCollapsed, toggleSidebar })
             </button>
           </div>
         </div>
-
-        <ConfirmationModal
-          show={confirmModal.show}
-          title={confirmModal.title}
-          message={confirmModal.message}
-          onConfirm={confirmModal.action}
-          onCancel={closeConfirmModal}
-          confirmText={confirmModal.confirmText}
-          confirmVariant={confirmModal.confirmVariant}
-        />
       </div>
     </PatientLayout>
   );
