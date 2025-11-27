@@ -46,6 +46,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
     service: "",
     date: "",
     patient: "",
+    patientName: "",
     status: "booked",
     servicesDetail: "",
     slot: "",
@@ -218,6 +219,17 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
       return;
     }
 
+    if (name === "patient") {
+      // value is the patient ID (or name if legacy/custom)
+      const selectedP = patients.find((p) => p._id === value);
+      setForm((p) => ({
+        ...p,
+        patient: value,
+        patientName: selectedP ? `${selectedP.firstName} ${selectedP.lastName}` : value,
+      }));
+      return;
+    }
+
     setForm((p) => ({ ...p, [name]: value }));
   };
 
@@ -229,6 +241,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
       service: "",
       date: "",
       patient: "",
+      patientName: "",
       status: "booked",
       servicesDetail: "",
       slot: "",
@@ -244,7 +257,8 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
       doctor: item.doctorName || "",
       service: item.services || "",
       date: item.date ? item.date.substring(0, 10) : "",
-      patient: item.patientName || "",
+      patient: item.patientId?._id || item.patientName || "",
+      patientName: item.patientName || "",
       status: item.status || "booked",
       servicesDetail: item.servicesDetail || "",
       slot: item.slot || "",
@@ -264,7 +278,8 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
       const payload = {
         clinic: form.clinic,
         doctorName: form.doctor,
-        patientName: form.patient,
+        patientId: form.patient, // Sending ID
+        patientName: form.patientName, // Sending Name
         services: form.service,
         date: form.date,
         status: form.status,
@@ -777,7 +792,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                               !patients.some(
                                 (p) =>
                                   `${p.firstName} ${p.lastName}` ===
-                                  form.patient
+                                    form.patient || p._id === form.patient
                               ) && (
                                 <option value={form.patient}>
                                   {form.patient}
@@ -786,7 +801,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                             {patients.map((p) => (
                               <option
                                 key={p._id}
-                                value={`${p.firstName} ${p.lastName}`}
+                                value={p._id}
                               >
                                 {p.firstName} {p.lastName}
                               </option>
