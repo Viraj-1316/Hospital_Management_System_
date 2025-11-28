@@ -98,7 +98,6 @@ const billingStyles = `
     font-size: 0.85rem;
   }
   
-  /* Highlight Custom Encounter ID */
   .billing-scope .enc-id-text { 
       font-family: monospace; 
       font-weight: 700; 
@@ -113,14 +112,14 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
   const navigate = useNavigate();
 
   const [bills, setBills] = useState([]);
-  const [encountersList, setEncountersList] = useState([]); // To store fetched encounters
+  const [encountersList, setEncountersList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const [filter, setFilter] = useState({
     id: "",
-    encounterId: "", // Added filter for Enc ID
+    encounterId: "",
     doctor: "",
     clinic: "",
     patient: "",
@@ -135,7 +134,6 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Load Data
   useEffect(() => {
     fetchData();
   }, []);
@@ -145,14 +143,12 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
       setLoading(true);
       setError("");
       
-      // Fetch BOTH Bills and Encounters in parallel
       const [billsRes, encRes] = await Promise.all([
           axios.get(`${BASE}/bills`),
           axios.get(`${BASE}/encounters`)
       ]);
 
       const allBills = billsRes.data || [];
-      // Handle encounter response structure (array vs {encounters: []})
       const allEncounters = Array.isArray(encRes.data) ? encRes.data : (encRes.data.encounters || []);
 
       setBills(allBills);
@@ -181,34 +177,22 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
     setPage(1); 
   };
 
-  // --- LOOKUP FUNCTION (Mongo ID -> ENC-XXXX) ---
   const lookupCustomId = (bill) => {
-      // If the bill already has the short ID stored (new system), use it
       if (bill.encounterId && bill.encounterId.startsWith("ENC-")) {
           return bill.encounterId;
       }
-
-      // Otherwise, lookup using the Mongo ID (old system)
       const mongoId = bill.encounterId || bill.encounter_id || bill.encounter;
-      
       if (!mongoId) return "-";
-
       const found = encountersList.find(e => e._id === mongoId);
-      if (found && found.encounterId) {
-          return found.encounterId; 
-      }
-      
-      // Fallback
+      if (found && found.encounterId) return found.encounterId; 
       return typeof mongoId === 'string' ? mongoId.substring(0,8) + "..." : "-";
   };
 
-  // Filtering logic
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
 
     return bills
       .filter((bill) => {
-        // Get the Readable Encounter ID for searching/filtering
         const customEncId = lookupCustomId(bill);
 
         // Global Search
@@ -221,10 +205,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
 
         // Column Filters
         if (filter.id && !bill._id?.toLowerCase().includes(filter.id.toLowerCase())) return false;
-        
-        // Filter by Custom ID (ENC-XXXX)
         if (filter.encounterId && !customEncId.toLowerCase().includes(filter.encounterId.toLowerCase())) return false;
-
         if (filter.doctor && !bill.doctorName?.toLowerCase().includes(filter.doctor.toLowerCase())) return false;
         if (filter.clinic && !bill.clinicName?.toLowerCase().includes(filter.clinic.toLowerCase())) return false;
         if (filter.patient && !bill.patientName?.toLowerCase().includes(filter.patient.toLowerCase())) return false;
@@ -241,18 +222,8 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
 
         return true;
       })
-const lists = useMemo(() => {
-  let filtered = bills?.filter((bill) => {
-    // filtering logic
-  });
-
-  if (filter === "billNumber") {
-    return filtered.sort((a, b) => a.billNumber - b.billNumber);
-  } else {
-    return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }
-}, [bills, encountersList, searchTerm, filter]);
-
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [bills, encountersList, searchTerm, filter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const pageItems = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
@@ -307,258 +278,44 @@ const lists = useMemo(() => {
             </div>
           </div>
 
-{/* Table Block */}
-<div className="card shadow-sm p-3">
-  {loading ? (
-    <div className="text-center py-5">Loading bills...</div>
-  ) : error ? (
-    <div className="text-danger py-3">{error}</div>
-  ) : (
-    <>
-      <div className="table-responsive">
-        <table className="custom-table table-hover text-center align-middle">
-          <thead>
-            <tr>
-              <th style={{ width: '50px' }}>
-                ID <FaSort size={10} className="text-muted" />
-              </th>
-              <th>
-                Encounter ID <FaSort size={10} className="text-muted" />
-              </th>
-              <th>
-                Doctor Name <FaSort size={10} className="text-muted" />
-              </th>
-              <th>
-                Clinic Name <FaSort size={10} className="text-muted" />
-              </th>
-              <th>
-                Patient Name <FaSort size={10} className="text-muted" />
-              </th>
-              <th>Services</th>
-              <th style={{ width: '80px' }}>
-                Total <FaSort size={10} className="text-muted" />
-              </th>
-              <th style={{ width: '80px' }}>
-                Discount <FaSort size={10} className="text-muted" />
-              </th>
-              <th style={{ width: '90px' }}>
-                Amount due <FaSort size={10} className="text-muted" />
-              </th>
-              <th style={{ width: '120px' }}>
-                Date <FaSort size={10} className="text-muted" />
-              </th>
-              <th style={{ width: '80px' }}>
-                Status <FaSort size={10} className="text-muted" />
-              </th>
-              <th style={{ width: '100px' }}>Action</th>
-            </tr>
-
-            {/* Filter row */}
-            <tr className="filter-row">
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="ID"
-                  onChange={(e) => handleFilterChange('id', e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Enc ID"
-                  onChange={(e) =>
-                    handleFilterChange('encounterId', e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Doctor"
-                  onChange={(e) =>
-                    handleFilterChange('doctor', e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Clinic"
-                  onChange={(e) =>
-                    handleFilterChange('clinic', e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Patient"
-                  onChange={(e) =>
-                    handleFilterChange('patient', e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Service"
-                  onChange={(e) =>
-                    handleFilterChange('service', e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Total"
-                  onChange={(e) =>
-                    handleFilterChange('total', e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Disc"
-                  onChange={(e) =>
-                    handleFilterChange('discount', e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <input
-                  className="filter-input"
-                  placeholder="Due"
-                  onChange={(e) => handleFilterChange('due', e.target.value)}
-                />
-              </td>
-              <td>
-                <div className="d-flex bg-white border rounded">
-                  <input
-                    type="text"
-                    className="form-control border-0 p-1 py-0 shadow-none"
-                    style={{ fontSize: '0.7rem', height: 24 }}
-                    placeholder="Date"
-                    onFocus={(e) => (e.target.type = 'date')}
-                    onBlur={(e) => (e.target.type = 'text')}
-                    onChange={(e) => handleFilterChange('date', e.target.value)}
-                  />
-                </div>
-              </td>
-              <td>
-                <select
-                  className="form-select border-secondary shadow-none p-0 ps-1"
-                  style={{ fontSize: '0.7rem', height: 26 }}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
-                >
-                  <option>Filter</option>
-                  <option value="paid">Paid</option>
-                  <option value="unpaid">Unpaid</option>
-                </select>
-              </td>
-              <td></td>
-            </tr>
-          </thead>
-
-          <tbody>
-            {pageItems.length > 0 ? (
-              pageItems.map((bill, i) => (
-                <tr key={bill.billNumber || i}>
-                  <td>{bill.billNumber}</td>
-                  <td>{bill.encounterId}</td>
-                  <td>{bill.doctorName}</td>
-                  <td>{bill.clinicName}</td>
-                  <td>{bill.patientName}</td>
-                  <td>{bill.services?.join(', ')}</td>
-                  <td>₹{bill.totalAmount}</td>
-                  <td>₹{bill.discount}</td>
-                  <td>₹{bill.amountDue}</td>
-                  <td>{bill.date}</td>
-                  <td>
-                    <span className={statusBadge(bill.status)}>
-                      {bill.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <button
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => navigate(`/EditBill/${bill._id}`)}
-                      >
-                        <FaEdit />
-                      </button>
-
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDelete(bill._id)}
-                      >
-                        <FaTrash />
-                      </button>
-
-                      <button
-                        className="btn btn-sm btn-outline-success"
-                        onClick={() =>
-                          window.open(`${BASE}/bills/${bill._id}/pdf`)
-                        }
-                      >
-                        PDF
-                      </button>
-                    </div>
-                  </td>
+          <div className="table-responsive">
+            <table className="custom-table table-hover">
+              <thead>
+                <tr>
+                  <th style={{ width: '50px' }}>ID <FaSort size={10} className="text-muted"/></th>
+                  <th>Encounter ID <FaSort size={10} className="text-muted"/></th>
+                  <th>Doctor Name <FaSort size={10} className="text-muted"/></th>
+                  <th>Clinic Name <FaSort size={10} className="text-muted"/></th>
+                  <th>Patient Name <FaSort size={10} className="text-muted"/></th>
+                  <th>Services</th>
+                  <th style={{ width: '80px' }}>Total <FaSort size={10} className="text-muted"/></th>
+                  <th style={{ width: '80px' }}>Discount <FaSort size={10} className="text-muted"/></th>
+                  <th style={{ width: '90px' }}>Amount due <FaSort size={10} className="text-muted"/></th>
+                  <th style={{ width: '120px' }}>Date <FaSort size={10} className="text-muted"/></th>
+                  <th style={{ width: '80px' }}>Status <FaSort size={10} className="text-muted"/></th>
+                  <th style={{ width: '100px' }}>Action</th>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="12" className="py-5 text-muted">
-                  No data found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* Pagination */}
-      <div className="d-flex justify-content-between align-items-center mt-3">
-        <div>
-          Rows per page:
-          <select
-            value={rowsPerPage}
-            onChange={(e) => {
-              setRowsPerPage(Number(e.target.value));
-              setPage(1);
-            }}
-            className="form-select form-select-sm d-inline-block ms-2"
-            style={{ width: 80 }}
-          >
-            <option>5</option>
-            <option>10</option>
-            <option>25</option>
-          </select>
-        </div>
-
-        <div>
-          Page {page} of {totalPages || 1}
-          <button
-            className="btn btn-sm btn-outline-secondary ms-2"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Prev
-          </button>
-          <button
-            className="btn btn-sm btn-outline-secondary ms-2"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </>
-  )}
-</div>
-
+                <tr className="filter-row">
+                  <td><input className="filter-input" disabled placeholder="|" /></td>
+                  <td><input className="filter-input" placeholder="Enc ID" onChange={e => handleFilterChange('encounterId', e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Doctor" onChange={e => handleFilterChange('doctor', e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Clinic" onChange={e => handleFilterChange('clinic', e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Patient" onChange={e => handleFilterChange('patient', e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Service" onChange={e => handleFilterChange('service', e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Total" onChange={e => handleFilterChange('total', e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Discount" onChange={e => handleFilterChange('discount', e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Due" onChange={e => handleFilterChange('due', e.target.value)} /></td>
+                  <td>
+                     <div className="d-flex bg-white border rounded">
+                       <input type="text" className="form-control border-0 p-1 py-0 shadow-none" style={{fontSize:'0.7rem', height: 24}} placeholder="Date" onFocus={e=>e.target.type='date'} onBlur={e=>e.target.type='text'} onChange={e => handleFilterChange('date', e.target.value)} />
+                     </div>
+                  </td>
+                  <td>
+                    <select className="form-select border-secondary shadow-none p-0 ps-1" style={{fontSize:'0.7rem', height: 26}} onChange={e => handleFilterChange('status', e.target.value)}>
+                       <option>Filter</option>
+                       <option value="paid">Paid</option>
+                       <option value="unpaid">Unpaid</option>
                     </select>
                   </td>
                   <td></td>
@@ -579,10 +336,10 @@ const lists = useMemo(() => {
                 ) : (
                   pageItems.map((bill, i) => (
                     <tr key={bill._id || i}>
-                      {/* 1. ID Column: Database _id */}
-                      <td>{bill._id ? bill._id.substring(0, 6) : "-"}</td>
+                      {/* ID: Sequential */}
+                      <td>{(page - 1) * rowsPerPage + i + 1}</td>
                       
-                      {/* 2. Encounter ID Column: Custom ID lookup */}
+                      {/* Encounter ID: Custom ID */}
                       <td>
                           <span className="enc-id-text">
                              {lookupCustomId(bill)}
