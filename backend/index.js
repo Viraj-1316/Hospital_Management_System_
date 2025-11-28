@@ -1,7 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config();
+require("./models/Doctor");
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+console.log("🔧 Dotenv loaded. TWILIO_ACCOUNT_SID present:", !!process.env.TWILIO_ACCOUNT_SID);
 
 const connectDB = require("./config/db");
 
@@ -19,6 +21,10 @@ const taxRoutes = require("./routes/taxRoutes");
 const billingRoutes = require("./routes/billingRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const userRoutes = require("./routes/userRoutes");
+const holidayRoutes = require("./routes/holidayRoutes");
+
+// const encounterRoutes = require("./routes/encounterRoutes");
+// const encounterTemplateRoutes = require("./routes/encounterTemplateRoutes");
 
 const app = express();
 
@@ -49,7 +55,10 @@ app.use("/taxes", taxRoutes);
 app.use("/bills", billingRoutes);
 app.use("/dashboard-stats", dashboardRoutes);
 app.use("/", userRoutes); 
+// app.use("/encounters", encounterRoutes);
+// app.use("/encounter-templates", encounterTemplateRoutes);
 
+app.use("/holidays", holidayRoutes);
 
 // Start the server
 const PORT = 3001;

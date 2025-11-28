@@ -222,3 +222,31 @@
 .doctor-dropdown .dropdown-item.text-danger i {
   color: red !important;
 }
+
+.doctor-layout {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Remove any unwanted spacing */
+.doctor-main {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+}
+
+/* Content area */
+.doctor-content {
+  padding: 20px;
+  background: #f8f9fa;
+  min-height: calc(100vh - 60px);
+}
+
+/* Sidebar container */
+.doctor-sidebar-container {
+  background: white;
+  height: 100vh;
+  border-right: none !important;
+}
