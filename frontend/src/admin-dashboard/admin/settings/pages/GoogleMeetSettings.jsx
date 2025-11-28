@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 const GoogleMeetSettings = () => {
   const [isConfigEnabled, setIsConfigEnabled] = useState(true);
   const [clientId, setClientId] = useState("demo.apps.googleusercontent.com");
+  
   const [clientSecret, setClientSecret] = useState("demo_secret");
   const [appName, setAppName] = useState("OneCare");
 
