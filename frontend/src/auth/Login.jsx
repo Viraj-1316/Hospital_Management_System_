@@ -45,12 +45,10 @@ function Login() {
       }
 
       const data = await res.json();
-      // backend may return user directly or inside { user: ... }
       const user = data.user || data;
 
       console.log("Login response user:", user);
 
-      // role check vs button selection
       if (user.role !== role) {
         const msg = "Invalid Credentials";
         setError(msg);
@@ -58,10 +56,22 @@ function Login() {
         return;
       }
 
-      // Normalize authUser object we'll store
+      // --- FIX START: Save Token & User ID ---
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      
+      // Important: Save the ID as a standalone string for Navbar/Reports to find
+      const userId = user.id || user._id;
+      if (userId) {
+        localStorage.setItem("userId", userId);
+        localStorage.setItem("userRole", user.role); 
+      }
+      // --- FIX END ---
+
       const authUser = {
-        id: user.id || user._id || user._id?.toString?.() || null,
-        _id: user._id || user.id || null,
+        id: userId || null,
+        _id: userId || null,
         email: user.email || "",
         role: user.role || "",
         name: user.name || "",
@@ -75,7 +85,7 @@ function Login() {
       console.log("Saving authUser to localStorage:", authUser);
       localStorage.setItem("authUser", JSON.stringify(authUser));
 
-      // Try to fetch patient doc by userId (may 404 if not created yet)
+      // Try to fetch patient doc by userId
       try {
         const pid = authUser.id || authUser._id;
         if (pid) {
@@ -88,11 +98,8 @@ function Login() {
               userId: patientDoc.userId || pid,
               firstName: patientDoc.firstName || "",
               lastName: patientDoc.lastName || "",
-              name:
-                (patientDoc.firstName || patientDoc.lastName)
-                  ? `${patientDoc.firstName || ""} ${
-                      patientDoc.lastName || ""
-                    }`.trim()
+              name: (patientDoc.firstName || patientDoc.lastName)
+                  ? `${patientDoc.firstName || ""} ${patientDoc.lastName || ""}`.trim()
                   : patientDoc.name || authUser.name || "",
               email: patientDoc.email || authUser.email || "",
               phone: patientDoc.phone || "",
@@ -100,25 +107,24 @@ function Login() {
               dob: patientDoc.dob || "",
               address: patientDoc.address || "",
             };
+            
             console.log("Saving patient to localStorage:", patientObj);
             localStorage.setItem("patient", JSON.stringify(patientObj));
+            
+            // --- FIX: Save patientId specifically ---
+            localStorage.setItem("patientId", patientObj.id); 
+            // ----------------------------------------
+
           } else {
-            // no patient yet — ensure there's no stale patient key
             localStorage.removeItem("patient");
-            console.log(
-              "No patient doc found for user — patient not saved in localStorage."
-            );
+            localStorage.removeItem("patientId"); // Clean up
           }
         }
       } catch (errFetchPatient) {
-        console.warn(
-          "Could not fetch patient doc after login:",
-          errFetchPatient
-        );
-        // don't block login on patient fetch failure
+        console.warn("Could not fetch patient doc:", errFetchPatient);
       }
 
-      // Try to fetch doctor doc by email (if user is a doctor)
+      // Try to fetch doctor doc (if doctor)
       if (authUser.role === "doctor") {
         try {
           const doctorRes = await fetch(
@@ -126,7 +132,6 @@ function Login() {
           );
           if (doctorRes.ok) {
             const doctorsData = await doctorRes.json();
-            // Assuming the API returns an array, find the doctor by email
             const doctorDoc = Array.isArray(doctorsData)
               ? doctorsData.find((d) => d.email === authUser.email)
               : null;
@@ -137,11 +142,8 @@ function Login() {
                 _id: doctorDoc._id || doctorDoc.id,
                 firstName: doctorDoc.firstName || "",
                 lastName: doctorDoc.lastName || "",
-                name:
-                  doctorDoc.firstName || doctorDoc.lastName
-                    ? `${doctorDoc.firstName || ""} ${
-                        doctorDoc.lastName || ""
-                      }`.trim()
+                name: doctorDoc.firstName || doctorDoc.lastName
+                    ? `${doctorDoc.firstName || ""} ${doctorDoc.lastName || ""}`.trim()
                     : authUser.name || "",
                 email: doctorDoc.email || authUser.email || "",
                 phone: doctorDoc.phone || "",
@@ -157,14 +159,11 @@ function Login() {
             localStorage.removeItem("doctor");
           }
         } catch (errFetchDoctor) {
-          console.warn(
-            "Could not fetch doctor doc after login:",
-            errFetchDoctor
-          );
+          console.warn("Could not fetch doctor doc:", errFetchDoctor);
         }
       }
 
-      // Redirect based on role and profileCompleted
+      // Redirect Logic
       if (authUser.role === "admin") {
         navigate("/admin-dashboard");
       } else if (authUser.role === "doctor") {
@@ -175,7 +174,6 @@ function Login() {
           navigate("/doctor-dashboard");
         }
       } else if (authUser.role === "receptionist") {
-        // 🔥 New logic: first-time login → force password change
         if (authUser.mustChangePassword) {
           toast("Please change your default password.", { icon: "🔐" });
           navigate("/receptionist/change-password");
@@ -183,11 +181,9 @@ function Login() {
           navigate("/reception-dashboard");
         }
       } else if (authUser.role === "patient") {
-        // If profile not completed, route to setup; otherwise dashboard
         if (!authUser.profileCompleted) navigate("/patient/profile-setup");
         else navigate("/patient-dashboard");
       } else {
-        // unknown role — fallback to home
         navigate("/");
       }
 
@@ -223,13 +219,7 @@ function Login() {
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: "12px" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "4px",
-                fontSize: "14px",
-              }}
-            >
+            <label style={{ display: "block", marginBottom: "4px", fontSize: "14px" }}>
               Username or Email Address
             </label>
             <input
@@ -248,13 +238,7 @@ function Login() {
           </div>
 
           <div style={{ marginBottom: "16px" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "4px",
-                fontSize: "14px",
-              }}
-            >
+            <label style={{ display: "block", marginBottom: "4px", fontSize: "14px" }}>
               Password
             </label>
             <input
@@ -272,14 +256,7 @@ function Login() {
             />
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              marginBottom: "16px",
-              justifyContent: "space-between",
-            }}
-          >
+          <div style={{ display: "flex", gap: "8px", marginBottom: "16px", justifyContent: "space-between" }}>
             <button
               type="button"
               onClick={() => handleRoleClick("doctor")}
@@ -307,8 +284,7 @@ function Login() {
                 border: "none",
                 cursor: "pointer",
                 fontSize: "14px",
-                backgroundColor:
-                  role === "receptionist" ? "#0d6efd" : "#6c757d",
+                backgroundColor: role === "receptionist" ? "#0d6efd" : "#6c757d",
                 color: "white",
               }}
             >
@@ -333,13 +309,7 @@ function Login() {
             </button>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              marginBottom: "16px",
-              justifyContent: "center",
-            }}
-          >
+          <div style={{ display: "flex", marginBottom: "16px", justifyContent: "center" }}>
             <button
               type="button"
               onClick={() => setRole("admin")}
@@ -375,21 +345,12 @@ function Login() {
           </button>
 
           {error && (
-            <div
-              style={{
-                color: "red",
-                fontSize: "13px",
-                textAlign: "center",
-                marginBottom: "8px",
-              }}
-            >
+            <div style={{ color: "red", fontSize: "13px", textAlign: "center", marginBottom: "8px" }}>
               {error}
             </div>
           )}
 
-          <div
-            style={{ textAlign: "center", fontSize: "12px", marginTop: "8px" }}
-          >
+          <div style={{ textAlign: "center", fontSize: "12px", marginTop: "8px" }}>
             <Link to="/signup" style={{ color: "blue" }}>
               Don't have an account? Signup
             </Link>

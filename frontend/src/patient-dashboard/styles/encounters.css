@@ -1,0 +1,195 @@
+/* =========================================
+   Main Layout
+   ========================================= */
+.encounters-main-content {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.encounters-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+}
+
+.encounters-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.encounters-title {
+  color: #3b7ddd;
+  font-weight: 700;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+/* =========================================
+   Search Bar
+   ========================================= */
+.encounters-search-container {
+  padding: 1rem 1.5rem;
+  background-color: white;
+}
+
+.encounters-search-group .input-group-text {
+  background-color: white;
+  border-right: none;
+  color: #6c757d;
+}
+
+.encounters-search-group .form-control {
+  border-left: none;
+  font-size: 0.9rem;
+}
+
+.encounters-search-group .form-control:focus {
+  border-color: #ced4da;
+  box-shadow: none;
+}
+
+/* =========================================
+   Table Styling
+   ========================================= */
+.encounters-table-container {
+  overflow-x: auto;
+}
+
+.table-encounters {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+  min-width: 1000px;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table-encounters thead th {
+  background-color: #f1f3f5;
+  color: #495057;
+  font-weight: 600;
+  border-bottom: 1px solid #dee2e6;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.table-encounters tbody td {
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f1f1;
+  padding: 0.75rem 0.5rem;
+}
+
+/* Column Widths */
+.col-checkbox { width: 40px; }
+.col-id { width: 80px; }
+.col-doctor { width: 20%; }
+.col-clinic { width: 20%; }
+.col-date { width: 15%; }
+.col-status { width: 120px; }
+.col-action { width: 80px; }
+
+/* Filter Inputs */
+.filter-row td {
+  background-color: #f8f9fa;
+  padding: 0.5rem;
+}
+
+.filter-input-sm {
+  font-size: 0.75rem;
+  height: 30px;
+  border-radius: 4px;
+}
+
+.date-filter-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.date-clear-btn {
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: bold;
+  color: #495057;
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+/* =========================================
+   Status & Empty State
+   ========================================= */
+.no-data-row {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+  font-weight: 500;
+  background-color: white;
+}
+
+.status-badge-active {
+  background-color: #d1e7dd;
+  color: #0f5132;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.status-badge-inactive {
+  background-color: #e9ecef;
+  color: #6c757d;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+/* =========================================
+   Pagination & Footer
+   ========================================= */
+.encounters-footer {
+  padding: 1rem 1.5rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.page-display-box {
+  background: white;
+  border: 1px solid #dee2e6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #495057;
+  font-weight: 500;
+}
+
+.btn-nav {
+  border: none;
+  background: transparent;
+  color: #6c757d;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.btn-nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.copyright-text {
+  font-size: 0.75rem;
+  color: #3b7ddd;
+  margin-top: 1rem;
+  padding-left: 1rem;
+}

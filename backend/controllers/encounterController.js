@@ -1,11 +1,18 @@
 const EncounterModel = require("../models/Encounter");
 
-// Create new encounter
+// Create new encounter (WITH SEQUENTIAL ID GENERATION)
 exports.createEncounter = async (req, res) => {
   try {
     const { date, clinic, doctor, doctorId, patient, patientId, description, status } = req.body;
 
+    // 1. Count existing documents to generate the next number
+    const count = await EncounterModel.countDocuments();
+    
+    // 2. Generate ID (e.g., ENC-1001, ENC-1002...)
+    const customId = `ENC-${1000 + count + 1}`;
+
     const newEncounter = new EncounterModel({
+      encounterId: customId, // <--- SAVING THE NEW ID HERE
       date,
       clinic,
       doctor,

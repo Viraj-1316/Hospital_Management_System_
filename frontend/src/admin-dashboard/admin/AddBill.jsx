@@ -10,61 +10,147 @@ const BASE = "http://localhost:3001";
 const AddBill = () => {
   const navigate = useNavigate();
 
+  // --- 1. Form State with IDs ---
   const [form, setForm] = useState({
-    doctorName: "",
-    clinicName: "",
+    patientId: "",
     patientName: "",
+    doctorId: "",
+    doctorName: "",
+    clinicId: "",
+    clinicName: "",
+    encounterId: "", // This will store "ENC-1001"
     services: "",
     totalAmount: "",
-    discount: "",
+    discount: "0",
     amountDue: "",
-    date: "",
+    date: new Date().toISOString().split("T")[0],
     status: "unpaid",
-    notes: "",   // ADDED HERE
+    notes: "",
   });
 
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [clinics, setClinics] = useState([]);
+  const [encounters, setEncounters] = useState([]);
   const [saving, setSaving] = useState(false);
 
+  // --- 2. Fetch Initial Data ---
   useEffect(() => {
-    axios.get(`${BASE}/doctors`).then((res) => setDoctors(res.data));
-    axios.get(`${BASE}/patients`).then((res) => setPatients(res.data));
+    const fetchData = async () => {
+      try {
+        const [docRes, patRes, clinicRes] = await Promise.all([
+          axios.get(`${BASE}/doctors`),
+          axios.get(`${BASE}/patients`),
+          axios.get(`${BASE}/api/clinics`) // Ensure route matches your backend
+        ]);
+
+        setDoctors(Array.isArray(docRes.data) ? docRes.data : docRes.data.data || []);
+        setPatients(Array.isArray(patRes.data) ? patRes.data : patRes.data.data || []);
+        
+        // Handle Clinic Data Structure
+        const cData = clinicRes.data.clinics || (Array.isArray(clinicRes.data) ? clinicRes.data : []);
+        setClinics(cData);
+
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load dropdown data");
+      }
+    };
+    fetchData();
   }, []);
 
-  const handleChange = (e) => {
+  // --- 3. Fetch Encounters when Patient Selected ---
+  useEffect(() => {
+    if (form.patientId) {
+      axios.get(`${BASE}/encounters`)
+        .then((res) => {
+           // Filter encounters for this specific patient
+           const allEncounters = Array.isArray(res.data) ? res.data : res.data.encounters || [];
+           const myEncounters = allEncounters.filter(e => 
+              e.patientId === form.patientId || e.patient?._id === form.patientId
+           );
+           setEncounters(myEncounters);
+        })
+        .catch(err => console.error(err));
+    } else {
+        setEncounters([]);
+        setForm(prev => ({ ...prev, encounterId: "" }));
+    }
+  }, [form.patientId]);
+
+  // --- 4. Change Handlers ---
+
+  const handleDoctorChange = (e) => {
+    const selectedId = e.target.value;
+    const selectedObj = doctors.find(d => d._id === selectedId);
+    setForm(prev => ({
+      ...prev,
+      doctorId: selectedId,
+      doctorName: selectedObj ? `${selectedObj.firstName} ${selectedObj.lastName}` : ""
+    }));
+  };
+
+  const handlePatientChange = (e) => {
+    const selectedId = e.target.value;
+    const selectedObj = patients.find(p => p._id === selectedId);
+    setForm(prev => ({
+      ...prev,
+      patientId: selectedId,
+      patientName: selectedObj ? `${selectedObj.firstName} ${selectedObj.lastName}` : "",
+      encounterId: "" // Reset encounter selection
+    }));
+  };
+
+  const handleClinicChange = (e) => {
+    const selectedId = e.target.value;
+    // Find clinic object if possible
+    const selectedObj = clinics.find(c => c._id === selectedId);
+    
+    if (selectedObj) {
+        setForm(prev => ({
+            ...prev,
+            clinicId: selectedId,
+            clinicName: selectedObj.name || selectedObj.clinicName || ""
+        }));
+    } else {
+        // Fallback if entering manually
+        setForm(prev => ({ ...prev, clinicId: "", clinicName: e.target.value }));
+    }
+  };
+
+  const handleGenericChange = (e) => {
     const { name, value } = e.target;
     let updatedForm = { ...form, [name]: value };
 
+    // Auto-calculate Amount Due
     if (name === "totalAmount" || name === "discount") {
-      const total = Number(
-        name === "totalAmount" ? value : updatedForm.totalAmount
-      );
-      const discount = Number(
-        name === "discount" ? value : updatedForm.discount
-      );
-
+      const total = Number(name === "totalAmount" ? value : updatedForm.totalAmount);
+      const discount = Number(name === "discount" ? value : updatedForm.discount);
       updatedForm.amountDue = Math.max(total - discount, 0);
     }
 
     setForm(updatedForm);
   };
 
+  // --- 5. Submit Handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.doctorName) return toast.error("Please select a doctor");
-    if (!form.patientName) return toast.error("Please select a patient");
+    if (!form.doctorId) return toast.error("Please select a Doctor");
+    if (!form.patientId) return toast.error("Please select a Patient");
 
     try {
       setSaving(true);
+
       const payload = {
         ...form,
-        services: form.services.split(","), // convert to array
+        services: form.services.split(",").map(s => s.trim()),
+        // Ensure clinicId is sent (if manually typed, backend might need to allow null)
+        clinicId: form.clinicId || null 
       };
 
       await axios.post(`${BASE}/bills`, payload);
-      toast.success("Bill created!");
+      toast.success("Bill created successfully!");
       navigate("/BillingRecords");
     } catch (err) {
       console.error(err);
@@ -82,18 +168,20 @@ const AddBill = () => {
         <div className="card shadow-sm p-4">
           <form onSubmit={handleSubmit}>
             <div className="row">
+              
               {/* Doctor */}
               <div className="col-md-6 mb-3">
-                <label className="form-label">Doctor Name</label>
+                <label className="form-label">Doctor Name <span className="text-danger">*</span></label>
                 <select
-                  name="doctorName"
+                  name="doctorId"
                   className="form-select"
-                  value={form.doctorName}
-                  onChange={handleChange}
+                  value={form.doctorId}
+                  onChange={handleDoctorChange}
+                  required
                 >
                   <option value="">-- Select Doctor --</option>
                   {doctors.map((doc) => (
-                    <option value={`${doc.firstName} ${doc.lastName}`}>
+                    <option key={doc._id} value={doc._id}>
                       {doc.firstName} {doc.lastName}
                     </option>
                   ))}
@@ -102,97 +190,138 @@ const AddBill = () => {
 
               {/* Patient */}
               <div className="col-md-6 mb-3">
-                <label className="form-label">Patient Name</label>
+                <label className="form-label">Patient Name <span className="text-danger">*</span></label>
                 <select
-                  name="patientName"
+                  name="patientId"
                   className="form-select"
-                  value={form.patientName}
-                  onChange={handleChange}
+                  value={form.patientId}
+                  onChange={handlePatientChange}
+                  required
                 >
                   <option value="">-- Select Patient --</option>
                   {patients.map((p) => (
-                    <option value={`${p.firstName} ${p.lastName}`}>
+                    <option key={p._id} value={p._id}>
                       {p.firstName} {p.lastName}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Clinic Name */}
+              {/* Clinic - Dynamic Dropdown */}
               <div className="col-md-6 mb-3">
-                <label className="form-label">Clinic Name</label>
-                <input
-                  name="clinicName"
-                  className="form-control"
-                  value={form.clinicName}
-                  onChange={handleChange}
-                />
+                <label className="form-label">Clinic Name <span className="text-danger">*</span></label>
+                {clinics.length > 0 ? (
+                    <select 
+                        name="clinicId"
+                        className="form-select" 
+                        value={form.clinicId} 
+                        onChange={handleClinicChange} 
+                        required
+                    >
+                        <option value="">-- Select Clinic --</option>
+                        {clinics.map((c) => (
+                            <option key={c._id} value={c._id}>{c.name || c.clinicName}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <input
+                      name="clinicName"
+                      className="form-control"
+                      value={form.clinicName}
+                      onChange={handleGenericChange}
+                      placeholder="Enter Clinic Name"
+                      required
+                    />
+                )}
+              </div>
+
+              {/* Encounter - Links "ENC-XXXX" */}
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Link Encounter (Optional)</label>
+                <select
+                  name="encounterId"
+                  className="form-select"
+                  value={form.encounterId}
+                  onChange={handleGenericChange}
+                  disabled={!form.patientId}
+                >
+                  <option value="">-- Select Encounter --</option>
+                  {encounters.map((enc) => (
+                    /* --- KEY CHANGE: Use enc.encounterId as value --- */
+                    <option key={enc._id} value={enc.encounterId || enc._id}>
+                      {/* Display Date and the readable ID */}
+                      {new Date(enc.date).toLocaleDateString()} (ID: {enc.encounterId || "Pending"})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Services */}
-              <div className="col-md-6 mb-3">
-                <label>Services (comma separated)</label>
+              <div className="col-md-12 mb-3">
+                <label className="form-label">Services (comma separated)</label>
                 <input
                   name="services"
                   className="form-control"
                   value={form.services}
-                  onChange={handleChange}
+                  onChange={handleGenericChange}
+                  placeholder="Consultation, X-Ray"
                 />
               </div>
 
               {/* Amounts */}
               <div className="col-md-4 mb-3">
-                <label>Total Amount (₹)</label>
+                <label className="form-label">Total Amount (₹) <span className="text-danger">*</span></label>
                 <input
                   type="number"
                   name="totalAmount"
                   className="form-control"
                   value={form.totalAmount}
-                  onChange={handleChange}
+                  onChange={handleGenericChange}
+                  required
                 />
               </div>
 
               <div className="col-md-4 mb-3">
-                <label>Discount (₹)</label>
+                <label className="form-label">Discount (₹)</label>
                 <input
                   type="number"
                   name="discount"
                   className="form-control"
                   value={form.discount}
-                  onChange={handleChange}
+                  onChange={handleGenericChange}
                 />
               </div>
 
               <div className="col-md-4 mb-3">
-                <label>Amount Due (₹)</label>
+                <label className="form-label">Amount Due (₹)</label>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control bg-light"
                   value={form.amountDue}
                   readOnly
                 />
               </div>
 
-              {/* Date */}
+              {/* Date & Status */}
               <div className="col-md-6 mb-3">
-                <label>Date</label>
+                <label className="form-label">Date <span className="text-danger">*</span></label>
                 <input
                   type="date"
                   name="date"
                   className="form-control"
                   value={form.date}
-                  onChange={handleChange}
+                  onChange={handleGenericChange}
+                  required
                 />
               </div>
 
-              {/* Status */}
               <div className="col-md-6 mb-3">
-                <label>Status</label>
+                <label className="form-label">Status</label>
                 <select
                   name="status"
                   className="form-select"
                   value={form.status}
-                  onChange={handleChange}
+                  onChange={handleGenericChange}
                 >
                   <option value="paid">Paid</option>
                   <option value="unpaid">Unpaid</option>
@@ -200,21 +329,20 @@ const AddBill = () => {
                 </select>
               </div>
 
-              {/* NOTES FIELD (NEW) */}
+              {/* Notes */}
               <div className="col-md-12 mb-3">
                 <label className="form-label">Notes</label>
                 <textarea
                   name="notes"
                   className="form-control"
                   rows="3"
-                  placeholder="Enter notes or additional details..."
                   value={form.notes}
-                  onChange={handleChange}
+                  onChange={handleGenericChange}
                 ></textarea>
               </div>
             </div>
 
-            <button className="btn btn-primary" disabled={saving}>
+            <button className="btn btn-primary px-4" disabled={saving}>
               {saving ? "Saving..." : "Create Bill"}
             </button>
           </form>

@@ -354,296 +354,544 @@ router.post("/import", upload.single("file"), async (req, res) => {
 });
 
 // Appointments pdf  section
+// router.get("/:id/pdf", async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const appt = await AppointmentModel.findById(id);
+//     if (!appt) {
+//       return res.status(404).json({ message: "Appointment not found" });
+//     }
+
+//     // Try to fetch doctor details from DoctorModel using doctorName
+//     let doctor = null;
+//     if (appt.doctorName) {
+//       const parts = appt.doctorName.split(" ");
+//       const first = parts[0];
+//       const last = parts.slice(1).join(" ");
+//       doctor = await DoctorModel.findOne({
+//         firstName: first,
+//         lastName: last,
+//       });
+//     }
+
+//     // --------- Derived fields ---------
+//     const clinicName = appt.clinic || doctor?.clinic || "Valley Clinic";
+//     const clinicEmail = doctor?.email || "valley_clinic@example.com";
+//     const clinicPhone = doctor?.phone || "0000000000";
+
+//     const rawAddress =
+//       doctor?.address ||
+//       "Address not available\nCity, State, Country, 000000";
+
+//     const addressLines = String(rawAddress).split(/\r?\n/);
+//     const addressLine1 = addressLines[0] || "";
+//     const addressLine2 = addressLines[1] || "";
+
+//     const patientName = appt.patientName || "N/A";
+//     const patientEmail = "N/A"; // wire to PatientModel later if needed
+
+//     const apptDateObj = appt.date ? new Date(appt.date) : null;
+//     const apptDateFormatted = apptDateObj
+//       ? apptDateObj.toLocaleDateString("en-US", {
+//           year: "numeric",
+//           month: "long",
+//           day: "numeric",
+//         })
+//       : "N/A";
+
+//     const todayFormatted = new Date().toLocaleDateString("en-US", {
+//       year: "numeric",
+//       month: "long",
+//       day: "numeric",
+//     });
+
+//     const apptTime = appt.slot || "N/A";
+//     const apptStatus = appt.status || "Booked";
+//     const paymentMode = appt.paymentMode || "Manual";
+//     const serviceText = appt.services || "N/A";
+//     const totalBill = appt.charges ? `Rs.${appt.charges}/-` : "Not available";
+
+//     //A4 PDF Creation
+
+//     const pdfDoc = await PDFDocument.create();
+
+//     const pageWidth = 595; // A4 portrait
+//     const pageHeight = 842;
+//     const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+//     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+//     const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+//     const margin = 40;
+//     let y = pageHeight - margin; // start near top
+
+//     // ---------- Header: Logo + Clinic ----------
+//     const logoSize = 55;
+//     const logoX = margin;
+//     const logoY = y - logoSize + 5;
+
+//     // draw logo (optional)
+//     try {
+//       const logoPath = path.join(__dirname, "../assets", "logo.png");
+//       if (fs.existsSync(logoPath)) {
+//         const logoBytes = fs.readFileSync(logoPath);
+//         const logoImg = await pdfDoc.embedPng(logoBytes);
+//         page.drawImage(logoImg, {
+//           x: logoX,
+//           y: logoY,
+//           width: logoSize,
+//           height: logoSize,
+//         });
+//       }
+//     } catch (e) {
+//       console.warn("Logo not found or failed to load.");
+//     }
+
+//     const textStartX = logoX + logoSize + 10;
+
+//     // Clinic name
+//     page.drawText(clinicName, {
+//       x: textStartX,
+//       y,
+//       size: 18,
+//       font: bold,
+//       color: rgb(0, 0, 0),
+//     });
+
+//     // Date (top-right)
+//     page.drawText(`Date: ${todayFormatted}`, {
+//       x: pageWidth - margin - 150,
+//       y,
+//       size: 11,
+//       font,
+//     });
+
+//     // Doctor name
+//     y -= 18;
+//     page.drawText(`Dr. ${appt.doctorName || "Not specified"}`, {
+//       x: textStartX,
+//       y,
+//       size: 11,
+//       font,
+//     });
+
+//     // Address lines
+//     y -= 20;
+//     page.drawText(`Address: ${addressLine1}`, {
+//       x: textStartX,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     if (addressLine2) {
+//       y -= 14;
+//       page.drawText(addressLine2, {
+//         x: textStartX + 60, // indent slightly so it visually continues
+//         y,
+//         size: 10,
+//         font,
+//       });
+//     }
+
+//     // Contact + Email row (ALWAYS after address lines)
+//     y -= 18;
+//     page.drawText(`Contact No: ${clinicPhone}`, {
+//       x: textStartX,
+//       y,
+//       size: 10,
+//       font,
+//     });
+//     page.drawText(`Email: ${clinicEmail}`, {
+//       x: pageWidth - margin - 200,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     // Divider line
+//     y -= 25;
+//     page.drawLine({
+//       start: { x: margin, y },
+//       end: { x: pageWidth - margin, y },
+//       thickness: 1,
+//       color: rgb(0.7, 0.7, 0.7),
+//     });
+
+//     // ---------- Patient section ----------
+//     y -= 25;
+//     page.drawText(`Patient Name: ${patientName}`, {
+//       x: margin,
+//       y,
+//       size: 11,
+//       font: bold,
+//     });
+
+//     y -= 16;
+//     page.drawText(`Email: ${patientEmail}`, {
+//       x: margin,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     // ---------- Appointment Detail Title ----------
+//     y -= 35;
+//     page.drawText("Appointment Detail", {
+//       x: pageWidth / 2 - 70,
+//       y,
+//       size: 13,
+//       font: bold,
+//     });
+
+//     y -= 15;
+//     page.drawLine({
+//       start: { x: margin, y },
+//       end: { x: pageWidth - margin, y },
+//       thickness: 1,
+//       color: rgb(0.7, 0.7, 0.7),
+//     });
+
+//     // ---------- Detail rows (NO overlap) ----------
+//     y -= 25;
+//     const colLeftX = margin;
+//     const colRightX = pageWidth / 2 + 10;
+
+//     // Row 1: date + time
+//     page.drawText("Appointment Date:", {
+//       x: colLeftX,
+//       y,
+//       size: 10,
+//       font: bold,
+//     });
+//     page.drawText(apptDateFormatted, {
+//       x: colLeftX + 115,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     page.drawText("Appointment Time:", {
+//       x: colRightX,
+//       y,
+//       size: 10,
+//       font: bold,
+//     });
+//     page.drawText(apptTime, { x: colRightX + 115, y, size: 10, font });
+
+//     // Row 2: status + payment
+//     y -= 22;
+//     page.drawText("Appointment Status:", {
+//       x: colLeftX,
+//       y,
+//       size: 10,
+//       font: bold,
+//     });
+//     page.drawText(apptStatus, {
+//       x: colLeftX + 115,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     page.drawText("Payment Mode:", {
+//       x: colRightX,
+//       y,
+//       size: 10,
+//       font: bold,
+//     });
+//     page.drawText(paymentMode, {
+//       x: colRightX + 115,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     // Row 3: service + total
+//     y -= 22;
+//     page.drawText("Service:", {
+//       x: colLeftX,
+//       y,
+//       size: 10,
+//       font: bold,
+//     });
+//     page.drawText(serviceText, {
+//       x: colLeftX + 115,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     page.drawText("Total Bill Payment:", {
+//       x: colRightX,
+//       y,
+//       size: 10,
+//       font: bold,
+//     });
+//     page.drawText(totalBill, {
+//       x: colRightX + 115,
+//       y,
+//       size: 10,
+//       font,
+//     });
+
+//     // ---------- Send PDF ----------
+//     const pdfBytes = await pdfDoc.save();
+//     res.setHeader("Content-Type", "application/pdf");
+//     res.setHeader(
+//       "Content-Disposition",
+//       `inline; filename=appointment-${appt._id}.pdf`
+//     );
+//     res.send(Buffer.from(pdfBytes));
+//   } catch (err) {
+//     console.error("Appointment PDF error:", err);
+//     res.status(500).json({ message: "PDF generation failed" });
+//   }
+// });
+
+//const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+//const fs = require('fs');
+//const path = require('path');
+
 router.get("/:id/pdf", async (req, res) => {
   try {
     const { id } = req.params;
 
+    // ---------------------------------------------------------
+    // 1. DATA FETCHING & PREPARATION
+    // ---------------------------------------------------------
     const appt = await AppointmentModel.findById(id);
     if (!appt) {
       return res.status(404).json({ message: "Appointment not found" });
     }
 
-    // Try to fetch doctor details from DoctorModel using doctorName
     let doctor = null;
     if (appt.doctorName) {
+      // Logic to split name and find doctor, adjust based on your exact schema
       const parts = appt.doctorName.split(" ");
       const first = parts[0];
       const last = parts.slice(1).join(" ");
-      doctor = await DoctorModel.findOne({
-        firstName: first,
-        lastName: last,
-      });
+      doctor = await DoctorModel.findOne({ firstName: first, lastName: last });
     }
 
-    // --------- Derived fields ---------
+    // Clinic Data
     const clinicName = appt.clinic || doctor?.clinic || "Valley Clinic";
-    const clinicEmail = doctor?.email || "valley_clinic@example.com";
-    const clinicPhone = doctor?.phone || "0000000000";
+    const clinicEmail = doctor?.email || "info@medicalcenter.com";
+    const clinicPhone = doctor?.phone || "+1 234 567 890";
+    
+    // Address
+    const rawAddress = doctor?.address || "123 Health Street\nMedical District, City, 000000";
+    const addressLines = String(rawAddress).split(/\r?\n/).slice(0, 2);
 
-    const rawAddress =
-      doctor?.address ||
-      "Address not available\nCity, State, Country, 000000";
-
-    const addressLines = String(rawAddress).split(/\r?\n/);
-    const addressLine1 = addressLines[0] || "";
-    const addressLine2 = addressLines[1] || "";
-
+    // Patient Data
     const patientName = appt.patientName || "N/A";
-    const patientEmail = "N/A"; // wire to PatientModel later if needed
-
+    
+    // Formatting Data
+    const todayFormatted = new Date().toLocaleDateString("en-US", { 
+        year: "numeric", month: "long", day: "numeric" 
+    });
+    
     const apptDateObj = appt.date ? new Date(appt.date) : null;
     const apptDateFormatted = apptDateObj
-      ? apptDateObj.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+      ? apptDateObj.toLocaleDateString("en-US", { weekday: 'short', year: "numeric", month: "long", day: "numeric" })
       : "N/A";
 
-    const todayFormatted = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    const generatedDate = new Date().toLocaleString("en-US", { 
+        day: "2-digit", month: "short", year: "numeric", hour: '2-digit', minute:'2-digit' 
     });
 
+    const apptId = String(appt._id).substring(0, 8).toUpperCase(); 
     const apptTime = appt.slot || "N/A";
-    const apptStatus = appt.status || "Booked";
+    const apptStatus = (appt.status || "Booked").toUpperCase();
     const paymentMode = appt.paymentMode || "Manual";
-    const serviceText = appt.services || "N/A";
-    const totalBill = appt.charges ? `Rs.${appt.charges}/-` : "Not available";
+    const serviceText = appt.services || "General Consultation";
+    const totalBill = appt.charges ? `Rs. ${appt.charges}/-` : "Rs. 0/-";
 
-    //A4 PDF Creation
-
+    // ---------------------------------------------------------
+    // 2. PDF GENERATION
+    // ---------------------------------------------------------
     const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595, 842]); // A4 Size
+    const { width, height } = page.getSize();
 
-    const pageWidth = 595; // A4 portrait
-    const pageHeight = 842;
-    const page = pdfDoc.addPage([pageWidth, pageHeight]);
+    // Fonts
+    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // Colors
+    const primaryColor = rgb(0, 0.53, 0.71); // Medical Blue
+    const black = rgb(0, 0, 0);
+    const gray = rgb(0.4, 0.4, 0.4);
+    const lightGray = rgb(0.92, 0.92, 0.92);
 
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    let cursorY = height - 50;
+    const margin = 50;
 
-    const margin = 40;
-    let y = pageHeight - margin; // start near top
-
-    // ---------- Header: Logo + Clinic ----------
-    const logoSize = 55;
-    const logoX = margin;
-    const logoY = y - logoSize + 5;
-
-    // draw logo (optional)
+    // --- LOGO (Left) ---
     try {
+      // Adjust path to where your logo actually is
       const logoPath = path.join(__dirname, "../assets", "logo.png");
       if (fs.existsSync(logoPath)) {
         const logoBytes = fs.readFileSync(logoPath);
         const logoImg = await pdfDoc.embedPng(logoBytes);
+        const logoDims = logoImg.scale(0.25); 
         page.drawImage(logoImg, {
-          x: logoX,
-          y: logoY,
-          width: logoSize,
-          height: logoSize,
+          x: margin,
+          y: cursorY - logoDims.height + 10,
+          width: logoDims.width,
+          height: logoDims.height,
         });
       }
     } catch (e) {
-      console.warn("Logo not found or failed to load.");
+      console.warn("Logo load failed:", e.message);
     }
 
-    const textStartX = logoX + logoSize + 10;
-
-    // Clinic name
-    page.drawText(clinicName, {
-      x: textStartX,
-      y,
-      size: 18,
-      font: bold,
-      color: rgb(0, 0, 0),
-    });
-
-    // Date (top-right)
+    // --- HEADER DETAILS (Right of Logo) ---
+    const textStartX = 180; 
+    
+    // Clinic Name
+    page.drawText(clinicName.toUpperCase(), { x: textStartX, y: cursorY, size: 18, font: fontBold, color: primaryColor });
+    
+    // --- DATE & BOOKING ID (Top Right Corner) ---
+    // Moved here to separate from the blue title bar
     page.drawText(`Date: ${todayFormatted}`, {
-      x: pageWidth - margin - 150,
-      y,
-      size: 11,
-      font,
-    });
-
-    // Doctor name
-    y -= 18;
-    page.drawText(`Dr. ${appt.doctorName || "Not specified"}`, {
-      x: textStartX,
-      y,
-      size: 11,
-      font,
-    });
-
-    // Address lines
-    y -= 20;
-    page.drawText(`Address: ${addressLine1}`, {
-      x: textStartX,
-      y,
+      x: width - margin - 130, // Fixed align right
+      y: cursorY,
       size: 10,
-      font,
+      font: fontRegular,
+      color: black,
     });
 
-    if (addressLine2) {
-      y -= 14;
-      page.drawText(addressLine2, {
-        x: textStartX + 60, // indent slightly so it visually continues
-        y,
-        size: 10,
-        font,
-      });
-    }
-
-    // Contact + Email row (ALWAYS after address lines)
-    y -= 18;
-    page.drawText(`Contact No: ${clinicPhone}`, {
-      x: textStartX,
-      y,
+    page.drawText(`Booking ID: #${apptId}`, {
+      x: width - margin - 130, 
+      y: cursorY - 15,         // Stacked below date
       size: 10,
-      font,
-    });
-    page.drawText(`Email: ${clinicEmail}`, {
-      x: pageWidth - margin - 200,
-      y,
-      size: 10,
-      font,
+      font: fontBold,          
+      color: black,
     });
 
-    // Divider line
-    y -= 25;
-    page.drawLine({
-      start: { x: margin, y },
-      end: { x: pageWidth - margin, y },
-      thickness: 1,
-      color: rgb(0.7, 0.7, 0.7),
+    // Clinic Contact Info
+    let detailsY = cursorY - 18;
+    page.drawText(addressLines.join(", "), { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+    detailsY -= 12;
+    page.drawText(`Phone: ${clinicPhone}`, { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+    detailsY -= 12;
+    page.drawText(`Email: ${clinicEmail}`, { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+
+    cursorY -= 60; // Move down for Title Bar
+    
+    // --- TITLE BAR ---
+    // Full width blue bar
+    page.drawRectangle({ x: 0, y: cursorY - 20 , width: width, height: 30, color: primaryColor });
+    
+    const titleText = "APPOINTMENT CONFIRMATION";
+    const titleWidth = fontBold.widthOfTextAtSize(titleText, 14);
+    // Center the title
+    page.drawText(titleText, { 
+        x: (width - titleWidth) / 2, 
+        y: cursorY, 
+        size: 14, 
+        font: fontBold, 
+        color: rgb(1,1,1) // White text
     });
 
-    // ---------- Patient section ----------
-    y -= 25;
-    page.drawText(`Patient Name: ${patientName}`, {
-      x: margin,
-      y,
-      size: 11,
-      font: bold,
-    });
+    cursorY -= 50;
 
-    y -= 16;
-    page.drawText(`Email: ${patientEmail}`, {
-      x: margin,
-      y,
-      size: 10,
-      font,
-    });
+    // --- PATIENT & DOCTOR GRID ---
+    const col1 = margin;
+    const col2 = 320;
 
-    // ---------- Appointment Detail Title ----------
-    y -= 35;
-    page.drawText("Appointment Detail", {
-      x: pageWidth / 2 - 70,
-      y,
-      size: 13,
-      font: bold,
-    });
+    // Patient Column
+    page.drawText("PATIENT DETAILS", { x: col1, y: cursorY, size: 10, font: fontBold, color: gray });
+    cursorY -= 15;
+    page.drawText(patientName, { x: col1, y: cursorY, size: 14, font: fontBold, color: black });
+    cursorY -= 15;
+    // You can add Patient Email/Phone here if available
+    page.drawText("Patient ID: --", { x: col1, y: cursorY, size: 10, font: fontRegular, color: black });
 
-    y -= 15;
-    page.drawLine({
-      start: { x: margin, y },
-      end: { x: pageWidth - margin, y },
-      thickness: 1,
-      color: rgb(0.7, 0.7, 0.7),
-    });
+    // Reset Y for Doctor Column
+    const sectionTopY = cursorY + 30; 
+    
+    // Doctor Column
+    page.drawText("DOCTOR DETAILS", { x: col2, y: sectionTopY, size: 10, font: fontBold, color: gray });
+    page.drawText(`Dr. ${appt.doctorName}`, { x: col2, y: sectionTopY - 15, size: 14, font: fontBold, color: black });
+    page.drawText("General Physician", { x: col2, y: sectionTopY - 30, size: 10, font: fontRegular, color: black });
 
-    // ---------- Detail rows (NO overlap) ----------
-    y -= 25;
-    const colLeftX = margin;
-    const colRightX = pageWidth / 2 + 10;
+    cursorY -= 40;
+    
+    // Divider Line
+    page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
+    cursorY -= 30;
 
-    // Row 1: date + time
-    page.drawText("Appointment Date:", {
-      x: colLeftX,
-      y,
-      size: 10,
-      font: bold,
-    });
-    page.drawText(apptDateFormatted, {
-      x: colLeftX + 115,
-      y,
-      size: 10,
-      font,
-    });
+    // --- APPOINTMENT DETAILS (3 Columns) ---
+    page.drawText("APPOINTMENT DETAILS", { x: margin, y: cursorY, size: 12, font: fontBold, color: primaryColor });
+    cursorY -= 20;
 
-    page.drawText("Appointment Time:", {
-      x: colRightX,
-      y,
-      size: 10,
-      font: bold,
-    });
-    page.drawText(apptTime, { x: colRightX + 115, y, size: 10, font });
+    const drawDetailRow = (label, value, xPos, yPos) => {
+        page.drawText(label, { x: xPos, y: yPos, size: 9, font: fontRegular, color: gray });
+        page.drawText(value, { x: xPos, y: yPos - 12, size: 11, font: fontBold, color: black });
+    };
 
-    // Row 2: status + payment
-    y -= 22;
-    page.drawText("Appointment Status:", {
-      x: colLeftX,
-      y,
-      size: 10,
-      font: bold,
-    });
-    page.drawText(apptStatus, {
-      x: colLeftX + 115,
-      y,
-      size: 10,
-      font,
-    });
+    drawDetailRow("Date", apptDateFormatted, margin, cursorY);
+    drawDetailRow("Time", apptTime, margin + 180, cursorY);
+    
+    // Status Logic
+    page.drawText("Status", { x: width - margin - 80, y: cursorY, size: 9, font: fontRegular, color: gray });
+    
+    let statusColor = black;
+    if(apptStatus === 'BOOKED' || apptStatus === 'CONFIRMED') statusColor = rgb(0, 0.6, 0); // Green
+    if(apptStatus === 'CANCELLED') statusColor = rgb(0.8, 0, 0); // Red
 
-    page.drawText("Payment Mode:", {
-      x: colRightX,
-      y,
-      size: 10,
-      font: bold,
-    });
-    page.drawText(paymentMode, {
-      x: colRightX + 115,
-      y,
-      size: 10,
-      font,
-    });
+    page.drawText(apptStatus, { x: width - margin - 80, y: cursorY - 12, size: 11, font: fontBold, color: statusColor });
 
-    // Row 3: service + total
-    y -= 22;
-    page.drawText("Service:", {
-      x: colLeftX,
-      y,
-      size: 10,
-      font: bold,
-    });
-    page.drawText(serviceText, {
-      x: colLeftX + 115,
-      y,
-      size: 10,
-      font,
-    });
+    cursorY -= 50;
 
-    page.drawText("Total Bill Payment:", {
-      x: colRightX,
-      y,
-      size: 10,
-      font: bold,
-    });
-    page.drawText(totalBill, {
-      x: colRightX + 115,
-      y,
-      size: 10,
-      font,
-    });
+    // --- BILLING TABLE ---
+    
+    // Table Header Background
+    page.drawRectangle({ x: margin, y: cursorY, width: width - (margin*2), height: 25, color: lightGray });
+    // Header Text
+    page.drawText("Service / Description", { x: margin + 10, y: cursorY + 7, size: 10, font: fontBold, color: black });
+    page.drawText("Amount", { x: width - margin - 70, y: cursorY + 7, size: 10, font: fontBold, color: black });
 
-    // ---------- Send PDF ----------
+    cursorY -= 25;
+
+    // Table Content
+    page.drawText(serviceText, { x: margin + 10, y: cursorY + 8, size: 10, font: fontRegular, color: black });
+    page.drawText(totalBill, { x: width - margin - 70, y: cursorY + 8, size: 10, font: fontRegular, color: black });
+    
+    // Bottom Border
+    page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
+
+    cursorY -= 35;
+
+    // Totals
+    page.drawText("Total Amount:", { x: width - margin - 150, y: cursorY, size: 12, font: fontBold, color: black });
+    page.drawText(totalBill, { x: width - margin - 70, y: cursorY, size: 12, font: fontBold, color: primaryColor });
+    
+    cursorY -= 15;
+    page.drawText(`Payment Mode: ${paymentMode}`, { x: width - margin - 150, y: cursorY, size: 9, font: fontRegular, color: gray });
+
+    // --- FOOTER ---
+    const footerY = 50;
+    
+    // Note
+    page.drawText("Note:", { x: margin, y: footerY + 45, size: 9, font: fontBold, color: black });
+    page.drawText("Please arrive 15 minutes prior to your appointment time. If you need to reschedule, contact us 24 hours in advance.", { x: margin, y: footerY + 33, size: 9, font: fontRegular, color: black });
+
+    // Disclaimer
+    page.drawLine({ start: { x: margin, y: footerY + 15 }, end: { x: width - margin, y: footerY + 15 }, thickness: 1, color: lightGray });
+    page.drawText(`Generated on: ${generatedDate}`, { x: margin, y: footerY, size: 8, font: fontRegular, color: gray });
+    page.drawText("This is a computer-generated document. No signature is required.", { x: margin, y: footerY - 10, size: 8, font: fontRegular, color: gray });
+
+    // 3. SEND RESPONSE
     const pdfBytes = await pdfDoc.save();
+    
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename=appointment-${appt._id}.pdf`
-    );
+    res.setHeader("Content-Disposition", `inline; filename=Appointment_${apptId}.pdf`);
     res.send(Buffer.from(pdfBytes));
+
   } catch (err) {
     console.error("Appointment PDF error:", err);
     res.status(500).json({ message: "PDF generation failed" });

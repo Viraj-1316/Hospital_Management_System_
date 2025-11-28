@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const EncounterSchema = new mongoose.Schema({
+  encounterId: { type: String, unique: true },
   date: {
     type: Date,
     required: true,
@@ -10,7 +11,9 @@ const EncounterSchema = new mongoose.Schema({
     required: true,
   },
   doctor: {
-    type: String, 
+    type: String, // Storing name or ID depending on how we want to display it, usually name for simple display or ID for relation. 
+                  // Based on other models, it seems mixed. Let's store name but also keep ID if possible. 
+                  // The screenshot shows "Doctor Name" in the table.
     required: true,
   },
   doctorId: {
