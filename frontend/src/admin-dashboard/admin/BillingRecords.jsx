@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import { FaSearch, FaPlus, FaTrash, FaEdit } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import "../styles/services.css"; // for topbar & layout spacing
+import "../styles/admin-shared.css"; // for topbar & layout spacing
 
 const BASE = "http://localhost:3001";
 

@@ -3,7 +3,7 @@ import { FaSearch, FaPlus, FaTimes, FaEdit, FaTrash, FaEye } from "react-icons/f
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/services.css";
+import "../../admin-dashboard/styles/admin-shared.css";
 
 export default function SharedEncounterTemplateList({ role }) {
   const navigate = useNavigate();

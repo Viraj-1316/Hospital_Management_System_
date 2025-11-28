@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { FaPlus, FaTimes, FaEdit, FaEye, FaTrash } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/services.css";
+import "../../admin-dashboard/styles/admin-shared.css";
 
 export default function MedicalReport({ role }) {
   const { id } = useParams();

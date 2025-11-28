@@ -10,9 +10,7 @@ const EncounterSchema = new mongoose.Schema({
     required: true,
   },
   doctor: {
-    type: String, // Storing name or ID depending on how we want to display it, usually name for simple display or ID for relation. 
-                  // Based on other models, it seems mixed. Let's store name but also keep ID if possible. 
-                  // The screenshot shows "Doctor Name" in the table.
+    type: String, 
     required: true,
   },
   doctorId: {

@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import { FaPlus, FaSearch, FaEdit, FaTrash, FaFileImport } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../styles/services.css";
+import "../styles/admin-shared.css";
 import "../styles/appointments.css";
 import { toast } from "react-hot-toast";
 import ConfirmationModal from "../../components/ConfirmationModal";

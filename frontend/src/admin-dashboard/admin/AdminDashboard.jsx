@@ -148,7 +148,7 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
               <div
                 className="card shadow-sm border-0 p-3 text-center clickable"
                 style={{ cursor: "pointer" }}
-                onClick={() => navigate("/patients")}
+                onClick={() => navigate("/Appointments")}
               >
                 <div className="d-flex justify-content-center align-items-center gap-3">
                   <div className="bg-success bg-opacity-10 text-success rounded-circle p-3">
@@ -169,7 +169,7 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
               <div
                 className="card shadow-sm border-0 p-3 text-center clickable"
                 style={{ cursor: "pointer" }}
-                onClick={() => navigate("/patients")}
+                onClick={() => navigate("/BillingRecords")}
               >
                 <div className="d-flex justify-content-center align-items-center gap-3">
                   <div className="bg-info bg-opacity-10 text-info rounded-circle p-3">

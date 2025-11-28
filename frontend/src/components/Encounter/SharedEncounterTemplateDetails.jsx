@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaTimes, FaPlus, FaTrash, FaEdit } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/services.css";
+import "../../admin-dashboard/styles/admin-shared.css";
 
 export default function SharedEncounterTemplateDetails({ role }) {
   const { id } = useParams();

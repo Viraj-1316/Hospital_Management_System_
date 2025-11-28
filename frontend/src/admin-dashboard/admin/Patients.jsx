@@ -3,7 +3,7 @@ import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../styles/services.css"; // using the Services layout styling
+import "../styles/admin-shared.css"; // using the Services layout styling
 import { FaSearch, FaPlus, FaDownload, FaCalendarAlt, FaFileMedical, FaFileAlt, FaEnvelope } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { RiDeleteBinFill } from "react-icons/ri";

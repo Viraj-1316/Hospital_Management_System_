@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaPrint, FaFileUpload, FaTimes, FaPlus, FaTrash, FaEdit, FaEye } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/services.css"; // Adjust path if needed, or assume global styles
+import "../../admin-dashboard/styles/admin-shared.css"; 
 
 export default function SharedEncounterDetails({ role }) {
   const { id } = useParams();

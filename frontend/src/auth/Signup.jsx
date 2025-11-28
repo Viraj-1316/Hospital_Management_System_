@@ -1,18 +1,18 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import PhoneInput from "react-phone-input-2";
+import toast from "react-hot-toast";
 
 const API_BASE = "http://localhost:3001";
 
 function Signup() {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [clinicId, setClinicId] = useState("");
   const [clinics, setClinics] = useState([]);
   const [phone, setPhone] = useState(""); // value like "919876543210"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const loadClinics = async () => {
@@ -27,6 +27,7 @@ function Signup() {
       } catch (err) {
         console.error("Error fetching clinics:", err);
         setClinics([]);
+        toast.error("Failed to load clinics");
       }
     };
 
@@ -37,27 +38,21 @@ function Signup() {
     e.preventDefault();
 
     if (!name || !email || !password || !phone) {
-      setError("All fields including mobile are required.");
-      setSuccess("");
+      toast.error("All fields including mobile are required.");
       return;
     }
 
     if (!clinicId) {
-      setError("Please select a clinic.");
-      setSuccess("");
+      toast.error("Please select a clinic.");
       return;
     }
 
     if (phone.replace(/\D/g, "").length < 6) {
-      setError("Please enter a valid mobile number.");
-      setSuccess("");
+      toast.error("Please enter a valid mobile number.");
       return;
     }
 
     const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
-
-    setError("");
-    setSuccess("");
 
     try {
       const res = await fetch(`${API_BASE}/signup`, {
@@ -74,24 +69,28 @@ function Signup() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        setError(errData.message || "Signup failed");
-        setSuccess("");
+        const msg = errData.message || "Signup failed";
+        toast.error(msg);
         return;
       }
 
       await res.json().catch(() => ({}));
 
-      setSuccess("Signup successful! You can now login.");
-      setError("");
+      toast.success("Signup successful! You can now login.");
+      
+      // Clear form
       setName("");
       setEmail("");
       setPassword("");
       setPhone("");
       setClinicId("");
+      
+      // Optional: Navigate to login after short delay
+      setTimeout(() => navigate("/"), 2000);
+
     } catch (err) {
       console.error(err);
-      setError("Network error: backend not responding");
-      setSuccess("");
+      toast.error("Network error: backend not responding");
     }
   };
 
@@ -173,18 +172,6 @@ function Signup() {
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
           />
-
-          {error && (
-            <p style={{ color: "red", fontSize: "13px", marginTop: "6px" }}>
-              {error}
-            </p>
-          )}
-
-          {success && (
-            <p style={{ color: "green", fontSize: "13px", marginTop: "6px" }}>
-              {success}
-            </p>
-          )}
 
           <button type="submit" style={btnStyle}>
             Signup

@@ -11,6 +11,7 @@ const PatientModel = require("../models/Patient");
 const DoctorModel = require("../models/Doctor");
 const { sendEmail } = require("../utils/emailService");
 const { appointmentBookedTemplate } = require("../utils/emailTemplates");
+const { sendWhatsAppMessage } = require("../utils/whatsappService");
 const upload = require("../middleware/upload");
 
 // POST /appointments - create appointment using provided patient/doctor contact fields
@@ -37,39 +38,56 @@ router.post("/", async (req, res) => {
     };
 
     console.log("📌 New appointment payload:", payload);
+    console.log("🔍 Incoming Body:", req.body);
 
     //  Create appointment in DB
     const created = await AppointmentModel.create(payload);
 
-    // Figure out patient email
+    // Figure out patient email & phone
     let targetEmail = payload.patientEmail;
+    let targetPhone = payload.patientPhone;
 
-    // If frontend didn’t send patientEmail, try from DB
-    if (!targetEmail && payload.patientId) {
+    // If frontend didn’t send patientEmail/Phone, try from DB
+    if ((!targetEmail || !targetPhone) && payload.patientId) {
+      console.log("🔍 Looking up patient in DB with ID:", payload.patientId);
       try {
         const patientDoc = await PatientModel.findById(payload.patientId);
-        if (patientDoc && patientDoc.email) {
-          targetEmail = patientDoc.email;
-          console.log("👤 Fetched patient email from DB:", targetEmail);
+        console.log("👤 Patient Doc found:", patientDoc);
+        
+        if (patientDoc) {
+          if (!targetEmail && patientDoc.email) {
+            targetEmail = patientDoc.email;
+            console.log("👤 Fetched patient email from DB:", targetEmail);
+          }
+          if (!targetPhone && patientDoc.phone) {
+            targetPhone = patientDoc.phone;
+            console.log("👤 Fetched patient phone from DB:", targetPhone);
+          }
+          // Also check for 'mobile' or 'phoneNumber' just in case schema differs
+          if (!targetPhone && patientDoc.mobile) {
+             targetPhone = patientDoc.mobile;
+             console.log("👤 Fetched patient phone (mobile) from DB:", targetPhone);
+          }
         } else {
-          console.log("⚠️ Patient found but no email field.");
+             console.log("⚠️ Patient ID provided but no document found in DB.");
         }
       } catch (e) {
-        console.log("⚠️ Error fetching patient for email:", e.message);
+        console.log("⚠️ Error fetching patient for contact info:", e.message);
       }
     }
 
-    if (targetEmail) {
-      // Optional: format date to dd/mm/yyyy
-      let formattedDate = payload.date;
-      try {
-        if (payload.date) {
-          formattedDate = new Date(payload.date).toLocaleDateString("en-GB");
-        }
-      } catch (e) {
-        console.log("⚠️ Date format issue, using raw date:", payload.date);
+    // Format date for notifications
+    let formattedDate = payload.date;
+    try {
+      if (payload.date) {
+        formattedDate = new Date(payload.date).toLocaleDateString("en-GB");
       }
+    } catch (e) {
+      console.log("⚠️ Date format issue, using raw date:", payload.date);
+    }
 
+    // --- 1. Send Email ---
+    if (targetEmail) {
       const html = appointmentBookedTemplate({
         patientName: payload.patientName,
         doctorName: payload.doctorName,
@@ -80,17 +98,24 @@ router.post("/", async (req, res) => {
       });
 
       console.log("📧 Preparing to send appointment email to:", targetEmail);
-
-      // 3️⃣ Fire email (non-blocking)
       sendEmail({
         to: targetEmail,
         subject: "Your Appointment is Confirmed | OneCare",
         html,
       });
     } else {
-      console.log(
-        "🚫 No email available for this appointment (no patientEmail and no email in DB). Skipping email."
-      );
+      console.log("🚫 No email available. Skipping email.");
+    }
+
+    // --- 2. Send WhatsApp ---
+    if (targetPhone) {
+      console.log("📱 Preparing to send WhatsApp to:", targetPhone);
+      const whatsappBody = `Hello ${payload.patientName},\n\nYour appointment with Dr. ${payload.doctorName} at ${payload.clinic} is confirmed for ${formattedDate} at ${payload.time}.\n\nThank you for choosing OneCare!`;
+      
+      // We don't await this so it doesn't block the response
+      sendWhatsAppMessage(targetPhone, whatsappBody);
+    } else {
+      console.log("🚫 No phone available. Skipping WhatsApp.");
     }
 
     // 4️⃣ Response stays same as before
