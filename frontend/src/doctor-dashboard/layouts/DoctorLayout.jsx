@@ -7,7 +7,7 @@ import "../styles/DoctorLayout.css";
 import PageTransition from "../../components/PageTransition";
 
 export default function DoctorLayout({ children }) {
-  const [open, setOpen] = useState(true); 
+  const [open, setOpen] = useState(true);
 
   return (
     <div className="doctor-layout">
@@ -18,6 +18,7 @@ export default function DoctorLayout({ children }) {
           <PageTransition>{children}</PageTransition>
         </div>
       </div>
+
     </div>
   );
 }

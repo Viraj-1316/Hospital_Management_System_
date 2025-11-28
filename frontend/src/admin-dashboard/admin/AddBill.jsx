@@ -3,7 +3,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 
 const BASE = "http://localhost:3001";
 
@@ -122,7 +122,15 @@ const AddBill = () => {
     const { name, value } = e.target;
     let updatedForm = { ...form, [name]: value };
 
-    // Auto-calculate Amount Due
+    if (name === "doctorName") {
+  const selectedDoc = doctors.find((doc) => doc._id === value);
+
+  if (selectedDoc) {
+    updatedForm.clinicName = selectedDoc.clinic || "";
+  }
+}
+
+
     if (name === "totalAmount" || name === "discount") {
       const total = Number(name === "totalAmount" ? value : updatedForm.totalAmount);
       const discount = Number(name === "discount" ? value : updatedForm.discount);
@@ -141,12 +149,16 @@ const AddBill = () => {
 
     try {
       setSaving(true);
-
+      const selectedDoc = doctors.find((doc) => doc._id === form.doctorName);
       const payload = {
         ...form,
-        services: form.services.split(",").map(s => s.trim()),
-        // Ensure clinicId is sent (if manually typed, backend might need to allow null)
-        clinicId: form.clinicId || null 
+
+        // Convert doctor ID → doctor's full name
+        doctorName: selectedDoc
+          ? `${selectedDoc.firstName} ${selectedDoc.lastName}`
+          : "",
+
+        services: form.services.split(","),
       };
 
       await axios.post(`${BASE}/bills`, payload);
@@ -341,10 +353,19 @@ const AddBill = () => {
                 ></textarea>
               </div>
             </div>
+            <div className="d-flex gap-2">
+              <button className="btn btn-primary" disabled={saving}>
+                {saving ? "Saving..." : "Create Bill"}
+              </button>
 
-            <button className="btn btn-primary px-4" disabled={saving}>
-              {saving ? "Saving..." : "Create Bill"}
-            </button>
+              <button
+                type="button"
+                className="btn btn-secondary "
+                onClick={() => navigate("/BillingRecords")}
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>

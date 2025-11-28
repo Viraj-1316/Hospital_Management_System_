@@ -13,8 +13,8 @@ export default function DoctorNavbar({ onToggle }) {
   const navigate = useNavigate();
   const menuRef = useRef();
 
-  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
-  const userId = authUser?.id;
+  const doctor = JSON.parse(localStorage.getItem("doctor") || "{}");
+  const userId = doctor?.id;
 
   // Fetch doctor profile
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function DoctorNavbar({ onToggle }) {
     }
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -50,7 +50,7 @@ export default function DoctorNavbar({ onToggle }) {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    localStorage.removeItem("authUser");
+    localStorage.removeItem("doctor");
     navigate("/");
   };
 
@@ -119,7 +119,8 @@ export default function DoctorNavbar({ onToggle }) {
                 setDropdownOpen(false);
               }}
             >
-              <i className="fa fa-user"></i> My Profile
+              <i className="fa fa-user"></i>
+              My Profile
             </button>
 
             <button
@@ -129,14 +130,16 @@ export default function DoctorNavbar({ onToggle }) {
                 setDropdownOpen(false);
               }}
             >
-              <i className="fa fa-lock"></i> Change Password
+              <i className="fa fa-lock"></i>
+              Change Password
             </button>
 
             <button
               className="dropdown-item text-danger d-flex align-items-center gap-2"
               onClick={handleLogout}
             >
-              <i className="fa fa-sign-out-alt"></i> Logout
+              <i className="fa fa-sign-out-alt"></i>
+              Logout
             </button>
           </div>
         )}

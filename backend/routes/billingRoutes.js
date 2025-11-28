@@ -4,12 +4,21 @@ const BillingModel = require("../models/Billing");
 
 router.post("/", async (req, res) => {
   try {
-    const bill = await BillingModel.create(req.body);
+    // find last bill
+    const lastBill = await BillingModel.findOne().sort({ billNumber: -1 });
+    const nextNumber = lastBill ? lastBill.billNumber + 1 : 1;
+
+    const bill = await BillingModel.create({
+      ...req.body,
+      billNumber: nextNumber,
+    });
+
     res.json({ message: "Bill created successfully", data: bill });
   } catch (err) {
     res.status(500).json({ message: "Error", error: err.message });
   }
 });
+
 
 router.get("/", async (req, res) => {
   try {

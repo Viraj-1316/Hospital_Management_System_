@@ -33,5 +33,5 @@ const DoctorSchema = new mongoose.Schema({
   mustChangePassword: { type: Boolean, default: true },
 });
 
-const DoctorModel = mongoose.model("doctors", DoctorSchema);
+const DoctorModel = mongoose.model("Doctor", DoctorSchema);
 module.exports = DoctorModel;

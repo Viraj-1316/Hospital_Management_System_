@@ -241,8 +241,18 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
 
         return true;
       })
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [bills, encountersList, searchTerm, filter]);
+const lists = useMemo(() => {
+  let filtered = bills?.filter((bill) => {
+    // filtering logic
+  });
+
+  if (filter === "billNumber") {
+    return filtered.sort((a, b) => a.billNumber - b.billNumber);
+  } else {
+    return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }
+}, [bills, encountersList, searchTerm, filter]);
+
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const pageItems = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
@@ -297,44 +307,258 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
             </div>
           </div>
 
-          <div className="table-responsive">
-            <table className="custom-table table-hover">
-              <thead>
-                <tr>
-                  <th style={{ width: '50px' }}>ID <FaSort size={10} className="text-muted"/></th>
-                  <th>Encounter ID <FaSort size={10} className="text-muted"/></th>
-                  <th>Doctor Name <FaSort size={10} className="text-muted"/></th>
-                  <th>Clinic Name <FaSort size={10} className="text-muted"/></th>
-                  <th>Patient Name <FaSort size={10} className="text-muted"/></th>
-                  <th>Services</th>
-                  <th style={{ width: '80px' }}>Total <FaSort size={10} className="text-muted"/></th>
-                  <th style={{ width: '80px' }}>Discount <FaSort size={10} className="text-muted"/></th>
-                  <th style={{ width: '90px' }}>Amount due <FaSort size={10} className="text-muted"/></th>
-                  <th style={{ width: '120px' }}>Date <FaSort size={10} className="text-muted"/></th>
-                  <th style={{ width: '80px' }}>Status <FaSort size={10} className="text-muted"/></th>
-                  <th style={{ width: '100px' }}>Action</th>
-                </tr>
+{/* Table Block */}
+<div className="card shadow-sm p-3">
+  {loading ? (
+    <div className="text-center py-5">Loading bills...</div>
+  ) : error ? (
+    <div className="text-danger py-3">{error}</div>
+  ) : (
+    <>
+      <div className="table-responsive">
+        <table className="custom-table table-hover text-center align-middle">
+          <thead>
+            <tr>
+              <th style={{ width: '50px' }}>
+                ID <FaSort size={10} className="text-muted" />
+              </th>
+              <th>
+                Encounter ID <FaSort size={10} className="text-muted" />
+              </th>
+              <th>
+                Doctor Name <FaSort size={10} className="text-muted" />
+              </th>
+              <th>
+                Clinic Name <FaSort size={10} className="text-muted" />
+              </th>
+              <th>
+                Patient Name <FaSort size={10} className="text-muted" />
+              </th>
+              <th>Services</th>
+              <th style={{ width: '80px' }}>
+                Total <FaSort size={10} className="text-muted" />
+              </th>
+              <th style={{ width: '80px' }}>
+                Discount <FaSort size={10} className="text-muted" />
+              </th>
+              <th style={{ width: '90px' }}>
+                Amount due <FaSort size={10} className="text-muted" />
+              </th>
+              <th style={{ width: '120px' }}>
+                Date <FaSort size={10} className="text-muted" />
+              </th>
+              <th style={{ width: '80px' }}>
+                Status <FaSort size={10} className="text-muted" />
+              </th>
+              <th style={{ width: '100px' }}>Action</th>
+            </tr>
 
-                <tr className="filter-row">
-                  <td><input className="filter-input" placeholder="ID" onChange={e => handleFilterChange('id', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Enc ID" onChange={e => handleFilterChange('encounterId', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Doctor" onChange={e => handleFilterChange('doctor', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Clinic" onChange={e => handleFilterChange('clinic', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Patient" onChange={e => handleFilterChange('patient', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Service" onChange={e => handleFilterChange('service', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Total" onChange={e => handleFilterChange('total', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Disc" onChange={e => handleFilterChange('discount', e.target.value)} /></td>
-                  <td><input className="filter-input" placeholder="Due" onChange={e => handleFilterChange('due', e.target.value)} /></td>
+            {/* Filter row */}
+            <tr className="filter-row">
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="ID"
+                  onChange={(e) => handleFilterChange('id', e.target.value)}
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Enc ID"
+                  onChange={(e) =>
+                    handleFilterChange('encounterId', e.target.value)
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Doctor"
+                  onChange={(e) =>
+                    handleFilterChange('doctor', e.target.value)
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Clinic"
+                  onChange={(e) =>
+                    handleFilterChange('clinic', e.target.value)
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Patient"
+                  onChange={(e) =>
+                    handleFilterChange('patient', e.target.value)
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Service"
+                  onChange={(e) =>
+                    handleFilterChange('service', e.target.value)
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Total"
+                  onChange={(e) =>
+                    handleFilterChange('total', e.target.value)
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Disc"
+                  onChange={(e) =>
+                    handleFilterChange('discount', e.target.value)
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  className="filter-input"
+                  placeholder="Due"
+                  onChange={(e) => handleFilterChange('due', e.target.value)}
+                />
+              </td>
+              <td>
+                <div className="d-flex bg-white border rounded">
+                  <input
+                    type="text"
+                    className="form-control border-0 p-1 py-0 shadow-none"
+                    style={{ fontSize: '0.7rem', height: 24 }}
+                    placeholder="Date"
+                    onFocus={(e) => (e.target.type = 'date')}
+                    onBlur={(e) => (e.target.type = 'text')}
+                    onChange={(e) => handleFilterChange('date', e.target.value)}
+                  />
+                </div>
+              </td>
+              <td>
+                <select
+                  className="form-select border-secondary shadow-none p-0 ps-1"
+                  style={{ fontSize: '0.7rem', height: 26 }}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                >
+                  <option>Filter</option>
+                  <option value="paid">Paid</option>
+                  <option value="unpaid">Unpaid</option>
+                </select>
+              </td>
+              <td></td>
+            </tr>
+          </thead>
+
+          <tbody>
+            {pageItems.length > 0 ? (
+              pageItems.map((bill, i) => (
+                <tr key={bill.billNumber || i}>
+                  <td>{bill.billNumber}</td>
+                  <td>{bill.encounterId}</td>
+                  <td>{bill.doctorName}</td>
+                  <td>{bill.clinicName}</td>
+                  <td>{bill.patientName}</td>
+                  <td>{bill.services?.join(', ')}</td>
+                  <td>₹{bill.totalAmount}</td>
+                  <td>₹{bill.discount}</td>
+                  <td>₹{bill.amountDue}</td>
+                  <td>{bill.date}</td>
                   <td>
-                     <div className="d-flex bg-white border rounded">
-                       <input type="text" className="form-control border-0 p-1 py-0 shadow-none" style={{fontSize:'0.7rem', height: 24}} placeholder="Date" onFocus={e=>e.target.type='date'} onBlur={e=>e.target.type='text'} onChange={e => handleFilterChange('date', e.target.value)} />
-                     </div>
+                    <span className={statusBadge(bill.status)}>
+                      {bill.status}
+                    </span>
                   </td>
                   <td>
-                    <select className="form-select border-secondary shadow-none p-0 ps-1" style={{fontSize:'0.7rem', height: 26}} onChange={e => handleFilterChange('status', e.target.value)}>
-                       <option>Filter</option>
-                       <option value="paid">Paid</option>
-                       <option value="unpaid">Unpaid</option>
+                    <div className="d-flex justify-content-center gap-2">
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => navigate(`/EditBill/${bill._id}`)}
+                      >
+                        <FaEdit />
+                      </button>
+
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDelete(bill._id)}
+                      >
+                        <FaTrash />
+                      </button>
+
+                      <button
+                        className="btn btn-sm btn-outline-success"
+                        onClick={() =>
+                          window.open(`${BASE}/bills/${bill._id}/pdf`)
+                        }
+                      >
+                        PDF
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="12" className="py-5 text-muted">
+                  No data found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="d-flex justify-content-between align-items-center mt-3">
+        <div>
+          Rows per page:
+          <select
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(Number(e.target.value));
+              setPage(1);
+            }}
+            className="form-select form-select-sm d-inline-block ms-2"
+            style={{ width: 80 }}
+          >
+            <option>5</option>
+            <option>10</option>
+            <option>25</option>
+          </select>
+        </div>
+
+        <div>
+          Page {page} of {totalPages || 1}
+          <button
+            className="btn btn-sm btn-outline-secondary ms-2"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            Prev
+          </button>
+          <button
+            className="btn btn-sm btn-outline-secondary ms-2"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </>
+  )}
+</div>
+
                     </select>
                   </td>
                   <td></td>

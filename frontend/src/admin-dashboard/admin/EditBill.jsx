@@ -260,10 +260,19 @@ const EditBill = () => {
               </div>
 
             </div>
-
+            
+            <div className="d-flex gap-2">
             <button className="btn btn-primary" disabled={saving}>
               {saving ? "Updating..." : "Update Bill"}
             </button>
+            <button
+              type="button"
+              className="btn btn-secondary "
+              onClick={() => navigate("/BillingRecords")}
+            >
+              Cancel
+            </button>
+            </div>
           </form>
         </div>
       </div>
