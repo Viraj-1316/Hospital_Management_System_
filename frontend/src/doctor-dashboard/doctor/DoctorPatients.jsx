@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE } from "../../config";
 import DoctorLayout from "../layouts/DoctorLayout";
 import { useNavigate } from "react-router-dom";
 import { MdEditCalendar } from "react-icons/md";
@@ -63,7 +64,7 @@ export default function DoctorPatients() {
       setLoading(true);
       setErr(null);
       try {
-        const res = await axios.get("http://localhost:3001/patients");
+        const res = await axios.get(`${API_BASE}/patients`);
         if (!mounted) return;
         const raw = Array.isArray(res.data)
           ? res.data
@@ -100,7 +101,7 @@ export default function DoctorPatients() {
     const prev = patients;
     setPatients((p) => p.filter((x) => (x._id || x.id) !== id));
     try {
-      await axios.delete(`http://localhost:3001/patients/${id}`);
+      await axios.delete(`${API_BASE}/patients/${id}`);
       toast.success("Patient deleted");
     } catch (err) {
       console.error("Delete failed:", err);
@@ -130,9 +131,9 @@ export default function DoctorPatients() {
     );
 
     const endpoints = [
-      `http://localhost:3001/patients/${id}`,
-      `http://localhost:3001/patients/${id}/status`,
-      `http://localhost:3001/api/patients/${id}`,
+      `${API_BASE}/patients/${id}`,
+      `${API_BASE}/patients/${id}/status`,
+      `${API_BASE}/api/patients/${id}`,
     ];
 
     let success = false;
@@ -174,7 +175,7 @@ export default function DoctorPatients() {
   const patientId = p._id || p.id;
 
   try {
-    const res = await axios.get(`http://localhost:3001/patients/${patientId}/latest-appointment`);
+    const res = await axios.get(`${API_BASE}/patients/${patientId}/latest-appointment`);
     const appt = res.data;
 
     setSelectedAppointmentForPdf(appt._id);

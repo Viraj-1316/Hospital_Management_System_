@@ -1,16 +1,3 @@
-import React, { useEffect, useState } from "react";
-import { FiSearch, FiPrinter } from "react-icons/fi";
-import { FaSort } from "react-icons/fa";
-import axios from "axios";
-import PatientLayout from "../layouts/PatientLayout"; // <--- Using Layout
-
-const api = axios.create({ baseURL: "http://127.0.0.1:3001" });
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
 
 const billsStyles = `
   .bills-scope .table-card { background: white; border: 1px solid #e9ecef; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }

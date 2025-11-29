@@ -1,39 +1,26 @@
-// src/Login.jsx
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE } from "../config";
 
 function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("patient");
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
-  const API_BASE = "http://localhost:3001";
+  const handleRoleClick = (r) => setRole(r);
 
-  const handleRoleClick = (newRole) => {
-    setRole(newRole);
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!email || !password) {
-      const msg = "Please enter both email and password.";
-      setError(msg);
-      toast.error(msg);
-      return;
-    }
-
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError("");
 
     try {
       const res = await fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role }),
       });
 
       if (!res.ok) {
@@ -56,19 +43,7 @@ function Login() {
         return;
       }
 
-      // --- FIX START: Save Token & User ID ---
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-      
-      // Important: Save the ID as a standalone string for Navbar/Reports to find
       const userId = user.id || user._id;
-      if (userId) {
-        localStorage.setItem("userId", userId);
-        localStorage.setItem("userRole", user.role); 
-      }
-      // --- FIX END ---
-
       const authUser = {
         id: userId || null,
         _id: userId || null,
@@ -84,6 +59,11 @@ function Login() {
 
       console.log("Saving authUser to localStorage:", authUser);
       localStorage.setItem("authUser", JSON.stringify(authUser));
+      // Also save token if returned
+      if (data.token) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("userToken", data.token);
+      }
 
       // Try to fetch patient doc by userId
       try {

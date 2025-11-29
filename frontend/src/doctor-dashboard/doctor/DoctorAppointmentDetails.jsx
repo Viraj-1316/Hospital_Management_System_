@@ -3,8 +3,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import DoctorLayout from "../layouts/DoctorLayout";
+import { API_BASE } from "../../config";
 
-const API_BASE = "http://localhost:3001";
+// const API_BASE = "http://localhost:3001";
 
 export default function DoctorAppointmentDetails() {
   const { id } = useParams();          // appointment id from URL

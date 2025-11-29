@@ -4,7 +4,9 @@ import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-const BASE = "http://localhost:3001";
+import { API_BASE } from "../../config";
+
+const BASE = API_BASE;
 
 const EditBill = () => {
   const { id } = useParams();

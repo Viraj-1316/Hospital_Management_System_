@@ -1,15 +1,9 @@
 import React, { useEffect, useState } from "react";
+import PatientLayout from "../layouts/PatientLayout";
 import axios from "axios";
-import { FaFilePdf, FaEye } from "react-icons/fa"; 
-import PatientLayout from "../layouts/PatientLayout"; // <--- Use Shared Layout
+import { API_BASE } from "../../config";
 
-const api = axios.create({ baseURL: "http://127.0.0.1:3001" });
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+const api = axios.create({ baseURL: API_BASE });
 
 const reportStyles = `
   .report-scope .report-header-card { background: #fff; padding: 15px 20px; border-bottom: 1px solid #e9ecef; margin-bottom: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
@@ -108,16 +102,18 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
                       </span>
                    </div>
 
-                   {/* 2. Report Name & Link */}
+                   {/* 2. Report Name / Link */}
                    <div style={{ flex: 1 }}>
-                     <a 
-                        href={`http://127.0.0.1:3001${r.file}`} 
+                      <a 
+                        href={`${API_BASE}${r.file}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="report-link"
-                     >
-                        <FaFilePdf className="text-danger"/> {r.name} <FaEye size={12} className="text-muted ms-2"/>
-                     </a>
+                      >
+                         {/* Icon placeholder if needed */}
+                         <span>📄</span>
+                         {r.name || "Medical Report"}
+                      </a>
                    </div>
 
                    {/* 3. Date */}

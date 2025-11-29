@@ -2,8 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { API_BASE } from "../../config";
 
-const API_BASE = "http://localhost:3001";
+// const API_BASE = "http://localhost:3001";
 
 function DoctorFirstLoginChangePassword() {
   const navigate = useNavigate();

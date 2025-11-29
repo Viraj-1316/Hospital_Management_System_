@@ -1,43 +1,30 @@
 import React, { useEffect, useState, useRef } from "react";
-
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import PatientLayout from "../layouts/PatientLayout";
+import { API_BASE } from "../../config";
 
 export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
   const navigate = useNavigate();
   const calendarRef = useRef(null);
 
-  // --- State for Filters & Data ---
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [rawAppointments, setRawAppointments] = useState([]); 
-  const [filters, setFilters] = useState({ doctor: "", status: "" });
-
-  // --- NEW: State for Appointment Details Modal ---
-  const [selectedAppointment, setSelectedAppointment] = useState(null); 
-  // -----------------------------------------------
-
   const [events, setEvents] = useState([]);
-  const [loadingEvents, setLoadingEvents] = useState(true);
-  const [errorEvents, setErrorEvents] = useState(null);
-
+  const [rawAppointments, setRawAppointments] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
-  const [loadingUpcoming, setLoadingUpcoming] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false);
+  const [errorEvents, setErrorEvents] = useState("");
+  
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState({ doctor: "", status: "" });
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
-  // Auth / LocalStorage Logic
-  const storedPatient = (() => {
-    try { return JSON.parse(localStorage.getItem("patient") || "null"); } 
-    catch { return null; }
-  })();
-
-  const patientId = storedPatient?._id || storedPatient?.id || localStorage.getItem("patientId");
-  const token = localStorage.getItem("token") || localStorage.getItem("patientToken");
-  const API_BASE = "http://localhost:3001";
+  const patientId = localStorage.getItem("patientId") || localStorage.getItem("userId");
+  const token = localStorage.getItem("token") || localStorage.getItem("userToken");
 
   // --- Map Data to Calendar Events ---
   const mapAppointmentToEvent = (a) => {

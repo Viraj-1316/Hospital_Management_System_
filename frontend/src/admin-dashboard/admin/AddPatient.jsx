@@ -4,6 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import AdminLayout from "../layouts/AdminLayout";
 import { FaArrowLeft, FaSave } from "react-icons/fa";
 import axios from "axios";
+import { API_BASE } from "../../config";
 
 
 const AddPatient = () => {
@@ -32,7 +33,7 @@ const AddPatient = () => {
   const handleSubmit = async (e) => {
   e.preventDefault();
   try {
-    const res = await axios.post("http://localhost:3001/patients", formData);
+    const res = await axios.post(`${API_BASE}/patients`, formData);
     if (res.data.message === "Patient added") {
       alert("✅ Patient added successfully!");
       navigate("/patients");

@@ -5,7 +5,9 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import toast from 'react-hot-toast';
 
-const BASE = "http://localhost:3001";
+import { API_BASE } from "../../config";
+
+const BASE = API_BASE;
 
 const AddBill = () => {
   const navigate = useNavigate();

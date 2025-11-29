@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { API_BASE } from "../../config";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import { FaPlus, FaSearch, FaEdit, FaTrash, FaFileImport } from "react-icons/fa";
@@ -72,7 +73,7 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:3001/doctor-sessions");
+      const res = await axios.get(`${API_BASE}/doctor-sessions`);
       setSessions(res.data || []);
     } catch (err) {
       console.error("Error fetching doctor sessions:", err);
@@ -83,7 +84,7 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
   const fetchDoctors = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/doctors");
+      const res = await axios.get(`${API_BASE}/doctors`);
       setDoctors(res.data || []);
     } catch (err) {
       console.error("Error fetching doctors:", err);
@@ -168,12 +169,12 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
       if (editingId) {
         await axios.put(
-          `http://localhost:3001/doctor-sessions/${editingId}`,
+          `${API_BASE}/doctor-sessions/${editingId}`,
           payload
         );
         toast.success("Doctor session updated");
       } else {
-        await axios.post("http://localhost:3001/doctor-sessions", payload);
+        await axios.post(`${API_BASE}/doctor-sessions`, payload);
         toast.success("Doctor session created");
       }
 
@@ -199,7 +200,7 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
   const executeDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:3001/doctor-sessions/${id}`);
+      await axios.delete(`${API_BASE}/doctor-sessions/${id}`);
       setSessions((prev) => prev.filter((s) => s._id !== id));
       toast.success("Session deleted");
     } catch (err) {
@@ -227,7 +228,7 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3001/doctor-sessions/import",
+        `${API_BASE}/doctor-sessions/import`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

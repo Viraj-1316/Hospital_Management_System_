@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE } from "../../config";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import { FaSearch, FaPlus, FaTrash, FaEdit, FaDownload, FaEnvelope, FaCalendarAlt, FaBriefcaseMedical } from "react-icons/fa";
@@ -48,7 +49,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
   // Fetch doctors
   const fetchDoctors = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/doctors");
+      const res = await axios.get(`${API_BASE}/doctors`);
       setDoctors(res.data || []);
     } catch (error) {
       console.error("Error fetching doctors:", error);
@@ -73,7 +74,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
 
   const executeDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:3001/doctors/${id}`);
+      await axios.delete(`${API_BASE}/doctors/${id}`);
       setDoctors((prev) => prev.filter((doc) => doc._id !== id));
       toast.success("Doctor deleted successfully!");
     } catch (error) {
@@ -98,7 +99,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
 
   const executeResend = async (id) => {
     try {
-      await axios.post(`http://localhost:3001/doctors/${id}/resend-credentials`);
+      await axios.post(`${API_BASE}/doctors/${id}/resend-credentials`);
       toast.success("Credentials resent successfully!");
     } catch (error) {
       console.error("Error resending credentials:", error);
@@ -137,7 +138,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
       formData.append("type", importType);
 
       const res = await axios.post(
-        "http://localhost:3001/doctors/import",
+        `${API_BASE}/doctors/import`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -204,7 +205,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
         active: serviceForm.status === "Active",
       };
 
-      await axios.post("http://localhost:3001/services", payload);
+      await axios.post(`${API_BASE}/services`, payload);
       toast.success("Service added successfully!");
       setServiceModalOpen(false);
     } catch (error) {
@@ -231,7 +232,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
         ];
         setCategories(categoriesData);
 
-        const clinicsRes = await axios.get("http://localhost:3001/api/clinics");
+        const clinicsRes = await axios.get(`${API_BASE}/api/clinics`);
         if (clinicsRes.data.success) {
           setClinics(clinicsRes.data.clinics || []);
         }

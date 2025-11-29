@@ -5,6 +5,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import { FaArrowLeft, FaSave } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_BASE } from "../../config";
 
 const EditPatient = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const EditPatient = () => {
   useEffect(() => {
     const fetchPatient = async () => {
       try {
-        const res = await axios.get(`http://localhost:3001/patients/${id}`);
+        const res = await axios.get(`${API_BASE}/patients/${id}`);
         if (res.data) {
           setFormData({
             firstName: res.data.firstName || "",
@@ -66,7 +67,7 @@ const EditPatient = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.put(`http://localhost:3001/patients/${id}`, formData);
+      const res = await axios.put(`${API_BASE}/patients/${id}`, formData);
       if (res.data) {
         toast.success("Patient updated successfully!");
         navigate("/patients");

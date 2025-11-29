@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_BASE } from "../config";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const ChangePasswordForm = () => {
@@ -83,7 +84,7 @@ const ChangePasswordForm = () => {
         return;
       }
 
-      const res = await axios.post("http://localhost:3001/change-password", {
+      const res = await axios.post(`${API_BASE}/change-password`, {
         email,
         oldPassword,
         newPassword,

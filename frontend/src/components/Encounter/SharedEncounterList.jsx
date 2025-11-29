@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { FaSearch, FaPlus, FaTimes, FaSave, FaEdit, FaTrash, FaColumns } from "react-icons/fa";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_BASE } from "../../config";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/admin-shared.css";
+import { FaPlus, FaTimes, FaSearch, FaEdit, FaColumns, FaTrash } from "react-icons/fa";
 
-export default function SharedEncounterList({ role, doctorId }) {
-  const navigate = useNavigate();
+const SharedEncounterList = ({ doctorId, role }) => {
   const [searchParams] = useSearchParams();
   const patientIdParam = searchParams.get("patientId");
 
@@ -59,7 +58,7 @@ export default function SharedEncounterList({ role, doctorId }) {
 
   const fetchEncounters = async () => {
     try {
-      let url = "http://localhost:3001/encounters";
+      let url = `${API_BASE}/encounters`;
       if (role === 'doctor' && doctorId) {
         url += `?doctorId=${doctorId}`;
       }
@@ -72,7 +71,7 @@ export default function SharedEncounterList({ role, doctorId }) {
 
   const fetchClinics = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/clinics");
+      const res = await axios.get(`${API_BASE}/api/clinics`);
       // Handle different response structures
       setClinics(res.data.clinics || (Array.isArray(res.data) ? res.data : []) || []);
     } catch (err) { console.error(err); }
@@ -80,14 +79,14 @@ export default function SharedEncounterList({ role, doctorId }) {
 
   const fetchDoctors = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/doctors");
+      const res = await axios.get(`${API_BASE}/doctors`);
       setDoctors(Array.isArray(res.data) ? res.data : []);
     } catch (err) { console.error(err); }
   };
 
   const fetchPatients = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/patients");
+      const res = await axios.get(`${API_BASE}/patients`);
       setPatients(Array.isArray(res.data) ? res.data : res.data.data || []);
     } catch (err) { console.error(err); }
   };
@@ -145,10 +144,10 @@ export default function SharedEncounterList({ role, doctorId }) {
 
       let res;
       if (formData.id) {
-        res = await axios.put(`http://localhost:3001/encounters/${formData.id}`, payload);
+        res = await axios.put(`${API_BASE}/encounters/${formData.id}`, payload);
         toast.success("Encounter updated");
       } else {
-        res = await axios.post("http://localhost:3001/encounters", payload);
+        res = await axios.post(`${API_BASE}/encounters`, payload);
         toast.success("Encounter created");
       }
       
@@ -196,7 +195,7 @@ export default function SharedEncounterList({ role, doctorId }) {
   const confirmDelete = async () => {
     if (encounterToDelete) {
       try {
-        await axios.delete(`http://localhost:3001/encounters/${encounterToDelete}`);
+        await axios.delete(`${API_BASE}/encounters/${encounterToDelete}`);
         toast.success("Encounter deleted");
         fetchEncounters();
       } catch (err) {
@@ -403,3 +402,5 @@ export default function SharedEncounterList({ role, doctorId }) {
     </div>
   );
 }
+
+export default SharedEncounterList;

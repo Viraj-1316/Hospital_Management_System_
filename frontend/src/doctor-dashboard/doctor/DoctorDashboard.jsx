@@ -18,8 +18,10 @@ import {
   FaListAlt,
 } from "react-icons/fa";
 
+import { API_BASE } from "../../config";
+
 // ✅ Simple base URL for backend
-const API_BASE = "http://localhost:3001";
+// const API_BASE = "http://localhost:3001"; // Removed local definition
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();

@@ -1,6 +1,7 @@
 // src/doctor/DoctorServices.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE } from "../../config";
 import DoctorLayout from "../layouts/DoctorLayout";
 
 export default function DoctorServices() {
@@ -14,7 +15,7 @@ export default function DoctorServices() {
       setLoading(true);
       setErr(null);
       try {
-        const res = await axios.get("http://localhost:3001/services");
+        const res = await axios.get(`${API_BASE}/services`);
         if (!mounted) return;
         setServices(Array.isArray(res.data) ? res.data : res.data.data ?? []);
       } catch (error) {

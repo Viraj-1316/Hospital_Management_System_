@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaPrint, FaFileUpload, FaTimes, FaPlus, FaTrash, FaEdit, FaEye } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { API_BASE } from "../../config";
 import "../../admin-dashboard/styles/admin-shared.css"; 
 
 export default function SharedEncounterDetails({ role }) {
@@ -42,7 +43,7 @@ export default function SharedEncounterDetails({ role }) {
 
   const fetchEncounterTemplates = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/encounter-templates");
+      const res = await axios.get(`${API_BASE}/encounter-templates`);
       setEncounterTemplates(res.data);
     } catch (err) {
       console.error("Error fetching templates:", err);
@@ -54,7 +55,7 @@ export default function SharedEncounterDetails({ role }) {
     if (!templateId) return;
 
     try {
-      const res = await axios.get(`http://localhost:3001/encounter-templates/${templateId}`);
+      const res = await axios.get(`${API_BASE}/encounter-templates/${templateId}`);
       const template = res.data;
 
       const newProblems = [...new Set([...problems, ...(template.problems || [])])];
@@ -91,7 +92,7 @@ export default function SharedEncounterDetails({ role }) {
     try {
       
       
-      const res = await axios.get(`http://localhost:3001/encounters`); 
+      const res = await axios.get(`${API_BASE}/encounters`); 
       const found = res.data.find(e => e._id === id);
       
       if (found) {
@@ -105,7 +106,7 @@ export default function SharedEncounterDetails({ role }) {
         // Fetch patient details if patientId exists
         if (found.patientId) {
           try {
-            const patientRes = await axios.get(`http://localhost:3001/patients/${found.patientId}`);
+            const patientRes = await axios.get(`${API_BASE}/patients/${found.patientId}`);
             setPatientEmail(patientRes.data.email || "No email found");
           } catch (err) {
             console.error("Error fetching patient details:", err);
@@ -134,7 +135,7 @@ export default function SharedEncounterDetails({ role }) {
         });
       }
 
-      await axios.put(`http://localhost:3001/encounters/${id}`, payload);
+      await axios.put(`${API_BASE}/encounters/${id}`, payload);
     } catch (err) {
       console.error("Error updating encounter:", err);
       toast.error("Failed to save changes");

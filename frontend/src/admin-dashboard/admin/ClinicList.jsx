@@ -17,7 +17,9 @@ import {
 } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 
-const API_BASE_URL = "http://localhost:3001";
+import { API_BASE } from "../../config";
+
+const API_BASE_URL = API_BASE;
 
 const SPECIALIZATION_OPTIONS = [
   "General Physician",

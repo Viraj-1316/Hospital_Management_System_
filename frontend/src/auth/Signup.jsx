@@ -2,8 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import PhoneInput from "react-phone-input-2";
 import toast from "react-hot-toast";
-
-const API_BASE = "http://localhost:3001";
+import { API_BASE } from "../config";
+import "./auth.css";
 
 function Signup() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ function Signup() {
       try {
         const res = await fetch(`${API_BASE}/api/clinics`);
         const data = await res.json();
-        if (data.success && Array.isArray(data.clinics)) {
+        if (data.success) {
           setClinics(data.clinics);
         } else {
           setClinics([]);

@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import EditorSidebar from "./components/EditorSidebar";
 import PdfPreviewPane from "./components/PdfPreviewPane";
 import axios from "axios";
+import { API_BASE } from "../config";
 import "./PdfEditor.css";
 import { toast } from "react-hot-toast";
 
@@ -41,7 +42,7 @@ export default function PdfEditor() {
   useEffect(() => {
     const loadServices = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/services");
+        const res = await axios.get(`${API_BASE}/api/services`);
         setServices(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error("Failed to load services for editor", err);
@@ -79,7 +80,7 @@ export default function PdfEditor() {
   // download using current layout (no preview reload)
   const handleDownloadCurrentLayout = async () => {
     try {
-      const res = await axios.post("http://localhost:3001/pdf/preview", {
+      const res = await axios.post(`${API_BASE}/pdf/preview`, {
         appointmentId,
         layout,
       });
@@ -115,7 +116,7 @@ export default function PdfEditor() {
   const handleCreateNextAppointment = async () => {
     try {
       const res = await axios.post(
-        "http://localhost:3001/pdf/create-next-appointment",
+        `${API_BASE}/pdf/create-next-appointment`,
         { appointmentId, layout }
       );
       toast.success("Next appointment created successfully.");

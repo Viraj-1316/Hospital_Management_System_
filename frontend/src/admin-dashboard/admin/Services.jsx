@@ -14,8 +14,10 @@ import toast, { Toaster } from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 
+import { API_BASE } from "../../config";
+
 /* ---------- Local axios instance ---------- */
-const api = axios.create({ baseURL: "http://127.0.0.1:3001" });
+const api = axios.create({ baseURL: API_BASE });
 // choose ONE and keep consistent with server mount
 const SERVICES_BASE = "/services";
 

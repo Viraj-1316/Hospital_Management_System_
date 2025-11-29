@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import DoctorLayout from "../layouts/DoctorLayout";
+import { API_BASE } from "../../config";
 
 export default function DoctorAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -26,7 +27,8 @@ export default function DoctorAppointments() {
         }
 
         // Build URL with doctorId parameter
-        let url = "http://localhost:3001/appointments";
+        // Build URL with doctorId parameter
+        let url = `${API_BASE}/appointments`;
         if (doctorId) {
           url += `?doctorId=${doctorId}`;
         }

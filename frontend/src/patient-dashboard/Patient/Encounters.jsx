@@ -1,35 +1,3 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Eye // View Icon
-} from "lucide-react";
-import axios from "axios";
-import { toast } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
-
-// --- 1. Import Layout ---
-import PatientLayout from "../layouts/PatientLayout"; 
-import "../styles/encounters.css";
-
-/* -------------------------------------------------------------------------- */
-/* AXIOS SETUP                                                                */
-/* -------------------------------------------------------------------------- */
-const api = axios.create({ baseURL: "http://localhost:3001" });
-
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token") || localStorage.getItem("userToken");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-/* -------------------------------------------------------------------------- */
-/* HELPERS                                                                    */
-/* -------------------------------------------------------------------------- */
 const getName = (data) => {
   if (!data) return null;
   if (typeof data === "string") return data;

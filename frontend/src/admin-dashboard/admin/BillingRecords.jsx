@@ -5,7 +5,9 @@ import Navbar from "../components/Navbar";
 import { FaSearch, FaPlus, FaTrash, FaEdit, FaSort } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-const BASE = "http://localhost:3001";
+import { API_BASE } from "../../config";
+
+const BASE = API_BASE;
 
 /* ---------- SCOPED CSS ---------- */
 const billingStyles = `
