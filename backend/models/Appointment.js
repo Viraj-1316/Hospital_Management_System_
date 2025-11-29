@@ -2,11 +2,11 @@
 const mongoose = require("mongoose");
 
 const AppointmentSchema = new mongoose.Schema({
-  patientId: { type: mongoose.Schema.Types.ObjectId, ref: "patients", required: false },
+  patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: false },
   patientName: String,
   patientEmail: String,    // <- add
   patientPhone: String,    // <- add
-  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "doctors", required: false },
+  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "Doctor", required: false },
   doctorName: String,
   clinic: String,
   date: {type : Date},
@@ -19,4 +19,4 @@ const AppointmentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("appointments", AppointmentSchema);
+module.exports = mongoose.model("Appointment", AppointmentSchema);

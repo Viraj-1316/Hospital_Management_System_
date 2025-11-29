@@ -12,130 +12,9 @@ const generateRandomPassword = require("../utils/generatePassword");
 const { sendEmail } = require("../utils/emailService");
 const { credentialsTemplate } = require("../utils/emailTemplates");
 
-// Get all patients
-router.get("/", (req, res) => {
-  PatientModel.find()
-    .then((patients) => res.json(patients))
-    .catch((err) => res.status(500).json(err));
-});
-
-router.get("/:id/latest-appointment", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // find patient doc
-    const patient = await PatientModel.findById(id).lean();
-    if (!patient) return res.status(404).json({ message: "Patient not found" });
-
-    const fullName = `${patient.firstName} ${patient.lastName}`.trim();
-
-    // find by either patientId or patientName
-    const appt = await AppointmentModel.findOne({
-      $or: [
-        { patientId: id },
-        { patientName: fullName }
-      ]
-    })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (!appt)
-      return res.status(404).json({ message: "No appointment found" });
-
-    res.json(appt);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// Get patient by ID
-router.get("/:id", async (req, res) => {
-  // Check if it's looking for "by-user" which might conflict if not handled carefully, 
-  // but since "by-user" is a specific path, we should put specific paths before generic :id
-  // However, in the original code, they were separate. 
-  // I will put specific routes before generic :id routes in this file to be safe.
-  
-  try {
-    const patient = await PatientModel.findById(req.params.id);
-    if (!patient) return res.status(404).json({ message: "Patient not found" });
-    res.json(patient);
-  } catch (err) {
-    // If cast error (invalid ID), check if it might be a mistake or just return 404/500
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-// Create patient (POST)
-router.post("/", async (req, res) => {
-  try {
-    const newPatient = await PatientModel.create(req.body);
-    res.json({ message: "Patient added", data: newPatient });
-  } catch (err) {
-    console.error("Error creating patient:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-// Delete Patient
-router.delete("/:id", async (req, res) => {
-  try {
-    await PatientModel.findByIdAndDelete(req.params.id);
-    res.json({ message: "Patient deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-// Update patient (PUT for full update)
-router.put("/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updated = await PatientModel.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updated) return res.status(404).json({ message: "Patient not found" });
-
-    return res.json({ success: true, patient: updated });
-  } catch (err) {
-    console.error("PUT /patients/:id error:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-// Patch patient (for partial updates like status)
-router.patch("/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const update = {};
-
-    // Accept either boolean isActive or string status for compatibility
-    if (req.body.hasOwnProperty("isActive")) {
-      update.isActive = !!req.body.isActive;
-    }
-    if (req.body.status) {
-      update.status = req.body.status;
-    }
-
-    if (Object.keys(update).length === 0) {
-      return res.status(400).json({ message: "No updatable fields provided" });
-    }
-
-    const updated = await PatientModel.findByIdAndUpdate(id, update, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updated) return res.status(404).json({ message: "Patient not found" });
-
-    return res.json({ success: true, patient: updated });
-  } catch (err) {
-    console.error("PATCH /patients/:id error:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
+// =================================================================
+// 1. SPECIFIC ROUTES (Must come BEFORE /:id generic routes)
+// =================================================================
 
 // Import patients from CSV
 router.post("/import", upload.single("file"), async (req, res) => {
@@ -193,39 +72,18 @@ router.post("/import", upload.single("file"), async (req, res) => {
   }
 });
 
-// CREATE or UPDATE a patient profile for a given userId
-router.put("/by-user/:userId", async (req, res) => {
-  try {
-    let { userId } = req.params;
-    const updateData = req.body;
-
-    // convert string to Mongo ObjectId (matches your Patient schema)
-    try {
-      userId = new mongoose.Types.ObjectId(userId);
-    } catch (err) {
-      return res.status(400).json({ message: "Invalid userId" });
-    }
-
-    const patient = await PatientModel.findOneAndUpdate(
-      { userId }, // find by userId (ObjectId)
-      { $set: { ...updateData, userId } }, // update fields + ensure userId set
-      { new: true, upsert: true } // create if not found
-    );
-    return res.json(patient);
-  } catch (err) {
-    console.error("Error updating/creating patient:", err);
-    return res
-      .status(500)
-      .json({ message: "Failed to update patient profile" });
-  }
-});
-
 // GET patient by userId (returns patient doc if exists)
 router.get("/by-user/:userId", async (req, res) => {
   try {
-    let { userId } = req.params;
-    try { userId = new mongoose.Types.ObjectId(userId); } catch (e) { /* keep string if invalid */ }
+    const { userId } = req.params;
+
+    // FIX: Check if userId is valid before querying
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+       return res.status(400).json({ message: "Invalid User ID format" });
+    }
+
     const patient = await PatientModel.findOne({ userId });
+    
     if (!patient) return res.status(404).json({ message: "Patient not found" });
     return res.json(patient);
   } catch (err) {
@@ -234,7 +92,41 @@ router.get("/by-user/:userId", async (req, res) => {
   }
 });
 
-// Resend credentials
+// CREATE or UPDATE a patient profile for a given userId
+router.put("/by-user/:userId", async (req, res) => {
+  try {
+    let { userId } = req.params;
+    const updateData = req.body;
+
+    // FIX: Check validity
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
+    }
+
+    const patient = await PatientModel.findOneAndUpdate(
+      { userId }, 
+      { $set: { ...updateData, userId } }, 
+      { new: true, upsert: true } // create if not found
+    );
+    return res.json(patient);
+  } catch (err) {
+    console.error("Error updating/creating patient:", err);
+    return res.status(500).json({ message: "Failed to update patient profile" });
+  }
+});
+
+// =================================================================
+// 2. GENERIC ROUTES (Must come AFTER specific routes)
+// =================================================================
+
+// Get all patients
+router.get("/", (req, res) => {
+  PatientModel.find()
+    .then((patients) => res.json(patients))
+    .catch((err) => res.status(500).json(err));
+});
+
+// Resend credentials (Specific ID route, but structure is :id/action, so safe here)
 router.post("/:id/resend-credentials", async (req, res) => {
   try {
     const patient = await PatientModel.findById(req.params.id);
@@ -257,13 +149,12 @@ router.post("/:id/resend-credentials", async (req, res) => {
       user.password = hashedPassword;
       await user.save();
     } else {
-      // If user doesn't exist for this patient, create one
       user = new User({
         email,
         password: hashedPassword,
         role: "patient",
         name: `${patient.firstName} ${patient.lastName}`,
-        profileCompleted: true, // Assuming basic profile is done
+        profileCompleted: true, 
       });
       await user.save();
       
@@ -291,6 +182,120 @@ router.post("/:id/resend-credentials", async (req, res) => {
   } catch (err) {
     console.error("Error resending credentials:", err);
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+router.get("/:id/latest-appointment", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // find patient doc
+    const patient = await PatientModel.findById(id).lean();
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    const fullName = `${patient.firstName} ${patient.lastName}`.trim();
+
+    // find by either patientId or patientName
+    const appt = await AppointmentModel.findOne({
+      $or: [
+        { patientId: id },
+        { patientName: fullName }
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!appt)
+      return res.status(404).json({ message: "No appointment found" });
+
+    res.json(appt);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get patient by ID (GENERIC CATCH-ALL FOR :id)
+router.get("/:id", async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ message: "Invalid Patient ID" });
+    }
+    const patient = await PatientModel.findById(req.params.id);
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+    res.json(patient);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Delete Patient
+router.delete("/:id", async (req, res) => {
+  try {
+    await PatientModel.findByIdAndDelete(req.params.id);
+    res.json({ message: "Patient deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Create patient (POST)
+router.post("/", async (req, res) => {
+  try {
+    const newPatient = await PatientModel.create(req.body);
+    res.json({ message: "Patient added", data: newPatient });
+  } catch (err) {
+    console.error("Error creating patient:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Update patient (PUT for full update)
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await PatientModel.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updated) return res.status(404).json({ message: "Patient not found" });
+
+    return res.json({ success: true, patient: updated });
+  } catch (err) {
+    console.error("PUT /patients/:id error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Patch patient (for partial updates like status)
+router.patch("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const update = {};
+
+    if (req.body.hasOwnProperty("isActive")) {
+      update.isActive = !!req.body.isActive;
+    }
+    if (req.body.status) {
+      update.status = req.body.status;
+    }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ message: "No updatable fields provided" });
+    }
+
+    const updated = await PatientModel.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updated) return res.status(404).json({ message: "Patient not found" });
+
+    return res.json({ success: true, patient: updated });
+  } catch (err) {
+    console.error("PATCH /patients/:id error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 

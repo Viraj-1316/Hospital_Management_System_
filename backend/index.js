@@ -4,6 +4,7 @@ const path = require("path");
 require("./models/Doctor");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 console.log("🔧 Dotenv loaded. TWILIO_ACCOUNT_SID present:", !!process.env.TWILIO_ACCOUNT_SID);
+require('./models/Appointment');
 
 const connectDB = require("./config/db");
 
@@ -54,7 +55,6 @@ app.use("/taxes", taxRoutes);
 app.use("/bills", billingRoutes);
 app.use("/dashboard-stats", dashboardRoutes);
 app.use("/", userRoutes); 
-app.use("/encounters", encounterRoutes);
 app.use("/encounters", encounterRoutes);
 app.use("/encounter-templates", encounterTemplateRoutes);
 app.use("/api/email", require("./routes/emailRoutes"));

@@ -26,4 +26,4 @@ const EncounterTemplateSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("encounterTemplates", EncounterTemplateSchema);
+module.exports = mongoose.model("EncounterTemplate", EncounterTemplateSchema);

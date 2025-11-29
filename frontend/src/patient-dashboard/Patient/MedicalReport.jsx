@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaFilePdf, FaEye } from "react-icons/fa"; 
-import PatientLayout from "../layouts/PatientLayout"; // <--- Use Shared Layout
+import PatientLayout from "../layouts/PatientLayout"; 
 
 const api = axios.create({ baseURL: "http://127.0.0.1:3001" });
 
@@ -18,16 +18,7 @@ const reportStyles = `
   .report-scope .table-header-text { font-size: 0.75rem; font-weight: 700; color: #6c757d; text-transform: uppercase; }
   .report-scope .report-link { text-decoration: none; color: #3b82f6; font-weight: 500; display: flex; align-items: center; gap: 8px; }
   .report-scope .report-link:hover { text-decoration: underline; }
-  
-  /* Encounter ID Badge */
-  .report-scope .enc-id-text { 
-      font-family: monospace; 
-      font-weight: 700; 
-      color: #0d6efd; 
-      background: #f0f9ff; 
-      padding: 2px 6px; 
-      border-radius: 4px; 
-  }
+  .report-scope .enc-id-text { font-family: monospace; font-weight: 700; color: #0d6efd; background: #f0f9ff; padding: 2px 6px; border-radius: 4px; }
 `;
 
 export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
@@ -38,30 +29,38 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
     const fetchReports = async () => {
       setLoading(true);
       try {
-        const patientId = localStorage.getItem("patientId");
+        // 1. Get ID (Try patientId first, fallback to userId)
+        const patientId = localStorage.getItem("patientId") || localStorage.getItem("userId");
         
-        // 1. Fetch ALL Encounters
-        const { data } = await api.get("/encounters");
-        
-        // 2. Filter for THIS Patient
-        const myEncounters = data.filter(e => {
-            const pId = e.patientId || e.patient?._id || e.patient;
-            return pId?.toString() === patientId?.toString();
-        });
+        console.log("🔍 Fetching reports for Patient ID:", patientId);
 
-        // 3. Extract Reports & Attach Encounter ID
-        const aggregatedReports = myEncounters.flatMap(encounter => 
+        if (!patientId) {
+            console.warn("❌ No Patient ID found in localStorage");
+            setLoading(false);
+            return;
+        }
+        
+        // 2. Fetch Encounters via Query Param (Server-Side Filtering)
+        // We pass ?patientId=... so the backend does the filtering for us.
+        // This avoids the Object vs String mismatch issues in frontend.
+        const { data } = await api.get(`/encounters?patientId=${patientId}`);
+        
+        console.log("✅ Encounters Found:", data.length);
+
+        // 3. Extract Reports
+        const aggregatedReports = data.flatMap(encounter => 
             (encounter.medicalReports || []).map(report => ({
                 ...report,
-                // Attach readable ID (ENC-XXXX) to the report row
                 customEncounterId: encounter.encounterId || "Pending", 
                 encounterDate: encounter.date 
             }))
         );
 
+        console.log("📄 Total Reports Extracted:", aggregatedReports.length);
         setReports(aggregatedReports);
+
       } catch (e) {
-        console.error("Error fetching reports:", e);
+        console.error("❌ Error fetching reports:", e);
         setReports([]); 
       }
       setLoading(false);
@@ -75,7 +74,6 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
   };
 
   return (
-    // WRAPPER: Uses PatientLayout to fix sidebar/navbar alignment
     <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <style>{reportStyles}</style>
       
@@ -89,9 +87,9 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
           
           {/* --- HEADERS --- */}
           <div className="table-header-row">
-             <span className="table-header-text" style={{ width: '120px' }}>ENC ID</span>
-             <span className="table-header-text" style={{ flex: 1 }}>REPORT NAME</span>
-             <span className="table-header-text" style={{ width: '150px', textAlign: 'right' }}>DATE</span>
+              <span className="table-header-text" style={{ width: '120px' }}>ENC ID</span>
+              <span className="table-header-text" style={{ flex: 1 }}>REPORT NAME</span>
+              <span className="table-header-text" style={{ width: '150px', textAlign: 'right' }}>DATE</span>
           </div>
 
           {/* --- DATA LIST --- */}
@@ -116,19 +114,19 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
                         rel="noopener noreferrer"
                         className="report-link"
                      >
-                        <FaFilePdf className="text-danger"/> {r.name} <FaEye size={12} className="text-muted ms-2"/>
+                        <FaFilePdf className="text-danger"/> {r.name || r.originalName || "Unnamed Report"} <FaEye size={12} className="text-muted ms-2"/>
                      </a>
                    </div>
 
                    {/* 3. Date */}
                    <div style={{ width: '150px', textAlign: 'right', color: '#666' }}>
-                     {formatDate(r.date)}
+                     {formatDate(r.date || r.encounterDate)}
                    </div>
                 </div>
              ))
           ) : (
              <div className="text-center py-5 text-muted">
-                No patient reports found
+                No medical reports found for this patient.
              </div>
           )}
         </div>

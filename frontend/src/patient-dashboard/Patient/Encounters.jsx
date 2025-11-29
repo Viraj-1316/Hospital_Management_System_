@@ -28,15 +28,33 @@ api.interceptors.request.use(
 );
 
 /* -------------------------------------------------------------------------- */
-/* HELPERS                                                                    */
+/* SMART HELPERS (FIXED DISPLAY LOGIC)                                        */
 /* -------------------------------------------------------------------------- */
-const getName = (data) => {
-  if (!data) return null;
-  if (typeof data === "string") return data;
-  if (typeof data === "object") {
-    return data.fullName || data.name || data.firstName || data.clinicName || "Unknown";
+
+// 1. Get Doctor Name: Handles Populated Objects vs Strings
+const getDoctorName = (row) => {
+  // Check if doctorId is populated (is an object with names)
+  if (row.doctorId && typeof row.doctorId === 'object') {
+    const { firstName, lastName, name } = row.doctorId;
+    if (firstName || lastName) return `${firstName || ''} ${lastName || ''}`.trim();
+    if (name) return name;
   }
-  return "Unknown";
+  
+  // Check explicit doctorName field
+  if (row.doctorName) return row.doctorName;
+  
+  // Legacy/Simple String Check
+  if (row.doctor && typeof row.doctor === 'string') return row.doctor;
+  
+  return "N/A";
+};
+
+// 2. Get Clinic Name
+const getClinicName = (row) => {
+  if (row.clinicName) return row.clinicName;
+  if (row.clinic && typeof row.clinic === 'object') return row.clinic.name || "N/A";
+  if (row.clinic && typeof row.clinic === 'string') return row.clinic;
+  return "N/A";
 };
 
 const formatDate = (dateString) => {
@@ -61,11 +79,10 @@ const dateVariants = (value) => {
 };
 
 const buildHaystack = (r) => {
-  const clinic = r.clinicName || r?.clinic?.name || "";
   const parts = [
     r.encounterId,
-    r.doctorName,
-    clinic,
+    getDoctorName(r), // Use smart helper for search
+    getClinicName(r), // Use smart helper for search
     r.status,
   ];
   dateVariants(r.date).forEach((dv) => parts.push(dv));
@@ -106,7 +123,7 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
              return;
         }
 
-        // 2. Fetch ALL Encounters (Client-side filtering strategy)
+        // 2. Fetch ALL Encounters
         const { data } = await api.get("/encounters");
         
         let allEncounters = [];
@@ -115,7 +132,7 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
 
         // 3. Filter for THIS Patient
         const myEncounters = allEncounters.filter(e => {
-            const pId = e.patientId || e.patient?._id || e.patient;
+            const pId = e.patientId?._id || e.patientId || e.patient?._id || e.patient;
             return pId?.toString() === patientId.toString();
         });
 
@@ -126,7 +143,6 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
         console.error(err);
         setRows([]);
         setTotal(0);
-        // toast.error("Failed to load encounters"); // Optional: Suppress error if backend is flaky
       } finally {
         setLoading(false);
       }
@@ -142,9 +158,12 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
       const hay = buildHaystack(r);
       if (tokens.length && !tokens.every((t) => hay.includes(t))) return false;
       
+      const docName = getDoctorName(r);
+      const cliName = getClinicName(r);
+
       if (filters.encounterId && !String(r.encounterId || "").toLowerCase().includes(filters.encounterId.toLowerCase())) return false;
-      if (filters.doctorName && !String(r.doctorName || "").toLowerCase().includes(filters.doctorName.toLowerCase())) return false;
-      if (filters.clinicName && !String(r.clinicName || "").toLowerCase().includes(filters.clinicName.toLowerCase())) return false;
+      if (filters.doctorName && !String(docName || "").toLowerCase().includes(filters.doctorName.toLowerCase())) return false;
+      if (filters.clinicName && !String(cliName || "").toLowerCase().includes(filters.clinicName.toLowerCase())) return false;
       if (filters.date) {
         const dv = dateVariants(r.date);
         if (!dv.includes(filters.date)) return false;
@@ -162,7 +181,6 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
   const effectiveTotal = clientFiltered.length || total;
 
   return (
-    // --- 2. WRAP IN LAYOUT ---
     <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       
       <div className="container-fluid py-4 position-relative">
@@ -236,8 +254,12 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
                           {row.encounterId || "Pending..."}
                       </td>
 
-                      <td>{row.doctorName || getName(row.doctor) || "N/A"}</td>
-                      <td>{row.clinicName || getName(row.clinic) || "N/A"}</td>
+                      {/* FIXED: Uses Smart Helper for Doctor Name */}
+                      <td>{getDoctorName(row)}</td>
+                      
+                      {/* FIXED: Uses Smart Helper for Clinic Name */}
+                      <td>{getClinicName(row)}</td>
+                      
                       <td>{formatDate(row.date)}</td>
                       <td><span className={`badge rounded-pill ${row.status === "active" ? "bg-success bg-opacity-10 text-success" : "bg-secondary bg-opacity-10 text-secondary"}`}>{row.status || "Unknown"}</span></td>
                       <td className="text-end pe-3">

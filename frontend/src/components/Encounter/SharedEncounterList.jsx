@@ -32,7 +32,7 @@ export default function SharedEncounterList({ role, doctorId }) {
     date: new Date().toISOString().split('T')[0],
     clinic: "",
     doctor: "",
-    patient: "",
+    patient: "", // THIS WILL NOW STORE THE ID (e.g., "64f1a...")
     description: "",
     status: "active"
   });
@@ -48,6 +48,7 @@ export default function SharedEncounterList({ role, doctorId }) {
   // 2. Handle URL Params (e.g. coming from Patient Profile)
   useEffect(() => {
     if (patientIdParam && patients.length > 0) {
+      // If we have a patient ID in URL, set it directly
       const p = patients.find(pat => pat._id === patientIdParam);
       if (p) {
         setFilters(prev => ({ ...prev, patient: `${p.firstName} ${p.lastName}` }));
@@ -73,7 +74,6 @@ export default function SharedEncounterList({ role, doctorId }) {
   const fetchClinics = async () => {
     try {
       const res = await axios.get("http://localhost:3001/api/clinics");
-      // Handle different response structures
       setClinics(res.data.clinics || (Array.isArray(res.data) ? res.data : []) || []);
     } catch (err) { console.error(err); }
   };
@@ -100,12 +100,27 @@ export default function SharedEncounterList({ role, doctorId }) {
   };
 
   const handleEdit = (encounter) => {
+    // FIX: Try to find the Patient ID. 
+    // If the record has patientId, use it. If not, try to match the name string to an ID.
+    let foundPatientId = encounter.patientId;
+    if (!foundPatientId && encounter.patient) {
+        const p = patients.find(pat => `${pat.firstName} ${pat.lastName}` === encounter.patient);
+        if (p) foundPatientId = p._id;
+    }
+
+    // FIX: Try to find Doctor ID similarly
+    let foundDoctorId = encounter.doctorId;
+    if (!foundDoctorId && encounter.doctor) {
+        const d = doctors.find(doc => `${doc.firstName} ${doc.lastName}` === encounter.doctor);
+        if (d) foundDoctorId = d._id;
+    }
+
     setFormData({
       id: encounter._id,
       date: new Date(encounter.date).toISOString().split('T')[0],
       clinic: encounter.clinic,
-      doctor: encounter.doctor,
-      patient: encounter.patient,
+      doctor: foundDoctorId || "", // Store ID
+      patient: foundPatientId || "", // Store ID
       description: encounter.description || "",
       status: encounter.status
     });
@@ -124,24 +139,36 @@ export default function SharedEncounterList({ role, doctorId }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Find Objects for ID linking
-      let selectedDoctor;
+      // 1. Find the objects based on the IDs stored in formData
+      let selectedDoctorId = formData.doctor;
+      
+      // If logged in as doctor, force their ID
       if (role === 'doctor' && doctorId) {
-        selectedDoctor = doctors.find(d => d._id === doctorId);
-      } else {
-        selectedDoctor = doctors.find(d => `${d.firstName} ${d.lastName}` === formData.doctor || d._id === formData.doctor);
+        selectedDoctorId = doctorId;
       }
 
-      const selectedPatient = patients.find(p => `${p.firstName} ${p.lastName}` === formData.patient || p._id === formData.patient);
+      const selectedDoctorObj = doctors.find(d => d._id === selectedDoctorId);
+      const selectedPatientObj = patients.find(p => p._id === formData.patient);
 
       const { id, ...dataToSave } = formData;
       
+      // 2. Construct Payload with IDs and Names
       const payload = {
         ...dataToSave,
-        doctor: selectedDoctor ? `${selectedDoctor.firstName} ${selectedDoctor.lastName}` : formData.doctor,
-        doctorId: selectedDoctor ? selectedDoctor._id : null,
-        patientId: selectedPatient ? selectedPatient._id : null
+        // Send IDs (Critical for backend validation)
+        doctorId: selectedDoctorId,
+        patientId: formData.patient,
+        
+        // Send Names (For display purposes / backward compatibility)
+        doctor: selectedDoctorObj ? `${selectedDoctorObj.firstName} ${selectedDoctorObj.lastName}` : "Unknown Doctor",
+        patient: selectedPatientObj ? `${selectedPatientObj.firstName} ${selectedPatientObj.lastName}` : "Unknown Patient",
+        
+        // Ensure names match specific fields if backend uses them
+        doctorName: selectedDoctorObj ? `${selectedDoctorObj.firstName} ${selectedDoctorObj.lastName}` : "",
+        patientName: selectedPatientObj ? `${selectedPatientObj.firstName} ${selectedPatientObj.lastName}` : ""
       };
+
+      console.log("Submitting Payload:", payload); // Debugging
 
       let res;
       if (formData.id) {
@@ -157,9 +184,9 @@ export default function SharedEncounterList({ role, doctorId }) {
       // If created new, redirect to details
       if (!formData.id && res.data && res.data._id) {
          if (role === 'doctor') {
-            navigate(`/doctor/encounters/${res.data._id}`);
+           navigate(`/doctor/encounters/${res.data._id}`);
          } else {
-            navigate(`/encounter-details/${res.data._id}`);
+           navigate(`/encounter-details/${res.data._id}`);
          }
       } else {
          fetchEncounters();
@@ -168,7 +195,8 @@ export default function SharedEncounterList({ role, doctorId }) {
       resetForm();
     } catch (err) {
       console.error("Error saving encounter:", err);
-      toast.error("Failed to save encounter");
+      // Show more detailed error if available
+      toast.error(err.response?.data?.message || "Failed to save encounter");
     }
   };
 
@@ -216,13 +244,16 @@ export default function SharedEncounterList({ role, doctorId }) {
   };
 
   const filteredEncounters = encounters.filter(enc => {
-    // Smart Filter: Check encounterId field (ENC-1001) OR _id
     const idToCheck = enc.encounterId || enc._id || "";
     const matchId = filters.id ? idToCheck.toLowerCase().includes(filters.id.toLowerCase()) : true;
     
-    const matchDoctor = filters.doctor ? (enc.doctor || "").toLowerCase().includes(filters.doctor.toLowerCase()) : true;
+    // Safety check for null strings
+    const docName = enc.doctor || enc.doctorName || "";
+    const patName = enc.patient || enc.patientName || "";
+
+    const matchDoctor = filters.doctor ? docName.toLowerCase().includes(filters.doctor.toLowerCase()) : true;
     const matchClinic = filters.clinic ? (enc.clinic || "").toLowerCase().includes(filters.clinic.toLowerCase()) : true;
-    const matchPatient = filters.patient ? (enc.patient || "").toLowerCase().includes(filters.patient.toLowerCase()) : true;
+    const matchPatient = filters.patient ? patName.toLowerCase().includes(filters.patient.toLowerCase()) : true;
     const matchDate = filters.date ? enc.date.startsWith(filters.date) : true;
     const matchStatus = filters.status ? enc.status === filters.status : true;
     
@@ -276,7 +307,8 @@ export default function SharedEncounterList({ role, doctorId }) {
                 <label className="form-label fw-bold">Doctor <span className="text-danger">*</span></label>
                 <select className="form-select" name="doctor" value={formData.doctor} onChange={handleInputChange} required>
                   <option value="">Search Doctor</option>
-                  {doctors.map(d => <option key={d._id} value={`${d.firstName} ${d.lastName}`}>{d.firstName} {d.lastName}</option>)}
+                  {/* FIX: Value is now ID, not Name */}
+                  {doctors.map(d => <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>)}
                 </select>
               </div>
             )}
@@ -285,7 +317,8 @@ export default function SharedEncounterList({ role, doctorId }) {
               <label className="form-label fw-bold">Patient <span className="text-danger">*</span></label>
               <select className="form-select" name="patient" value={formData.patient} onChange={handleInputChange} required>
                 <option value="">Search Patient</option>
-                {patients.map(p => <option key={p._id} value={`${p.firstName} ${p.lastName}`}>{p.firstName} {p.lastName}</option>)}
+                {/* FIX: Value is now ID, not Name */}
+                {patients.map(p => <option key={p._id} value={p._id}>{p.firstName} {p.lastName}</option>)}
               </select>
             </div>
             <div className="col-md-8">
@@ -350,14 +383,13 @@ export default function SharedEncounterList({ role, doctorId }) {
                   <tr key={enc._id}>
                     <td><input type="checkbox" /></td>
                     
-                    {/* --- DISPLAY BACKEND ID (ENC-1001) --- */}
                     <td className="fw-bold text-primary" style={{fontFamily:'monospace'}}>
-                       {enc.encounterId || "Pending"}
+                        {enc.encounterId || "Pending"}
                     </td>
                     
-                    <td>{enc.doctor}</td>
+                    <td>{enc.doctor || enc.doctorName}</td>
                     <td>{enc.clinic}</td>
-                    <td>{enc.patient}</td>
+                    <td>{enc.patient || enc.patientName}</td>
                     <td>{new Date(enc.date).toLocaleDateString()}</td>
                     <td>
                       <span className={`badge ${enc.status === 'active' ? 'bg-success' : 'bg-secondary'}`}>

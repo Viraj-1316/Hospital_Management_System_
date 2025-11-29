@@ -25,5 +25,5 @@ const PatientSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const PatientModel = mongoose.model("patients", PatientSchema);
+const PatientModel = mongoose.model("Patient", PatientSchema);
 module.exports = PatientModel;
