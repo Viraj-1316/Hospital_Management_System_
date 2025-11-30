@@ -17,13 +17,14 @@ const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
     patientName: "",
     doctorId: "", 
     doctorName: "", 
-    clinicId: null, // Not needed for doctor view
-    clinicName: "", // Locked to Doctor's clinic
+    clinicId: null, 
+    clinicName: "", 
     encounterId: "",
-    services: "",   // Will auto-fill
-    totalAmount: "", // Will auto-fill
-    discount: "0",
-    amountDue: "",
+    // Store selected services as objects for calculation: { name, charges }
+    selectedServices: [], 
+    totalAmount: 0,
+    discount: 0,
+    amountDue: 0,
     date: new Date().toISOString().split("T")[0],
     status: "unpaid",
     notes: "",
@@ -31,55 +32,66 @@ const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
 
   const [patients, setPatients] = useState([]);
   const [encounters, setEncounters] = useState([]);
+  const [doctorServices, setDoctorServices] = useState([]); // List from DB
   const [saving, setSaving] = useState(false);
 
   // --- 2. Initialize Data ---
   useEffect(() => {
     const init = async () => {
-        // A. Get Logged in Doctor
         const doctor = JSON.parse(localStorage.getItem("doctor"));
         if (!doctor || (!doctor._id && !doctor.id)) {
             toast.error("Doctor session invalid. Please login.");
             return;
         }
         
-        // ✅ AUTO-FILL DOCTOR & CLINIC (Locked)
+        const doctorName = `${doctor.firstName} ${doctor.lastName}`.trim();
+
+        // Auto-fill Doctor & Clinic (Locked)
         setForm(prev => ({
             ...prev,
             doctorId: doctor._id || doctor.id,
-            doctorName: `${doctor.firstName} ${doctor.lastName}`.trim(),
-            // Assuming doctor object has a 'clinic' field. If not, defaults to "General Clinic"
+            doctorName: doctorName,
             clinicName: doctor.clinic || "General Clinic", 
         }));
 
-        // B. Fetch Patients List
         try {
-            const res = await axios.get(`${BASE}/patients`);
-            const patientList = Array.isArray(res.data) ? res.data : res.data.data || [];
-            setPatients(patientList);
+            // A. Fetch Patients
+            const patRes = await axios.get(`${BASE}/patients`);
+            setPatients(Array.isArray(patRes.data) ? patRes.data : patRes.data.data || []);
+
+            // B. Fetch Services for this Doctor
+            // We filter by the doctor's name to show only their services
+            const servRes = await axios.get(`${BASE}/services`, { 
+                params: { doctor: doctorName, active: true } 
+            });
+            
+            const servicesData = Array.isArray(servRes.data) 
+                ? servRes.data 
+                : (servRes.data.rows || []);
+            
+            setDoctorServices(servicesData);
+
         } catch (err) {
             console.error(err);
-            toast.error("Failed to load patients");
+            toast.error("Failed to load initial data");
         }
     };
     init();
   }, []);
 
-  // --- 3. Auto-Fetch Data When Patient Changes ---
+  // --- 3. Patient Change Handler ---
   const handlePatientChange = async (e) => {
     const selectedId = e.target.value;
     const selectedPatient = patients.find(p => p._id === selectedId);
     
-    // 1. Update Patient Name
     setForm(prev => ({
       ...prev,
       patientId: selectedId,
       patientName: selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : "",
-      // Clear previous encounter data while loading new ones
       encounterId: "",
-      services: "",
-      totalAmount: "",
-      amountDue: ""
+      selectedServices: [],
+      totalAmount: 0,
+      amountDue: 0
     }));
 
     if (!selectedId) {
@@ -87,90 +99,148 @@ const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
         return;
     }
 
-    // 2. Fetch Encounters for this Patient & Doctor
+    // Fetch Encounters for this Patient & Doctor
     try {
         const res = await axios.get(`${BASE}/encounters?patientId=${selectedId}&doctorId=${form.doctorId}`);
         const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
-        
         setEncounters(data);
 
-        // ✅ SMART AUTO-FILL: Automatically select the most recent encounter
+        // Smart Auto-Fill Latest Appointment
         if (data.length > 0) {
-            // Sort by date (newest first) just in case backend didn't
-            const sorted = data.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const latest = sorted[0];
-
-            // Format services
-            let servicesText = Array.isArray(latest.services) ? latest.services.join(", ") : latest.services || "";
-            
-            // Update form with latest appointment details
-            setForm(prev => ({
-                ...prev,
-                encounterId: latest.encounterId || latest._id,
-                services: servicesText,
-                totalAmount: latest.charges || 0,
-                amountDue: (latest.charges || 0) - (Number(prev.discount) || 0),
-                date: new Date(latest.date).toISOString().split('T')[0]
-            }));
-            
+            const latest = data.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+            autoFillFromEncounter(latest);
             toast.success("Auto-filled from latest appointment!");
         }
     } catch (err) {
-        console.error(err);
         setEncounters([]);
     }
   };
 
-  // --- 4. Handle Manual Encounter Change (If they pick a different one) ---
+  // --- 4. Auto-Fill Logic ---
+  const autoFillFromEncounter = (encounter) => {
+      if (!encounter) return;
+
+      // Parse services string from appointment (e.g., "Checkup, Cleaning")
+      const rawServices = Array.isArray(encounter.services) 
+        ? encounter.services 
+        : (encounter.services || "").split(",");
+
+      // Map string names to actual service objects to get prices
+      const matchedServices = rawServices.map(sName => {
+          const nameClean = sName.trim();
+          if(!nameClean) return null;
+          
+          // Try to find in DB services to get price
+          const found = doctorServices.find(ds => ds.name.toLowerCase() === nameClean.toLowerCase());
+          return {
+              name: nameClean,
+              charges: found ? Number(found.charges) : 0 // Default to 0 if not in DB list
+          };
+      }).filter(Boolean);
+
+      // Calculate Total
+      // If appointment has a hardcoded 'charges' field, use that, otherwise sum up services
+      const calculatedTotal = matchedServices.reduce((sum, s) => sum + s.charges, 0);
+      const finalTotal = encounter.charges ? Number(encounter.charges) : calculatedTotal;
+
+      setForm(prev => ({
+          ...prev,
+          encounterId: encounter.encounterId || encounter._id,
+          selectedServices: matchedServices,
+          totalAmount: finalTotal,
+          amountDue: finalTotal - (Number(prev.discount) || 0),
+          date: new Date(encounter.date).toISOString().split('T')[0]
+      }));
+  };
+
   const handleEncounterChange = (e) => {
-      const selectedEncounterId = e.target.value;
-      const encounter = encounters.find(enc => (enc.encounterId === selectedEncounterId) || (enc._id === selectedEncounterId));
+      const selectedId = e.target.value;
+      if (!selectedId) {
+          setForm(prev => ({ ...prev, encounterId: "", selectedServices: [], totalAmount: 0, amountDue: 0 }));
+          return;
+      }
+      const encounter = encounters.find(enc => (enc.encounterId === selectedId) || (enc._id === selectedId));
+      autoFillFromEncounter(encounter);
+  };
 
-      if (encounter) {
-          let servicesText = Array.isArray(encounter.services) ? encounter.services.join(", ") : encounter.services || "";
-          const charges = encounter.charges || 0;
-          const discount = Number(form.discount) || 0;
+  // --- 5. Service Dropdown Logic ---
+  const handleServiceSelect = (e) => {
+      const serviceName = e.target.value;
+      if (!serviceName) return;
 
+      // Find full service object for price
+      const serviceObj = doctorServices.find(s => s.name === serviceName);
+      const newService = {
+          name: serviceObj ? serviceObj.name : serviceName,
+          charges: serviceObj ? Number(serviceObj.charges) : 0
+      };
+
+      // Check duplicates
+      if (!form.selectedServices.find(s => s.name === newService.name)) {
+          const updatedServices = [...form.selectedServices, newService];
+          
+          // Recalculate Total
+          const newTotal = updatedServices.reduce((sum, s) => sum + s.charges, 0);
+          
           setForm(prev => ({
               ...prev,
-              encounterId: selectedEncounterId,
-              services: servicesText, 
-              totalAmount: charges,   
-              amountDue: charges - discount,
-              date: new Date(encounter.date).toISOString().split('T')[0] 
+              selectedServices: updatedServices,
+              totalAmount: newTotal,
+              amountDue: newTotal - (Number(prev.discount) || 0)
           }));
-      } else {
-          setForm(prev => ({ ...prev, encounterId: "", services: "", totalAmount: "" }));
       }
+      
+      // Reset dropdown
+      e.target.value = "";
   };
 
+  const removeService = (indexToRemove) => {
+      const updatedServices = form.selectedServices.filter((_, i) => i !== indexToRemove);
+      const newTotal = updatedServices.reduce((sum, s) => sum + s.charges, 0);
+      
+      setForm(prev => ({
+          ...prev,
+          selectedServices: updatedServices,
+          totalAmount: newTotal,
+          amountDue: newTotal - (Number(prev.discount) || 0)
+      }));
+  };
+
+  // --- 6. General & Amount Change ---
   const handleGenericChange = (e) => {
     const { name, value } = e.target;
-    let updatedForm = { ...form, [name]: value };
-    
-    // Recalculate Due Amount if Total or Discount changes
-    if (name === "totalAmount" || name === "discount") {
-      const total = Number(name === "totalAmount" ? value : updatedForm.totalAmount);
-      const discount = Number(name === "discount" ? value : updatedForm.discount);
-      updatedForm.amountDue = Math.max(total - discount, 0);
-    }
-    setForm(updatedForm);
+    setForm(prev => {
+        const newState = { ...prev, [name]: value };
+        
+        // Auto-calc Amount Due if Total or Discount is typed manually
+        if (name === "totalAmount" || name === "discount") {
+            const total = Number(name === "totalAmount" ? value : newState.totalAmount);
+            const discount = Number(name === "discount" ? value : newState.discount);
+            newState.amountDue = Math.max(total - discount, 0);
+        }
+        return newState;
+    });
   };
 
+  // --- 7. Submit ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.patientId) return toast.error("Please select a Patient");
     
     try {
       setSaving(true);
+      
+      // Convert object array back to simple string array for backend
+      const serviceNames = form.selectedServices.map(s => s.name);
+      
       const payload = {
         ...form,
-        services: form.services.split(",").map(s => s.trim()), 
+        services: serviceNames, 
         clinicId: null 
       };
       await axios.post(`${BASE}/bills`, payload);
       toast.success("Bill created successfully!");
-      navigate("/doctor/billing-records");
+      navigate("/doctor/billing");
     } catch (err) {
       toast.error("Error creating bill.");
     } finally {
@@ -192,17 +262,19 @@ const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
             <form onSubmit={handleSubmit}>
               <div className="row">
                 
-                {/* Doctor (LOCKED) */}
+                {/* Doctor (Locked) */}
                 <div className="col-md-6 mb-3">
                   <label className="form-label small fw-bold text-muted">Doctor Name (Locked)</label>
-                  <input 
-                    className="form-control bg-light" 
-                    value={form.doctorName} 
-                    readOnly 
-                  />
+                  <input className="form-control bg-light" value={form.doctorName} readOnly />
                 </div>
 
-                {/* Patient Selection (Triggers Auto-Fetch) */}
+                {/* Clinic (Locked) */}
+                <div className="col-md-6 mb-3">
+                  <label className="form-label small fw-bold text-muted">Clinic Name (Locked)</label>
+                  <input className="form-control bg-light" value={form.clinicName} readOnly />
+                </div>
+
+                {/* Patient */}
                 <div className="col-md-6 mb-3">
                   <label className="form-label small fw-bold">Patient Name <span className="text-danger">*</span></label>
                   <select name="patientId" className="form-select" value={form.patientId} onChange={handlePatientChange} required>
@@ -213,26 +285,10 @@ const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
                   </select>
                 </div>
 
-                {/* Clinic (LOCKED - From Doctor Profile) */}
-                <div className="col-md-6 mb-3">
-                  <label className="form-label small fw-bold text-muted">Clinic Name (Locked)</label>
-                  <input 
-                    className="form-control bg-light" 
-                    value={form.clinicName} 
-                    readOnly 
-                  />
-                </div>
-
-                {/* Encounter Selection (Auto-Selected) */}
+                {/* Encounter */}
                 <div className="col-md-6 mb-3">
                   <label className="form-label small fw-bold">Link Appointment <span className="text-danger">*</span></label>
-                  <select 
-                    name="encounterId" 
-                    className="form-select" 
-                    value={form.encounterId} 
-                    onChange={handleEncounterChange} 
-                    disabled={!form.patientId}
-                  >
+                  <select name="encounterId" className="form-select" value={form.encounterId} onChange={handleEncounterChange} disabled={!form.patientId}>
                     <option value="">-- Select Appointment --</option>
                     {encounters.map((enc) => (
                       <option key={enc._id} value={enc.encounterId || enc._id}>
@@ -245,19 +301,43 @@ const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
                   )}
                 </div>
 
-                {/* Services (Auto-filled) */}
+                {/* Services Dropdown & List */}
                 <div className="col-md-12 mb-3">
                   <label className="form-label small fw-bold">Services</label>
-                  <input 
-                    name="services" 
-                    className="form-control" 
-                    value={form.services} 
-                    onChange={handleGenericChange} 
-                    placeholder="Auto-filled from appointment..." 
-                  />
+                  <div className="d-flex gap-2 mb-2">
+                      <select className="form-select" onChange={handleServiceSelect} defaultValue="">
+                          <option value="" disabled>-- Add Service from List --</option>
+                          {doctorServices.length > 0 ? (
+                              doctorServices.map((s) => (
+                                  <option key={s._id || s.name} value={s.name}>
+                                      {s.name} (₹{s.charges})
+                                  </option>
+                              ))
+                          ) : (
+                              <option disabled>No services found for this doctor</option>
+                          )}
+                      </select>
+                  </div>
+                  
+                  {/* Selected Services Tags */}
+                  <div className="d-flex flex-wrap gap-2 border p-3 rounded bg-light" style={{minHeight: '50px'}}>
+                      {form.selectedServices.length === 0 && <span className="text-muted small align-self-center">No services added yet. Select from dropdown above.</span>}
+                      {form.selectedServices.map((s, idx) => (
+                          <span key={idx} className="badge bg-primary d-flex align-items-center gap-2 py-2 px-3">
+                              {s.name} - ₹{s.charges}
+                              <span 
+                                style={{cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px'}} 
+                                onClick={() => removeService(idx)}
+                                title="Remove"
+                              >
+                                &times;
+                              </span>
+                          </span>
+                      ))}
+                  </div>
                 </div>
 
-                {/* Amounts (Auto-filled) */}
+                {/* Amounts */}
                 <div className="col-md-4 mb-3">
                   <label className="form-label small fw-bold">Total Amount (₹)</label>
                   <input 
@@ -300,7 +380,7 @@ const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
 
               <div className="mt-2">
                   <button className="btn btn-primary px-4 me-2" disabled={saving}>{saving ? "Generating..." : "Generate Bill"}</button>
-                  <button type="button" className="btn btn-secondary px-4" onClick={() => navigate("/doctor/billing-records")}>Cancel</button>
+                  <button type="button" className="btn btn-secondary px-4" onClick={() => navigate("/doctor/billing")}>Cancel</button>
               </div>
             </form>
           </div>

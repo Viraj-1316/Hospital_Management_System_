@@ -1,421 +1,631 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { 
   FaPlus, 
   FaSearch, 
   FaEdit, 
   FaTrash, 
-  FaSort, 
-  FaChevronLeft, 
-  FaChevronRight,
+  FaFileExcel, 
+  FaFileCsv, 
+  FaFilePdf,
   FaTimes,
-  FaSave,
-  FaFileExcel,
-  FaFileCsv,
-  FaFilePdf
+  FaFileImport
 } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
+const BASE_URL = "http://localhost:3001";
 const DAYS_OPTIONS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const DoctorSessions = () => {
-  // --- Data State ---
-  const [sessions, setSessions] = useState([
-    { id: 1, doctor: "doctorprajwalyadav21042004", clinic: "Valley Clinic", days: "Tue", timeSlot: "10", morning: "12:05 am to 1:10 am", evening: "2:10 am to 5:05 am" }
-  ]);
+/* ---------- SCOPED CSS (No Sidebar/Navbar layout needed) ---------- */
+const sessionStyles = `
+  .session-scope { font-family: 'Segoe UI', sans-serif; background-color: #f5f7fb; min-height: 100vh; padding: 20px; }
   
+  /* Top Bar */
+  .session-scope .page-title-bar {
+    background-color: #fff;
+    padding: 15px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+  }
+  .session-scope .page-title {
+    color: #333;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin: 0;
+  }
+
+  /* Card */
+  .session-scope .table-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 0 0 8px 8px; /* Connect to title bar */
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  }
+
+  /* Controls */
+  .session-scope .controls-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 10px;
+  }
+  .session-scope .search-group {
+    display: flex;
+    align-items: center;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 6px 12px;
+    width: 100%;
+    max-width: 400px;
+    background: #fff;
+  }
+  .session-scope .search-input {
+    border: none;
+    outline: none;
+    width: 100%;
+    margin-left: 8px;
+    color: #495057;
+  }
+  .session-scope .export-btn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #555;
+    transition: 0.2s;
+  }
+  .session-scope .export-btn:hover { background: #f8f9fa; }
+  .session-scope .export-btn.excel { color: #198754; }
+  .session-scope .export-btn.csv { color: #0d6efd; }
+  .session-scope .export-btn.pdf { color: #dc3545; }
+
+  /* Table */
+  .session-scope .custom-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .session-scope .custom-table thead th {
+    text-align: left;
+    padding: 12px 10px;
+    border-bottom: 2px solid #dee2e6;
+    color: #6c757d;
+    font-weight: 600;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .session-scope .custom-table tbody td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #e9ecef;
+    color: #333;
+    vertical-align: middle;
+  }
+  
+  /* Filter Inputs */
+  .session-scope .filter-row td {
+    padding: 5px 10px;
+    background: #fff;
+  }
+  .session-scope .filter-input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    outline: none;
+  }
+  .session-scope .filter-input:focus { border-color: #86b7fe; }
+
+  /* Actions */
+  .session-scope .action-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    border: 1px solid;
+    background: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .session-scope .btn-edit { border-color: #0d6efd; color: #0d6efd; }
+  .session-scope .btn-edit:hover { background: #0d6efd; color: #fff; }
+  .session-scope .btn-delete { border-color: #dc3545; color: #dc3545; }
+  .session-scope .btn-delete:hover { background: #dc3545; color: #fff; }
+
+  /* Footer */
+  .session-scope .table-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 15px; font-size: 0.85rem; color: #6c757d;
+  }
+  .session-scope .page-btn {
+    border: none; background: none; cursor: pointer; color: #6c757d; font-weight: 500; margin-left: 5px;
+  }
+  .session-scope .page-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* Form Animation */
+  .slide-down { animation: slideDown 0.3s ease-out; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+`;
+
+// Helper for time formatting (24h -> 12h AM/PM)
+const formatTime = (timeStr) => {
+  if (!timeStr) return "N/A";
+  const [hStr, mStr] = timeStr.split(":");
+  let h = parseInt(hStr, 10);
+  const m = parseInt(mStr || "0", 10);
+  const ampm = h >= 12 ? "pm" : "am";
+  h = h % 12 || 12;
+  return `${h}:${m.toString().padStart(2, "0")} ${ampm}`;
+};
+
+const formatRange = (start, end) => {
+  if (!start || !end) return "-";
+  return `${formatTime(start)} to ${formatTime(end)}`;
+};
+
+export default function DoctorSessions() {
+  // --- Data ---
+  const [sessions, setSessions] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // --- UI States ---
-  const [showForm, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
+  // --- Filters & Search ---
   const [searchTerm, setSearchTerm] = useState("");
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // --- Delete Modal States ---
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
-
-  // --- Form State ---
-  const [formData, setFormData] = useState({
+  const [filters, setFilters] = useState({
+    doctor: "",
     clinic: "",
-    timeSlot: "5",
-    morningStart: "",
-    morningEnd: "",
-    eveningStart: "",
-    eveningEnd: "",
-    selectedDays: []
+    day: ""
   });
 
-  // --- Filters ---
-  const [filterDoctor, setFilterDoctor] = useState("");
-  const [filterDay, setFilterDay] = useState("");
+  // --- Pagination ---
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // --- Form State ---
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({
+    doctorId: "", doctorName: "", clinic: "", days: [],
+    timeSlotMinutes: 30,
+    morningStart: "", morningEnd: "",
+    eveningStart: "", eveningEnd: ""
+  });
+
+  // --- Import Modal ---
+  const [showImport, setShowImport] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+
+  // --- Delete State ---
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+
+  // --- Fetch Data ---
   useEffect(() => {
-    // fetchSessions();
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [sessRes, docRes] = await Promise.all([
+          axios.get(`${BASE_URL}/doctor-sessions`),
+          axios.get(`${BASE_URL}/doctors`)
+        ]);
+        setSessions(sessRes.data || []);
+        setDoctors(docRes.data || docRes.data.data || []); // Handle varied API structures
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  // --- Handlers ---
-
-  // 1. Form Toggling
+  // --- Form Handlers ---
   const toggleForm = () => {
-    if (showForm) {
-      setShowForm(false);
-      setEditingItem(null);
-      resetForm();
-    } else {
-      setShowForm(true);
-      setEditingItem(null);
-      resetForm();
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      clinic: "",
-      timeSlot: "5",
-      morningStart: "",
-      morningEnd: "",
-      eveningStart: "",
-      eveningEnd: "",
-      selectedDays: []
+    setShowForm(!showForm);
+    setEditingId(null);
+    setForm({
+      doctorId: "", doctorName: "", clinic: "", days: [],
+      timeSlotMinutes: 30,
+      morningStart: "", morningEnd: "",
+      eveningStart: "", eveningEnd: ""
     });
   };
 
-  // 2. Edit Logic
   const handleEdit = (item) => {
-    setShowForm(true);
-    setEditingItem(item);
-    setFormData({
-      clinic: item.clinic,
-      timeSlot: item.timeSlot,
-      morningStart: "00:05",
-      morningEnd: "01:10",
-      eveningStart: "02:10",
-      eveningEnd: "05:05",
-      selectedDays: ["Tue"]
+    setEditingId(item._id);
+    setForm({
+      doctorId: item.doctorId || "",
+      doctorName: item.doctorName || "",
+      clinic: item.clinic || "",
+      days: item.days || [],
+      timeSlotMinutes: item.timeSlotMinutes || 30,
+      morningStart: item.morningStart || "",
+      morningEnd: item.morningEnd || "",
+      eveningStart: item.eveningStart || "",
+      eveningEnd: item.eveningEnd || "",
     });
+    setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 3. Delete Logic
   const handleDeleteClick = (id) => {
-    setItemToDelete(id);
+    setDeleteId(id);
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    setSessions(prev => prev.filter(s => s.id !== itemToDelete));
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`${BASE_URL}/doctor-sessions/${deleteId}`);
+      setSessions(prev => prev.filter(s => s._id !== deleteId));
+      toast.success("Session deleted");
+    } catch (err) {
+      toast.error("Delete failed");
+    }
     setShowDeleteModal(false);
-    setItemToDelete(null);
-    toast.success("Session deleted successfully!");
   };
 
-  // 4. Save Logic
-  const handleSave = (e) => {
-    e.preventDefault();
-    toast.success(editingItem ? "Session Updated" : "Session Created");
-    toggleForm();
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // 5. Form Input Handlers
-  const handleDayToggle = (day) => {
-    setFormData(prev => {
-      const newDays = prev.selectedDays.includes(day)
-        ? prev.selectedDays.filter(d => d !== day)
-        : [...prev.selectedDays, day];
-      return { ...prev, selectedDays: newDays };
-    });
+  const handleDoctorSelect = (e) => {
+    const docId = e.target.value;
+    const doc = doctors.find(d => d._id === docId);
+    setForm(prev => ({
+        ...prev,
+        doctorId: docId,
+        doctorName: doc ? `${doc.firstName} ${doc.lastName}` : "",
+        clinic: doc ? doc.clinic || "" : ""
+    }));
+  };
+
+  const toggleDay = (day) => {
+    setForm(prev => ({
+      ...prev,
+      days: prev.days.includes(day) 
+        ? prev.days.filter(d => d !== day) 
+        : [...prev.days, day]
+    }));
   };
 
   const handleSelectAllDays = (e) => {
-    if(e.target.checked) {
-        setFormData(prev => ({ ...prev, selectedDays: DAYS_OPTIONS }));
-    } else {
-        setFormData(prev => ({ ...prev, selectedDays: [] }));
+     if(e.target.checked) setForm(prev => ({ ...prev, days: DAYS_OPTIONS }));
+     else setForm(prev => ({ ...prev, days: [] }));
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+        let res;
+        if (editingId) {
+            res = await axios.put(`${BASE_URL}/doctor-sessions/${editingId}`, form);
+            toast.success("Session updated");
+            setSessions(prev => prev.map(s => s._id === editingId ? res.data.data : s));
+        } else {
+            res = await axios.post(`${BASE_URL}/doctor-sessions`, form);
+            toast.success("Session created");
+            setSessions(prev => [res.data.data, ...prev]);
+        }
+        // Refresh full list to be safe
+        const refresh = await axios.get(`${BASE_URL}/doctor-sessions`);
+        setSessions(refresh.data);
+        toggleForm();
+    } catch (err) {
+        toast.error("Save failed");
     }
   };
 
-  const handleExport = (type) => toast.success(`Exporting as ${type}...`);
+  // --- Import Logic ---
+  const handleImport = async (e) => {
+    e.preventDefault();
+    if(!importFile) return toast.error("Please select a file");
+    const fd = new FormData();
+    fd.append("file", importFile);
+    try {
+        await axios.post(`${BASE_URL}/doctor-sessions/import`, fd);
+        toast.success("Import successful");
+        setShowImport(false);
+        const refresh = await axios.get(`${BASE_URL}/doctor-sessions`);
+        setSessions(refresh.data);
+    } catch(e) {
+        toast.error("Import failed");
+    }
+  };
 
-  // --- Components ---
-  const SortableHeader = ({ label }) => (
-    <div className="d-flex justify-content-between align-items-center" style={{ cursor: 'pointer' }}>
-        <span>{label}</span>
-        <FaSort className="text-muted opacity-50" size={10} />
-    </div>
-  );
+  // --- Export Logic ---
+  const handleExport = (type) => {
+    if(type === 'excel') {
+        const ws = XLSX.utils.json_to_sheet(sessions);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Sessions");
+        XLSX.writeFile(wb, "doctor_sessions.xlsx");
+    } else if (type === 'csv') {
+        const headers = ["Doctor,Clinic,Days,Morning,Evening"];
+        const rows = sessions.map(s => 
+            `"${s.doctorName}","${s.clinic}","${s.days.join('|')}","${s.morningStart}-${s.morningEnd}","${s.eveningStart}-${s.eveningEnd}"`
+        );
+        const csvContent = "data:text/csv;charset=utf-8," + headers.concat(rows).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "doctor_sessions.csv");
+        document.body.appendChild(link);
+        link.click();
+    } else if (type === 'pdf') {
+        const doc = new jsPDF();
+        doc.text("Doctor Sessions", 14, 10);
+        autoTable(doc, {
+            head: [['Doctor', 'Clinic', 'Days', 'Morning', 'Evening']],
+            body: sessions.map(s => [s.doctorName, s.clinic, s.days.join(', '), `${s.morningStart}-${s.morningEnd}`, `${s.eveningStart}-${s.eveningEnd}`]),
+        });
+        doc.save('doctor_sessions.pdf');
+    }
+  };
+
+  // --- Filter Logic ---
+  const filteredData = useMemo(() => {
+    return sessions.filter(s => {
+        if(searchTerm && !JSON.stringify(s).toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        if(filters.doctor && !s.doctorName?.toLowerCase().includes(filters.doctor.toLowerCase())) return false;
+        if(filters.clinic && !s.clinic?.toLowerCase().includes(filters.clinic.toLowerCase())) return false;
+        if(filters.day && !(s.days || []).includes(filters.day)) return false;
+        return true;
+    });
+  }, [sessions, searchTerm, filters]);
+
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+  const pageItems = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   return (
-    <div className="position-relative">
-      {/* --- Global Styles --- */}
-      <style>
-        {`
-          .slide-down { animation: slideDown 0.3s ease-out; }
-          @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-          .fade-in { animation: fadeIn 0.2s ease-in; }
-          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    <div className="session-scope">
+      <style>{sessionStyles}</style>
+      <Toaster position="top-right" />
 
-          /* Custom Button Styles */
-          .btn-action-square {
-             width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-             border-radius: 4px; background-color: #fff; border: 1px solid #0d6efd; color: #0d6efd; transition: all 0.2s;
-          }
-          .btn-action-square:hover { background-color: #0d6efd; color: #fff; }
-
-          .btn-action-danger {
-             width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-             border-radius: 4px; background-color: #fff; border: 1px solid #dc3545; color: #dc3545; transition: all 0.2s;
-          }
-          .btn-action-danger:hover { background-color: #dc3545; color: #fff; }
-
-          /* Export Button Styling (Clean Gray Border) */
-          .btn-export {
-             width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;
-             background-color: #fff; border: 1px solid #dee2e6; border-radius: 6px; transition: all 0.2s;
-          }
-          .btn-export:hover { background-color: #f8f9fa; border-color: #adb5bd; }
-        `}
-      </style>
-
-      {/* --- Header --- */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h5 className="mb-0 fw-bold text-dark">Doctor Sessions</h5>
-        <button 
-            className={`btn ${showForm ? 'btn-secondary' : 'btn-primary'} d-flex align-items-center gap-2 px-3 fw-medium`}
-            style={{ fontSize: '0.9rem' }}
-            onClick={toggleForm}
-        >
-          {showForm ? <><FaTimes size={12} /> Close form</> : <><FaPlus size={10} /> Doctor Session</>}
-        </button>
-      </div>
-
-      {/* --- ROLL-DOWN FORM SECTION --- */}
-      {showForm && (
-        <div className="bg-white p-4 rounded shadow-sm mb-4 border slide-down">
-           <form onSubmit={handleSave}>
-              {/* Row 1: Clinic & Time Slot */}
-              <div className="row g-3 mb-3">
-                 <div className="col-md-6">
-                    <label className="form-label small fw-bold text-secondary">Select Clinic <span className="text-danger">*</span></label>
-                    <select 
-                        className="form-select" 
-                        value={formData.clinic} 
-                        onChange={(e) => setFormData({...formData, clinic: e.target.value})}
-                    >
-                        <option value="">Search</option>
-                        <option value="Valley Clinic">Valley Clinic</option>
-                    </select>
-                 </div>
-                 <div className="col-md-6">
-                    <label className="form-label small fw-bold text-secondary">Time slot (in minute) <span className="text-danger">*</span></label>
-                    <select 
-                        className="form-select"
-                        value={formData.timeSlot}
-                        onChange={(e) => setFormData({...formData, timeSlot: e.target.value})}
-                    >
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="15">15</option>
-                        <option value="30">30</option>
-                    </select>
-                 </div>
-              </div>
-
-              {/* Row 2: Morning Session */}
-              <div className="row g-3 mb-3">
-                 <div className="col-12">
-                    <label className="form-label small fw-bold text-secondary">Morning session</label>
-                    <div className="d-flex gap-3">
-                        <input type="time" className="form-control" placeholder="Start time" value={formData.morningStart} onChange={(e) => setFormData({...formData, morningStart: e.target.value})} />
-                        <input type="time" className="form-control" placeholder="End time" value={formData.morningEnd} onChange={(e) => setFormData({...formData, morningEnd: e.target.value})} />
-                    </div>
-                 </div>
-              </div>
-
-              {/* Row 3: Evening Session */}
-              <div className="row g-3 mb-3">
-                 <div className="col-12">
-                    <label className="form-label small fw-bold text-secondary">Evening session</label>
-                    <div className="d-flex gap-3">
-                        <input type="time" className="form-control" placeholder="Start time" value={formData.eveningStart} onChange={(e) => setFormData({...formData, eveningStart: e.target.value})} />
-                        <input type="time" className="form-control" placeholder="End time" value={formData.eveningEnd} onChange={(e) => setFormData({...formData, eveningEnd: e.target.value})} />
-                    </div>
-                 </div>
-              </div>
-
-              {/* Row 4: Week Days */}
-              <div className="mb-4">
-                 <label className="form-label small fw-bold text-secondary">Week days <span className="text-danger">*</span></label>
-                 <div className="d-flex flex-wrap gap-3 align-items-center">
-                    <div className="form-check">
-                        <input 
-                            className="form-check-input" 
-                            type="checkbox" 
-                            id="day-all" 
-                            checked={formData.selectedDays.length === DAYS_OPTIONS.length}
-                            onChange={handleSelectAllDays}
-                        />
-                        <label className="form-check-label text-secondary" htmlFor="day-all">All</label>
-                    </div>
-                    {DAYS_OPTIONS.map(day => (
-                        <div className="form-check" key={day}>
-                            <input 
-                                className="form-check-input" 
-                                type="checkbox" 
-                                id={`day-${day}`}
-                                checked={formData.selectedDays.includes(day)}
-                                onChange={() => handleDayToggle(day)}
-                            />
-                            <label className="form-check-label text-secondary" htmlFor={`day-${day}`}>{day}</label>
-                        </div>
-                    ))}
-                 </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="d-flex justify-content-end gap-2 border-top pt-3">
-                 <button type="submit" className="btn btn-primary px-4 d-flex align-items-center gap-2">
-                    <FaSave /> Save Session
-                 </button>
-                 <button type="button" className="btn btn-outline-secondary px-4" onClick={toggleForm}>
-                    Cancel
-                 </button>
-              </div>
-           </form>
-        </div>
-      )}
-
-      {/* --- SEARCH & EXPORT (SAME LINE) --- */}
-      <div className="mb-3 d-flex align-items-center gap-2">
-        <div className="input-group border rounded bg-light flex-grow-1" style={{ overflow: 'hidden' }}>
-            <span className="input-group-text bg-transparent border-0 pe-2 ps-3 text-muted">
-                <FaSearch size={14} />
-            </span>
-            <input
-                type="text"
-                className="form-control border-0 bg-transparent shadow-none"
-                placeholder="Search Table"
-                style={{ fontSize: '0.95rem' }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
-        </div>
-        
-        {/* Export Buttons (Next to Search Bar) */}
+      <div className="page-title-bar">
+        <h5 className="page-title">Doctor Sessions</h5>
         <div className="d-flex gap-2">
-            <button className="btn-export" onClick={() => handleExport('Excel')} title="Export Excel">
-                <FaFileExcel className="text-success" size={18} />
+            <button className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2" onClick={() => setShowImport(true)}>
+                <FaFileImport /> Import
             </button>
-            <button className="btn-export" onClick={() => handleExport('CSV')} title="Export CSV">
-                <FaFileCsv className="text-success" size={18} />
-            </button>
-            <button className="btn-export" onClick={() => handleExport('PDF')} title="Export PDF">
-                <FaFilePdf className="text-danger" size={18} />
+            <button 
+              className="btn btn-sm btn-primary d-flex align-items-center gap-2"
+              onClick={toggleForm}
+            >
+              {showForm ? <><FaTimes /> Close</> : <><FaPlus /> Doctor Session</>}
             </button>
         </div>
       </div>
 
-      {/* --- TABLE --- */}
-      <div className="border rounded">
-        <table className="table mb-0">
-          <thead className="bg-light">
-            <tr style={{ backgroundColor: '#f9fafb' }}>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0 ps-4" style={{ width: '60px', fontSize: '0.85rem' }}><SortableHeader label="Sr." /></th>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0" style={{ fontSize: '0.85rem' }}><SortableHeader label="Doctor" /></th>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0" style={{ fontSize: '0.85rem' }}><SortableHeader label="Clinic Name" /></th>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0" style={{ fontSize: '0.85rem' }}><SortableHeader label="Days" /></th>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0" style={{ fontSize: '0.85rem' }}><SortableHeader label="Time Slot" /></th>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0" style={{ fontSize: '0.85rem' }}><SortableHeader label="Morning Session" /></th>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0" style={{ fontSize: '0.85rem' }}><SortableHeader label="Evening Session" /></th>
-              <th className="py-3 fw-semibold text-secondary border-bottom-0 text-start pe-4" style={{ width: '100px', fontSize: '0.85rem' }}>Action</th>
-            </tr>
-            <tr className="bg-white border-bottom">
-              <td className="p-2"></td>
-              <td className="p-2"><input type="text" className="form-control form-control-sm" placeholder="Filter doctor session" value={filterDoctor} onChange={(e) => setFilterDoctor(e.target.value)} /></td>
-              <td className="p-2"></td>
-              <td className="p-2">
-                <select className="form-select form-select-sm" value={filterDay} onChange={(e) => setFilterDay(e.target.value)}>
-                    <option value="">Filter Day</option>
-                    {DAYS_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </td>
-              <td className="p-2"></td>
-              <td className="p-2"></td>
-              <td className="p-2"></td>
-              <td className="p-2"></td>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="8" className="text-center p-5 text-muted">Loading...</td></tr>
-            ) : sessions.length === 0 ? (
-              <tr><td colSpan="8" className="text-center p-5 text-muted border-0"><div className="py-4">No Data Found</div></td></tr>
-            ) : (
-              sessions.map((s, i) => (
-                <tr key={s.id} className="align-middle">
-                  <td className="ps-4 text-muted">{i + 1}</td>
-                  <td className="text-muted">{s.doctor}</td>
-                  <td className="text-muted">{s.clinic}</td>
-                  <td className="text-muted">{s.days}</td>
-                  <td className="text-muted">{s.timeSlot}</td>
-                  <td className="text-muted">{s.morning}</td>
-                  <td className="text-muted">{s.evening}</td>
-                  <td className="text-end pe-4">
-                     <div className="d-flex justify-content-end gap-2">
-                        <button className="btn-action-square" onClick={() => handleEdit(s)}><FaEdit /></button>
-                        <button className="btn-action-danger" onClick={() => handleDeleteClick(s.id)}><FaTrash /></button>
-                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <div className="table-card">
+        
+        {/* --- FORM SECTION --- */}
+        {showForm && (
+          <div className="bg-light p-4 mb-4 rounded border slide-down">
+              <h6 className="fw-bold text-primary mb-3">{editingId ? "Edit Session" : "Add New Session"}</h6>
+              <form onSubmit={handleSave}>
+                  <div className="row g-3">
+                      <div className="col-md-6">
+                          <label className="form-label small fw-bold">Doctor *</label>
+                          <select className="form-select" value={form.doctorId} onChange={handleDoctorSelect} required>
+                              <option value="">Select Doctor</option>
+                              {doctors.map(d => (
+                                  <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>
+                              ))}
+                          </select>
+                      </div>
+                      <div className="col-md-6">
+                          <label className="form-label small fw-bold">Clinic *</label>
+                          <input className="form-control" name="clinic" value={form.clinic} onChange={handleFormChange} required />
+                      </div>
+                      
+                      <div className="col-md-12">
+                          <label className="form-label small fw-bold d-block">Days *</label>
+                          <div className="form-check mb-2">
+                              <input className="form-check-input" type="checkbox" id="allDays" 
+                                  checked={form.days.length === DAYS_OPTIONS.length} onChange={handleSelectAllDays}/>
+                              <label className="form-check-label small" htmlFor="allDays">Select All</label>
+                          </div>
+                          <div className="d-flex flex-wrap gap-2">
+                              {DAYS_OPTIONS.map(day => (
+                                  <button 
+                                      type="button" 
+                                      key={day}
+                                      className={`btn btn-sm ${form.days.includes(day) ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                      onClick={() => toggleDay(day)}
+                                  >
+                                      {day}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
 
-      {/* --- Footer --- */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 text-secondary bg-light p-3 rounded" style={{ fontSize: "0.85rem" }}>
-        <div className="d-flex align-items-center gap-2 mb-2 mb-md-0">
-          <span>Rows per page:</span>
-          <select className="form-select form-select-sm border-0 bg-transparent fw-bold" style={{ width: "60px", boxShadow: 'none' }} value={rowsPerPage} onChange={(e) => setRowsPerPage(Number(e.target.value))}>
-            <option value="10">10</option>
-            <option value="25">25</option>
-          </select>
-        </div>
-        <div className="d-flex align-items-center gap-4">
-          <div><span>Page </span><span className="fw-bold border px-2 py-1 rounded bg-white mx-1">{currentPage}</span><span> of 1</span></div>
-          <div className="d-flex gap-1">
-            <button className="btn btn-sm text-secondary disabled d-flex align-items-center gap-1"><FaChevronLeft size={10} /> Prev</button>
-            <button className="btn btn-sm text-secondary disabled d-flex align-items-center gap-1">Next <FaChevronRight size={10} /></button>
+                      <div className="col-md-4">
+                          <label className="form-label small fw-bold">Time Slot (min)</label>
+                          <select className="form-select" name="timeSlotMinutes" value={form.timeSlotMinutes} onChange={handleFormChange}>
+                              <option value="10">10</option>
+                              <option value="15">15</option>
+                              <option value="30">30</option>
+                              <option value="45">45</option>
+                              <option value="60">60</option>
+                          </select>
+                      </div>
+
+                      <div className="col-md-4">
+                          <label className="form-label small fw-bold">Morning (Start - End)</label>
+                          <div className="d-flex gap-2">
+                              <input type="time" className="form-control" name="morningStart" value={form.morningStart} onChange={handleFormChange} />
+                              <input type="time" className="form-control" name="morningEnd" value={form.morningEnd} onChange={handleFormChange} />
+                          </div>
+                      </div>
+
+                      <div className="col-md-4">
+                          <label className="form-label small fw-bold">Evening (Start - End)</label>
+                          <div className="d-flex gap-2">
+                              <input type="time" className="form-control" name="eveningStart" value={form.eveningStart} onChange={handleFormChange} />
+                              <input type="time" className="form-control" name="eveningEnd" value={form.eveningEnd} onChange={handleFormChange} />
+                          </div>
+                      </div>
+                  </div>
+                  <div className="mt-4 d-flex justify-content-end gap-2">
+                      <button type="button" className="btn btn-light border" onClick={toggleForm}>Cancel</button>
+                      <button type="submit" className="btn btn-primary">Save Session</button>
+                  </div>
+              </form>
+          </div>
+        )}
+
+        {/* --- CONTROLS --- */}
+        <div className="controls-row">
+          <div className="search-group">
+             <FaSearch className="text-muted" />
+             <input 
+               className="search-input" 
+               placeholder="Search Table" 
+               value={searchTerm}
+               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+             />
+          </div>
+          <div className="d-flex gap-2">
+             <button className="export-btn excel" onClick={() => handleExport('excel')}><FaFileExcel size={18}/></button>
+             <button className="export-btn csv" onClick={() => handleExport('csv')}><FaFileCsv size={18}/></button>
+             <button className="export-btn pdf" onClick={() => handleExport('pdf')}><FaFilePdf size={18}/></button>
           </div>
         </div>
-      </div>
 
-      {/* --- DELETE CONFIRMATION MODAL --- */}
+        {/* --- TABLE --- */}
+        <div className="table-responsive">
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th style={{width: '50px'}}>Sr.</th>
+                <th>Doctor</th>
+                <th>Clinic Name</th>
+                <th>Days</th>
+                <th>Time Slot</th>
+                <th>Morning Session</th>
+                <th>Evening Session</th>
+                <th style={{textAlign: 'right'}}>Action</th>
+              </tr>
+              {/* Filter Row */}
+              <tr className="filter-row">
+                  <td></td>
+                  <td><input className="filter-input" placeholder="Filter doctor session" onChange={(e) => setFilters({...filters, doctor: e.target.value})}/></td>
+                  <td><input className="filter-input" placeholder="Filter Clinic" onChange={(e) => setFilters({...filters, clinic: e.target.value})}/></td>
+                  <td>
+                      <select className="filter-input" onChange={(e) => setFilters({...filters, day: e.target.value})}>
+                          <option value="">Filter Day</option>
+                          {DAYS_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+              </tr>
+            </thead>
+            <tbody>
+               {loading ? (
+                  <tr><td colSpan="8" className="text-center py-5">Loading...</td></tr>
+               ) : pageItems.length === 0 ? (
+                  <tr><td colSpan="8" className="text-center py-5 text-muted">No data found</td></tr>
+               ) : (
+                  pageItems.map((s, i) => (
+                      <tr key={s._id}>
+                          <td className="text-secondary pl-3">{(page - 1) * rowsPerPage + i + 1}</td>
+                          <td>{s.doctorName}</td>
+                          <td>{s.clinic}</td>
+                          <td>
+                              <div className="d-flex flex-wrap gap-1">
+                                  {s.days.map(d => <span key={d} className="badge bg-light text-dark border" style={{fontSize:'0.7rem', fontWeight: 'normal'}}>{d}</span>)}
+                              </div>
+                          </td>
+                          <td>{s.timeSlotMinutes}</td>
+                          <td>{formatRange(s.morningStart, s.morningEnd)}</td>
+                          <td>{formatRange(s.eveningStart, s.eveningEnd)}</td>
+                          <td style={{textAlign: 'right'}}>
+                              <div className="d-flex justify-content-end gap-2">
+                                  <button className="action-btn btn-edit" onClick={() => handleEdit(s)}><FaEdit /></button>
+                                  <button className="action-btn btn-delete" onClick={() => { setDeleteId(s._id); setShowDeleteModal(true); }}><FaTrash /></button>
+                              </div>
+                          </td>
+                      </tr>
+                  ))
+               )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* --- PAGINATION --- */}
+        <div className="table-footer">
+           <div className="d-flex align-items-center gap-2">
+              Rows per page:
+              <select className="form-select form-select-sm" style={{width:'70px'}} value={rowsPerPage} onChange={e => setRowsPerPage(Number(e.target.value))}>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+              </select>
+           </div>
+           <div className="d-flex align-items-center gap-3">
+              Page <span className="fw-bold border px-2 rounded bg-light">{page}</span> of {totalPages || 1}
+              <div>
+                  <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+                  <button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(p => p+1)}>Next</button>
+              </div>
+           </div>
+        </div>
+
+      </div>
+      
+      {/* Import Modal */}
+      {showImport && (
+        <>
+          <div className="modal-backdrop fade show" style={{zIndex: 1050}}></div>
+          <div className="modal fade show d-block" style={{zIndex: 1055}} tabIndex="-1">
+             <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content border-0 shadow">
+                    <div className="modal-header">
+                        <h5 className="modal-title text-primary">Import Doctor Sessions</h5>
+                        <button className="btn-close" onClick={() => setShowImport(false)}></button>
+                    </div>
+                    <div className="modal-body">
+                        <input type="file" className="form-control mb-3" accept=".csv" onChange={(e) => setImportFile(e.target.files[0])} />
+                        <div className="text-end">
+                             <button className="btn btn-primary" onClick={handleImport}>Upload & Import</button>
+                        </div>
+                    </div>
+                </div>
+             </div>
+          </div>
+        </>
+      )}
+
+      {/* Delete Modal */}
       {showDeleteModal && (
         <>
-          <div className="modal-backdrop fade show" style={{ zIndex: 1040 }}></div>
-          <div className="modal fade show d-block fade-in" tabIndex="-1" style={{ zIndex: 1050 }}>
-            <div className="modal-dialog modal-dialog-centered modal-sm">
-              <div className="modal-content border-0 shadow-lg">
-                <div className="modal-body p-4">
-                   <h5 className="mb-2 text-dark fw-bold" style={{ fontSize: '1.1rem' }}>Are you sure ?</h5>
-                   <p className="text-secondary mb-4" style={{ fontSize: '0.9rem' }}>Press yes to delete.</p>
-                   <div className="d-flex justify-content-end gap-2">
-                       <button className="btn btn-danger btn-sm px-3 fw-bold" onClick={confirmDelete}>YES</button>
-                       <button className="btn btn-light btn-sm px-3 fw-bold border" onClick={() => setShowDeleteModal(false)}>CANCEL</button>
-                   </div>
-                </div>
-              </div>
-            </div>
+          <div className="modal-backdrop fade show" style={{zIndex: 1040}}></div>
+          <div className="modal fade show d-block" style={{zIndex: 1050}}>
+             <div className="modal-dialog modal-dialog-centered modal-sm">
+                 <div className="modal-content border-0 shadow">
+                     <div className="modal-body text-center p-4">
+                         <h5 className="text-danger mb-2">Confirm Delete</h5>
+                         <p className="text-muted small mb-3">Are you sure you want to delete this session?</p>
+                         <div className="d-flex justify-content-center gap-2">
+                             <button className="btn btn-light btn-sm px-3" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+                             <button className="btn btn-danger btn-sm px-3" onClick={confirmDelete}>Delete</button>
+                         </div>
+                     </div>
+                 </div>
+             </div>
           </div>
         </>
       )}
 
     </div>
   );
-};
-
-export default DoctorSessions;
+}
