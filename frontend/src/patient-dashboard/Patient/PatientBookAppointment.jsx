@@ -38,6 +38,10 @@ export default function PatientBookAppointment() {
 
   const [dynamicSlots, setDynamicSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  
+  // ✅ New State for Holiday Handling
+  const [isHoliday, setIsHoliday] = useState(false);
+  const [holidayMessage, setHolidayMessage] = useState("");
 
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -84,12 +88,9 @@ export default function PatientBookAppointment() {
 
           // --- UPDATED MAPPING LOGIC ---
           setAllServices(servData.map(s => {
-            // Log specific item if name is missing to help debug
             if (!s.name) console.warn("Service missing name:", s);
-
             return {
               id: s._id || s.id,
-              // Fallback chain: Try 'name', then 'serviceName', then 'serviceId', then 'Unknown'
               name: s.name || s.serviceName || s.serviceId,
               price: s.charges || s.price || 0,
               doctorName: s.doctor || ""
@@ -140,16 +141,28 @@ export default function PatientBookAppointment() {
       setAvailableServices([]);
     }
 
-    // B. FETCH SLOTS LOGIC
+    // B. FETCH SLOTS LOGIC (Updated for Holidays)
     const fetchSlots = async () => {
       if (form.doctor && form.date) {
         setLoadingSlots(true);
         setSelectedSlot("");
+        setIsHoliday(false); // Reset holiday status
+        setHolidayMessage("");
+
         try {
-          const res = await axios.get(`${API_BASE}/doctor-sessions/available-slots`, {
+          // Use the unified backend endpoint for slots & holidays
+          const res = await axios.get(`${API_BASE}/appointments/slots`, {
             params: { doctorId: form.doctor, date: form.date }
           });
-          setDynamicSlots(res.data || []);
+          
+          if (res.data.isHoliday) {
+             setIsHoliday(true);
+             setHolidayMessage(res.data.message || "Doctor is on holiday.");
+             setDynamicSlots([]);
+          } else {
+             setDynamicSlots(res.data.slots || []);
+          }
+
         } catch (err) {
           console.error("Error fetching slots:", err);
           setDynamicSlots([]);
@@ -195,6 +208,13 @@ export default function PatientBookAppointment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevent booking on holiday
+    if (isHoliday) {
+        alert(holidayMessage);
+        return;
+    }
+
     if (!form.clinic || !form.doctor || !form.date || !selectedSlot || selectedServices.length === 0) {
       alert("Please complete all required fields (*).");
       return;
@@ -231,7 +251,9 @@ export default function PatientBookAppointment() {
       navigate("/patient/appointments");
     } catch (err) {
       console.error(err);
-      alert("Failed to book appointment.");
+      // Show backend error if available (like holiday restriction)
+      const errMsg = err.response?.data?.message || "Failed to book appointment.";
+      alert(errMsg);
     } finally {
       setSubmitting(false);
     }
@@ -308,11 +330,17 @@ export default function PatientBookAppointment() {
             <div className="col-lg-6">
               <div className="mb-3">
                 <label className="form-label">Available Slot <span className="text-danger">*</span></label>
-                <div className="border rounded p-3 bg-white">
+                <div className="border rounded p-3 bg-white" style={{minHeight: '150px'}}>
                   {!form.doctor || !form.date ? (
                     <div className="text-center text-muted small p-2">Select Doctor and Date first.</div>
                   ) : loadingSlots ? (
                     <div className="text-center text-muted small p-2">Loading slots...</div>
+                  ) : isHoliday ? (
+                    // ✅ SHOW HOLIDAY MESSAGE
+                    <div className="text-center text-danger p-3 bg-light rounded">
+                        <strong>⛔ {holidayMessage}</strong>
+                        <p className="small mb-0 mt-1">Please select a different date.</p>
+                    </div>
                   ) : dynamicSlots.length === 0 ? (
                     <div className="text-center text-danger small p-2">No slots available.</div>
                   ) : (
@@ -360,7 +388,9 @@ export default function PatientBookAppointment() {
 
           <div className="d-flex justify-content-end gap-2 mt-3">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate("/patient/appointments")}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? "Booking..." : "Save"}</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting || isHoliday}>
+                {submitting ? "Booking..." : "Save"}
+            </button>
           </div>
         </form>
       </div>
