@@ -18,6 +18,11 @@ export default function SharedEncounterDetails({ role }) {
   const [notes, setNotes] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
 
+  // Listing Options State
+  const [problemOptions, setProblemOptions] = useState([]);
+  const [observationOptions, setObservationOptions] = useState([]);
+  const [prescriptionOptions, setPrescriptionOptions] = useState([]);
+
   // Inputs for adding new items
   const [newNote, setNewNote] = useState("");
   
@@ -32,11 +37,28 @@ export default function SharedEncounterDetails({ role }) {
   });
 
   const [patientEmail, setPatientEmail] = useState("");
+  const [patientPhone, setPatientPhone] = useState("");
+  const [patientAddress, setPatientAddress] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [doctorName, setDoctorName] = useState("");
 
   useEffect(() => {
     fetchEncounterDetails();
     fetchEncounterTemplates();
+    fetchListings();
   }, [id]);
+
+  const fetchListings = async () => {
+    try {
+      const res = await axios.get("http://localhost:3001/listings");
+      const data = res.data;
+      setProblemOptions(data.filter(item => item.type === 'Problems' && item.status === 'Active'));
+      setObservationOptions(data.filter(item => item.type === 'Observations' && item.status === 'Active'));
+      setPrescriptionOptions(data.filter(item => item.type === 'Prescription' && item.status === 'Active'));
+    } catch (err) {
+      console.error("Error fetching listings:", err);
+    }
+  };
 
   const [encounterTemplates, setEncounterTemplates] = useState([]);
 
@@ -89,8 +111,6 @@ export default function SharedEncounterDetails({ role }) {
 
   const fetchEncounterDetails = async () => {
     try {
-      
-      
       const res = await axios.get(`http://localhost:3001/encounters`); 
       const found = res.data.find(e => e._id === id);
       
@@ -99,17 +119,66 @@ export default function SharedEncounterDetails({ role }) {
         setProblems(found.problems || []);
         setObservations(found.observations || []);
         setNotes(found.notes || []);
-        setNotes(found.notes || []);
         setPrescriptions(found.prescriptions || []);
 
-        // Fetch patient details if patientId exists
-        if (found.patientId) {
+        // Handle Patient Details
+        let pId = found.patientId;
+        // If patientId is populated (object), extract _id. Otherwise use it as is.
+        if (typeof pId === 'object' && pId !== null) {
+            pId = pId._id;
+        }
+
+        if (pId) {
           try {
-            const patientRes = await axios.get(`http://localhost:3001/patients/${found.patientId}`);
+            const patientRes = await axios.get(`http://localhost:3001/patients/${pId}`);
             setPatientEmail(patientRes.data.email || "No email found");
+            setPatientPhone(patientRes.data.mobile || patientRes.data.phone || "No records found");
+            setPatientAddress(patientRes.data.address || "No records found");
+            setPatientName(`${patientRes.data.firstName} ${patientRes.data.lastName}`);
           } catch (err) {
             console.error("Error fetching patient details:", err);
+            // Fallback to populated data if available, or encounter fields
+            const pName = (typeof found.patientId === 'object' && found.patientId) 
+                ? `${found.patientId.firstName} ${found.patientId.lastName}` 
+                : (found.patient || found.patientName || "Unknown Patient");
+            setPatientName(pName);
           }
+        } else {
+            const pName = (found.patient || found.patientName || "Unknown Patient");
+            setPatientName(pName);
+        }
+
+        // Handle Doctor Details
+        let dId = found.doctorId;
+        if (typeof dId === 'object' && dId !== null) {
+            dId = dId._id;
+        }
+
+        if (dId) {
+            try {
+                // Fetch all doctors to find the matching one
+                const doctorRes = await axios.get("http://localhost:3001/doctors");
+                const doctors = Array.isArray(doctorRes.data) ? doctorRes.data : [];
+                const doctorObj = doctors.find(d => d._id === dId);
+                if (doctorObj) {
+                    setDoctorName(`${doctorObj.firstName} ${doctorObj.lastName}`);
+                } else {
+                    // Fallback
+                    const dName = (typeof found.doctorId === 'object' && found.doctorId)
+                        ? `${found.doctorId.firstName} ${found.doctorId.lastName}`
+                        : (found.doctor || found.doctorName || "Unknown Doctor");
+                    setDoctorName(dName);
+                }
+            } catch (err) {
+                console.error("Error fetching doctor details:", err);
+                const dName = (typeof found.doctorId === 'object' && found.doctorId)
+                    ? `${found.doctorId.firstName} ${found.doctorId.lastName}`
+                    : (found.doctor || found.doctorName || "Unknown Doctor");
+                setDoctorName(dName);
+            }
+        } else {
+            const dName = (found.doctor || found.doctorName || "Unknown Doctor");
+            setDoctorName(dName);
         }
       }
     } catch (err) {
@@ -244,6 +313,430 @@ export default function SharedEncounterDetails({ role }) {
     updateEncounterData({ prescriptions: updatedPrescriptions });
   };
 
+  const handlePrint = () => {
+    const printWindow = window.open('', '', 'height=600,width=800');
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Encounter Report</title>
+        <style>
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          }
+
+          body {
+            font-size: 12px;
+            color: #1f2933;
+            padding: 24px 32px;
+          }
+
+          .report {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #e1e4ea;
+            border-radius: 12px;
+            padding: 24px 28px 40px;
+          }
+
+          .header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e1e4ea;
+          }
+
+          .clinic-info {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+          }
+
+          .clinic-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #2563eb11;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #2563eb;
+          }
+
+          .clinic-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+
+          .clinic-name {
+            font-size: 14px;
+            font-weight: 600;
+          }
+
+          .clinic-sub {
+            font-size: 11px;
+            color: #6b7280;
+          }
+
+          .encounter-meta {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+          }
+
+          .encounter-title {
+            font-size: 16px;
+            font-weight: 600;
+          }
+
+          .encounter-date {
+            font-size: 11px;
+            color: #6b7280;
+          }
+
+          .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #dcfce7;
+            color: #15803d;
+          }
+
+          .section {
+            margin-top: 18px;
+          }
+
+          .section-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+
+          .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #4b5563;
+          }
+
+          .section-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, #e5e7eb, transparent);
+            margin-left: 12px;
+          }
+
+          .grid-2 {
+            display: grid;
+            grid-template-columns: 1.2fr 1.1fr;
+            gap: 12px;
+          }
+
+          .card {
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            padding: 10px 12px;
+            background: #f9fafb;
+          }
+
+          .card-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+          }
+
+          .field-row {
+            display: flex;
+            margin-bottom: 4px;
+            font-size: 11px;
+          }
+
+          .field-label {
+            width: 32%;
+            font-weight: 500;
+            color: #4b5563;
+          }
+
+          .field-value {
+            width: 68%;
+            color: #111827;
+          }
+
+          .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 7px;
+            border-radius: 999px;
+            font-size: 10px;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            color: #374151;
+            margin-right: 4px;
+            margin-bottom: 4px;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            font-size: 11px;
+          }
+
+          thead tr {
+            background: #f3f4f6;
+          }
+
+          th, td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+          }
+
+          th {
+            text-align: left;
+            font-weight: 600;
+            color: #4b5563;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+          }
+
+          tbody tr:last-child td {
+            border-bottom: none;
+          }
+
+          .notes {
+            margin-top: 4px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px dashed #d1d5db;
+            background: #f9fafb;
+            font-size: 11px;
+          }
+
+          .signature-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 24px;
+          }
+
+          .signature-box {
+            width: 220px;
+            text-align: center;
+          }
+
+          .signature-line {
+            margin-top: 40px;
+            border-top: 1px solid #9ca3af;
+            padding-top: 4px;
+            font-size: 11px;
+            color: #4b5563;
+          }
+
+          .footer {
+            margin-top: 24px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #9ca3af;
+          }
+
+          .footer-right {
+            text-align: right;
+          }
+
+          .muted {
+            color: #9ca3af;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="report">
+          <!-- Header -->
+          <header class="header">
+            <div class="clinic-info">
+              <div class="clinic-logo">
+                VC
+              </div>
+              <div class="clinic-text">
+                <div class="clinic-name">${encounter.clinic}</div>
+                <div class="clinic-sub">OneCare Encounter Report</div>
+              </div>
+            </div>
+
+            <div class="encounter-meta">
+              <div class="encounter-title">Encounter Summary</div>
+              <div class="encounter-date">${new Date(encounter.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+              <span class="status-badge">${encounter.status}</span>
+            </div>
+          </header>
+
+          <!-- Patient & Encounter -->
+          <section class="section">
+            <div class="section-title-row">
+              <div class="section-title">Overview</div>
+              <div class="section-line"></div>
+            </div>
+
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-title">Patient</div>
+                <div class="field-row">
+                  <div class="field-label">Name</div>
+                  <div class="field-value">${patientName}</div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Email</div>
+                  <div class="field-value">${patientEmail}</div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Phone</div>
+                  <div class="field-value ${!patientPhone || patientPhone === 'No records found' ? 'muted' : ''}">${patientPhone}</div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Address</div>
+                  <div class="field-value ${!patientAddress || patientAddress === 'No records found' ? 'muted' : ''}">${patientAddress}</div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title">Encounter</div>
+                <div class="field-row">
+                  <div class="field-label">Clinic</div>
+                  <div class="field-value">${encounter.clinic}</div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Doctor</div>
+                  <div class="field-value">${doctorName}</div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Date</div>
+                  <div class="field-value">${new Date(encounter.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Description</div>
+                  <div class="field-value">${encounter.description || "No description"}</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Clinical details -->
+          <section class="section">
+            <div class="section-title-row">
+              <div class="section-title">Clinical Details</div>
+              <div class="section-line"></div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Problems</th>
+                  <th style="width: 25%;">Observations</th>
+                  <th style="width: 50%;">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    ${problems.length > 0 ? problems.map(p => `<div>• ${p}</div>`).join('') : '<span class="muted">No records found</span>'}
+                  </td>
+                  <td>
+                    ${observations.length > 0 ? observations.map(o => `<div>• ${o}</div>`).join('') : '<span class="muted">No records found</span>'}
+                  </td>
+                  <td>
+                    ${notes.length > 0 ? notes.map(n => `<div>• ${n}</div>`).join('') : '<span class="muted">No records found</span>'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <!-- Prescription -->
+          <section class="section">
+            <div class="section-title-row">
+              <div class="section-title">Prescription</div>
+              <div class="section-line"></div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Name</th>
+                  <th style="width: 20%;">Frequency</th>
+                  <th style="width: 15%;">Duration</th>
+                  <th style="width: 40%;">Instructions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${prescriptions.length > 0 ? prescriptions.map(p => `
+                  <tr>
+                    <td>${p.name}</td>
+                    <td>${p.frequency}</td>
+                    <td>${p.duration}</td>
+                    <td>${p.instruction || '-'}</td>
+                  </tr>
+                `).join('') : '<tr><td colspan="4" class="muted">No prescriptions found</td></tr>'}
+              </tbody>
+            </table>
+
+            <div class="notes">
+              Additional notes, warnings, or patient instructions can be shown here.
+            </div>
+          </section>
+
+          <!-- Signature -->
+          <section class="signature-row">
+            <div class="signature-box">
+              <div class="muted" style="font-size:10px;">Doctor Signature</div>
+              <div class="signature-line">${doctorName}</div>
+            </div>
+          </section>
+
+          <!-- Footer -->
+          <footer class="footer">
+            <div>Generated by OneCare</div>
+            <div class="footer-right">
+              <div>Page 1 of 1</div>
+              <div>Generated on ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+            </div>
+          </footer>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    // Delay to ensure styles are loaded
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
 
 
   if (loading) return <div className="p-5 text-center">Loading...</div>;
@@ -264,6 +757,7 @@ export default function SharedEncounterDetails({ role }) {
           <button 
             className="btn btn-light btn-sm d-flex align-items-center gap-2 text-dark hover-light-blue"
             style={{ transition: 'all 0.3s' }}
+            onClick={handlePrint}
           >
             <FaPrint /> Print Encounter
           </button>
@@ -297,7 +791,7 @@ export default function SharedEncounterDetails({ role }) {
             
             <div className="mb-2">
               <small className="text-muted d-block">Name:</small>
-              <span className="fw-semibold">{encounter.patient}</span>
+              <span className="fw-semibold">{patientName || encounter.patient}</span>
             </div>
             <div className="mb-2">
               <small className="text-muted d-block">Email:</small>
@@ -309,7 +803,7 @@ export default function SharedEncounterDetails({ role }) {
             </div>
             <div className="mb-2">
               <small className="text-muted d-block">Address:</small>
-              <span>No records found</span>
+              <span>{patientAddress}</span>
             </div>
             <hr />
             <div className="mb-2">
@@ -318,7 +812,7 @@ export default function SharedEncounterDetails({ role }) {
             </div>
             <div className="mb-2">
               <small className="text-muted d-block">Doctor name:</small>
-              <span>{encounter.doctor}</span>
+              <span>{doctorName || encounter.doctor}</span>
             </div>
             <div className="mb-2">
               <small className="text-muted d-block">Description:</small>
@@ -381,10 +875,9 @@ export default function SharedEncounterDetails({ role }) {
                   defaultValue="Select Problem"
                 >
                   <option disabled>Select Problem</option>
-                  <option value="Fever">Fever</option>
-                  <option value="Headache">Headache</option>
-                  <option value="Cough">Cough</option>
-                  <option value="Fatigue">Fatigue</option>
+                  {problemOptions.map((opt) => (
+                    <option key={opt._id} value={opt.name}>{opt.name}</option>
+                  ))}
                 </select>
                 <small className="text-primary d-block mt-1" style={{fontSize: '0.75rem'}}>Note: Type and press enter to create new problem</small>
               </div>
@@ -416,9 +909,9 @@ export default function SharedEncounterDetails({ role }) {
                   defaultValue="Select Observation"
                 >
                   <option disabled>Select Observation</option>
-                  <option value="Stable">Stable</option>
-                  <option value="Critical">Critical</option>
-                  <option value="Improving">Improving</option>
+                  {observationOptions.map((opt) => (
+                    <option key={opt._id} value={opt.name}>{opt.name}</option>
+                  ))}
                 </select>
                 <small className="text-primary d-block mt-1" style={{fontSize: '0.75rem'}}>Note: Type and press enter to create new observation</small>
               </div>
@@ -564,8 +1057,14 @@ export default function SharedEncounterDetails({ role }) {
                            name="name"
                            value={newPrescription.name}
                            onChange={handlePrescriptionChange}
+                           list="prescription-options"
                            required
                          />
+                         <datalist id="prescription-options">
+                            {prescriptionOptions.map((opt) => (
+                              <option key={opt._id} value={opt.name} />
+                            ))}
+                         </datalist>
                        </div>
                        <div className="col-md-6">
                          <label className="form-label fw-bold small">Frequency <span className="text-danger">*</span></label>
@@ -599,7 +1098,14 @@ export default function SharedEncounterDetails({ role }) {
                            name="instruction"
                            value={newPrescription.instruction}
                            onChange={handlePrescriptionChange}
-                         ></textarea>
+                           list="prescription-options"
+                           required
+                         />
+                         <datalist id="prescription-options">
+                            {prescriptionOptions.map((opt) => (
+                              <option key={opt._id} value={opt.name} />
+                            ))}
+                         </datalist>
                        </div>
                      </div>
                      <div className="d-flex justify-content-end gap-2 mt-4">
