@@ -1,18 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import AdminLayout from "../layouts/AdminLayout";
 import { FaArrowLeft, FaSave } from "react-icons/fa";
 import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 
+const API_BASE_URL = "http://localhost:3001";
 
 const AddPatient = () => {
   const navigate = useNavigate();
 
+  // State for fetched clinics
+  const [clinics, setClinics] = useState([]);
+  const [isLoadingClinics, setIsLoadingClinics] = useState(true);
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    clinic: "",
+    clinic: "", 
     email: "",
     phone: "",
     dob: "",
@@ -24,29 +30,75 @@ const AddPatient = () => {
     postalCode: "",
   });
 
+  // ✅ IMPROVED: Fetch Clinics with robust data handling
+  useEffect(() => {
+    const fetchClinics = async () => {
+      try {
+        setIsLoadingClinics(true);
+        // Note: Ensure this endpoint matches your backend route exactly
+        const res = await axios.get(`${API_BASE_URL}/api/clinics`);
+        
+        console.log("Clinics API Response:", res.data); // Check your browser console to see the real structure
+
+        // Handle different response structures
+        if (Array.isArray(res.data)) {
+          // Case 1: API returns [ {name: 'One Care'}, ... ]
+          setClinics(res.data);
+        } else if (res.data.clinics && Array.isArray(res.data.clinics)) {
+          // Case 2: API returns { clinics: [ {name: 'One Care'}, ... ] }
+          setClinics(res.data.clinics);
+        } else if (res.data.data && Array.isArray(res.data.data)) {
+           // Case 3: API returns { data: [ {name: 'One Care'}, ... ] }
+           setClinics(res.data.data);
+        } else {
+          console.warn("Unexpected API response structure", res.data);
+          toast.error("Loaded data is not a list of clinics.");
+        }
+
+      } catch (error) {
+        console.error("Error fetching clinics:", error);
+        toast.error("Failed to load clinics list.");
+      } finally {
+        setIsLoadingClinics(false);
+      }
+    };
+
+    fetchClinics();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await axios.post("http://localhost:3001/patients", formData);
-    if (res.data.message === "Patient added") {
-      alert("✅ Patient added successfully!");
-      navigate("/patients");
-    } else {
-      alert("Something went wrong!");
+    e.preventDefault();
+
+    if (!formData.clinic) {
+      toast.error("Please select a clinic.");
+      return;
     }
-  } catch (error) {
-    console.error("Error adding patient:", error);
-    alert("Error saving patient. Check console for details.");
-  }
-};
+
+    try {
+      const promise = axios.post(`${API_BASE_URL}/patients`, formData);
+
+      await toast.promise(promise, {
+        loading: "Saving patient...",
+        success: "Patient added successfully!",
+        error: "Failed to add patient.",
+      });
+
+      navigate("/patients");
+      
+    } catch (error) {
+      console.error("Error adding patient:", error);
+    }
+  };
 
   return (
     <AdminLayout>
+      <Toaster position="top-right" />
+      
       <div className="container bg-white p-4 rounded shadow-sm">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
@@ -61,7 +113,6 @@ const AddPatient = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          {/* Basic Details */}
           <h6 className="text-primary fw-bold mb-3">Basic Details</h6>
           <div className="row g-3">
             <div className="col-md-6">
@@ -90,6 +141,7 @@ const AddPatient = () => {
               />
             </div>
 
+            {/* ✅ UPDATED DROPDOWN LOGIC */}
             <div className="col-md-6">
               <label className="form-label">Select Clinic *</label>
               <select
@@ -100,8 +152,20 @@ const AddPatient = () => {
                 required
               >
                 <option value="">Select clinic</option>
-                <option value="Valley Clinic">Valley Clinic</option>
-                <option value="City Care">City Care</option>
+                
+                {/* Render options if clinics exist */}
+                {clinics.length > 0 ? (
+                  clinics.map((clinic, index) => (
+                    <option key={clinic._id || index} value={clinic.name}>
+                      {clinic.name}
+                    </option>
+                  ))
+                ) : (
+                  // Show appropriate message based on loading state
+                  <option disabled>
+                    {isLoadingClinics ? "Loading clinics..." : "No clinics found"}
+                  </option>
+                )}
               </select>
             </div>
 
@@ -203,7 +267,6 @@ const AddPatient = () => {
 
           <hr className="my-4" />
 
-          {/* Other Details */}
           <h6 className="text-primary fw-bold mb-3">Other Details</h6>
           <div className="mb-3">
             <label className="form-label">Address</label>
@@ -255,12 +318,11 @@ const AddPatient = () => {
             </div>
           </div>
 
-          {/* Buttons */}
           <div className="d-flex justify-content-end mt-4 gap-2">
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={() => navigate("/Patients")}
+              onClick={() => navigate("/patients")}
             >
               Cancel
             </button>
