@@ -7,7 +7,7 @@ import DoctorLayout from "../layouts/DoctorLayout";
 const API_BASE = "http://localhost:3001";
 
 export default function DoctorAppointmentDetails() {
-  const { id } = useParams();          // appointment id from URL
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [appointment, setAppointment] = useState(null);
@@ -21,10 +21,9 @@ export default function DoctorAppointmentDetails() {
         setError("");
 
         const res = await axios.get(`${API_BASE}/appointments/${id}`);
-        setAppointment(res.data);      // one appointment document
+        setAppointment(res.data);
       } catch (err) {
         console.error("Failed to load appointment", err);
-
         if (err.response?.status === 404) {
           setError("Appointment not found (maybe deleted).");
         } else {
@@ -50,9 +49,7 @@ export default function DoctorAppointmentDetails() {
     return (
       <DoctorLayout>
         <div className="p-4">
-          <p className="text-danger mb-3">
-            {error || "Appointment not found"}
-          </p>
+          <p className="text-danger mb-3">{error || "Appointment not found"}</p>
           <button className="btn btn-secondary" onClick={() => navigate(-1)}>
             ← Back
           </button>
@@ -62,6 +59,31 @@ export default function DoctorAppointmentDetails() {
   }
 
   const a = appointment;
+
+  // --- HELPER: Extract Patient Info Safely ---
+  // Checks normalized data first, then populated object, then root fields
+  const getPatientInfo = () => {
+    // 1. Check if backend sent a normalized object (your backend does this as _patientInfo)
+    if (a._patientInfo) return a._patientInfo;
+
+    // 2. Check if patientId is a populated object
+    if (a.patientId && typeof a.patientId === 'object') {
+      return {
+        name: `${a.patientId.firstName || ''} ${a.patientId.lastName || ''}`.trim() || a.patientId.name,
+        email: a.patientId.email,
+        phone: a.patientId.phone || a.patientId.mobile
+      };
+    }
+
+    // 3. Fallback to root level fields
+    return {
+      name: a.patientName,
+      email: a.patientEmail,
+      phone: a.patientPhone
+    };
+  };
+
+  const patient = getPatientInfo();
 
   return (
     <DoctorLayout>
@@ -73,45 +95,64 @@ export default function DoctorAppointmentDetails() {
         <h3 className="mb-4">Appointment Details</h3>
 
         {/* Patient info card */}
-        <div className="card p-3 mb-3">
-          <h5 className="mb-2">Patient information</h5>
-          <p className="mb-1">
-            <strong>Name:</strong> {a.patientName || "N/A"}
-          </p>
-          <p className="mb-1">
-            <strong>Email:</strong> {a.patientEmail || "N/A"}
-          </p>
-          <p className="mb-1">
-            <strong>Phone:</strong> {a.patientPhone || "N/A"}
-          </p>
+        <div className="card p-3 mb-3 shadow-sm border-0">
+          <h5 className="mb-3 border-bottom pb-2 text-primary">Patient Information</h5>
+          <div className="row g-2">
+            <div className="col-md-4">
+              <p className="mb-1 text-muted small">Name</p>
+              <p className="fw-medium">{patient.name || "N/A"}</p>
+            </div>
+            <div className="col-md-4">
+              <p className="mb-1 text-muted small">Email</p>
+              <p className="fw-medium">{patient.email || "N/A"}</p>
+            </div>
+            <div className="col-md-4">
+              <p className="mb-1 text-muted small">Phone</p>
+              <p className="fw-medium">{patient.phone || "N/A"}</p>
+            </div>
+          </div>
         </div>
 
         {/* Appointment info card */}
-        <div className="card p-3 mb-3">
-          <h5 className="mb-2">Appointment details</h5>
-          <p className="mb-1">
-            <strong>Doctor:</strong> {a.doctorName || "N/A"}
-          </p>
-          <p className="mb-1">
-            <strong>Clinic:</strong> {a.clinic || "N/A"}
-          </p>
-          <p className="mb-1">
-            <strong>Date:</strong> {a.date || "N/A"}
-          </p>
-          <p className="mb-1">
-            <strong>Time:</strong> {a.time || "N/A"}
-          </p>
-          <p className="mb-1">
-            <strong>Service:</strong>{" "}
-            {a.serviceName || a.service || "Appointment"}
-          </p>
-          <p className="mb-1">
-            <strong>Status:</strong> {a.status || "scheduled"}
-          </p>
-          <p className="mb-1">
-            <strong>Notes:</strong> {a.notes || "-"}
-          </p>
+        <div className="card p-3 mb-3 shadow-sm border-0">
+          <h5 className="mb-3 border-bottom pb-2 text-primary">Appointment Details</h5>
+          
+          <div className="row g-3">
+            <div className="col-md-6">
+                <p className="mb-1 text-muted small">Doctor</p>
+                <strong>{a.doctorName || "N/A"}</strong>
+            </div>
+            <div className="col-md-6">
+                <p className="mb-1 text-muted small">Clinic</p>
+                <strong>{a.clinic || "N/A"}</strong>
+            </div>
+            <div className="col-md-6">
+                <p className="mb-1 text-muted small">Date</p>
+                <strong>{a.date ? new Date(a.date).toLocaleDateString("en-GB") : "N/A"}</strong>
+            </div>
+            <div className="col-md-6">
+                <p className="mb-1 text-muted small">Time</p>
+                <strong>{a.time || "N/A"}</strong>
+            </div>
+            <div className="col-md-6">
+                <p className="mb-1 text-muted small">Service</p>
+                <strong>{a.serviceName || a.service || "Appointment"}</strong>
+            </div>
+            <div className="col-md-6">
+                <p className="mb-1 text-muted small">Status</p>
+                <span className={`badge ${a.status === 'booked' ? 'bg-primary' : 'bg-secondary'}`}>
+                    {a.status || "Scheduled"}
+                </span>
+            </div>
+            <div className="col-12">
+                <p className="mb-1 text-muted small">Notes</p>
+                <div className="p-2 bg-light rounded">
+                    {a.notes || "No additional notes."}
+                </div>
+            </div>
+          </div>
         </div>
+
       </div>
     </DoctorLayout>
   );
