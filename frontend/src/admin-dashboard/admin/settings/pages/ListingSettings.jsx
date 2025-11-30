@@ -6,10 +6,8 @@ import autoTable from "jspdf-autotable";
 
 import { 
   FaPlus, 
-  FaFileImport, 
   FaSearch, 
   FaEdit, 
-  FaQuestionCircle, 
   FaSort,
   FaTimes,
   FaFileCsv,
@@ -124,8 +122,8 @@ const ListingSettings = () => {
   // Filters
   const [filters, setFilters] = useState({ name: "", type: "", status: "" });
 
-  // Form Data
-  const [formData, setFormData] = useState({ label: "", type: "specialization", status: "Active" });
+  // Form Data (Default type set to Title Case)
+  const [formData, setFormData] = useState({ label: "", type: "Specialization", status: "Active" });
 
   // Fetch Data
   const fetchListings = async () => {
@@ -222,8 +220,11 @@ const ListingSettings = () => {
       }
       setShowForm(false);
       fetchListings();
-    } catch {
-      toast.error("Operation failed");
+    } catch (error) {
+      // Improved Error Handling: Show backend message
+      console.error("Save Error:", error);
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || "Operation failed";
+      toast.error(errorMsg);
     }
   };
 
@@ -293,7 +294,7 @@ const ListingSettings = () => {
           <h4 className="fw-bold text-dark m-0">Listing Settings</h4>
           <button 
             className="btn btn-primary btn-sm d-flex align-items-center gap-2"
-            onClick={() => { setShowForm(!showForm); setEditingItem(null); setFormData({label:"", type:"specialization", status:"Active"}); }}
+            onClick={() => { setShowForm(!showForm); setEditingItem(null); setFormData({label:"", type:"Specialization", status:"Active"}); }}
           >
             {showForm ? <><FaTimes/> Close</> : <><FaPlus/> Add Listing</>}
           </button>
@@ -312,11 +313,12 @@ const ListingSettings = () => {
                     <div className="col-md-4">
                         <label className="form-label small fw-bold">Type *</label>
                         <select className="form-select" value={formData.type} onChange={e => setFormData({...formData, type:e.target.value})}>
-                            <option value="specialization">Specialization</option>
-                            <option value="service type">Service Type</option>
-                            <option value="clinical observations">Clinical Observations</option>
-                            <option value="clinical problems">Clinical Problems</option>
-                            <option value="prescription medicine">Prescription Medicine</option>
+                            {/* UPDATED: Values match Title Case likely expected by Backend */}
+                            <option value="Specialization">Specialization</option>
+                            <option value="Service Type">Service Type</option>
+                            <option value="Clinical Observations">Clinical Observations</option>
+                            <option value="Clinical Problems">Clinical Problems</option>
+                            <option value="Prescription Medicine">Prescription Medicine</option>
                         </select>
                     </div>
                     <div className="col-md-4">
@@ -372,11 +374,11 @@ const ListingSettings = () => {
                     <td>
                         <select className="filter-input" onChange={e => setFilters({...filters, type: e.target.value})}>
                             <option value="">Filter by type</option>
-                            <option value="specialization">Specialization</option>
-                            <option value="service type">Service Type</option>
-                            <option value="clinical observations">Clinical Observations</option>
-                            <option value="clinical problems">Clinical Problems</option>
-                            <option value="prescription medicine">Prescription Medicine</option>
+                            <option value="Specialization">Specialization</option>
+                            <option value="Service Type">Service Type</option>
+                            <option value="Clinical Observations">Clinical Observations</option>
+                            <option value="Clinical Problems">Clinical Problems</option>
+                            <option value="Prescription Medicine">Prescription Medicine</option>
                         </select>
                     </td>
 

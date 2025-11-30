@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
-import { 
-  FaPlus, 
-  FaSearch, 
-  FaEdit, 
-  FaSort, 
-  FaTimes, 
-  FaFileExcel, 
-  FaFileCsv, 
-  FaFilePdf, 
-  FaChevronLeft, 
-  FaChevronRight, 
+import {
+  FaPlus,
+  FaSearch,
+  FaEdit,
+  FaSort,
+  FaTimes,
+  FaFileExcel,
+  FaFileCsv,
+  FaFilePdf,
+  FaChevronLeft,
+  FaChevronRight,
   FaTrash,
   FaCalendarAlt,
   FaQuestionCircle
@@ -91,7 +91,7 @@ export default function HolidaySettings() {
   const [editingItem, setEditingItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({ scheduleDate: [], doctorId: "" });
-  
+
   // Pagination
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -109,15 +109,15 @@ export default function HolidaySettings() {
     setLoading(true);
     try {
       const [resHolidays, resDoctors] = await Promise.all([
-          axios.get(`${BASE_URL}/holidays`),
-          axios.get(`${BASE_URL}/doctors`)
+        axios.get(`${BASE_URL}/holidays`),
+        axios.get(`${BASE_URL}/doctors`)
       ]);
-      
+
       setHolidays(resHolidays.data.map((h) => ({
-          ...h,
-          id: h.autoId, 
-          from: new Date(h.fromDate).toLocaleDateString(),
-          to: new Date(h.toDate).toLocaleDateString()
+        ...h,
+        id: h.autoId,
+        from: new Date(h.fromDate).toLocaleDateString(),
+        to: new Date(h.toDate).toLocaleDateString()
       })));
 
       setDoctors(Array.isArray(resDoctors.data) ? resDoctors.data : resDoctors.data.data || []);
@@ -134,51 +134,51 @@ export default function HolidaySettings() {
   // --- Handlers ---
   const handleSave = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.doctorId) {
-        toast.error("Please select a doctor");
-        return;
+      toast.error("Please select a doctor");
+      return;
     }
     if (!formData.scheduleDate || formData.scheduleDate.length !== 2) {
-        toast.error("Please select a date range");
-        return;
+      toast.error("Please select a date range");
+      return;
     }
 
     try {
-        const selectedDoc = doctors.find(d => d._id === formData.doctorId);
-        const docName = selectedDoc ? `${selectedDoc.firstName} ${selectedDoc.lastName}` : "Unknown";
+      const selectedDoc = doctors.find(d => d._id === formData.doctorId);
+      const docName = selectedDoc ? `${selectedDoc.firstName} ${selectedDoc.lastName}` : "Unknown";
 
-        const payload = {
-            doctorId: formData.doctorId,
-            doctorName: docName,
-            scheduleOf: "Doctor",
-            name: docName,
-            fromDate: formData.scheduleDate[0],
-            toDate: formData.scheduleDate[1]
-        };
+      const payload = {
+        doctorId: formData.doctorId,
+        doctorName: docName,
+        scheduleOf: "Doctor",
+        name: docName,
+        fromDate: formData.scheduleDate[0],
+        toDate: formData.scheduleDate[1]
+      };
 
-        if(editingItem) {
-            await axios.put(`${BASE_URL}/holidays/${editingItem._id}`, payload);
-            toast.success("Holiday updated");
-        } else {
-            await axios.post(`${BASE_URL}/holidays`, payload);
-            toast.success("Holiday added");
-        }
-        toggleForm();
-        fetchData();
+      if (editingItem) {
+        await axios.put(`${BASE_URL}/holidays/${editingItem._id}`, payload);
+        toast.success("Holiday updated");
+      } else {
+        await axios.post(`${BASE_URL}/holidays`, payload);
+        toast.success("Holiday added");
+      }
+      toggleForm();
+      fetchData();
     } catch (error) {
-        toast.error("Operation failed");
+      toast.error("Operation failed");
     }
   };
 
   const handleDelete = async () => {
-      if(!itemToDelete) return;
-      try {
-          await axios.delete(`${BASE_URL}/holidays/${itemToDelete}`);
-          toast.success("Deleted");
-          fetchData();
-      } catch { toast.error("Delete failed"); }
-      setShowDeleteModal(false);
+    if (!itemToDelete) return;
+    try {
+      await axios.delete(`${BASE_URL}/holidays/${itemToDelete}`);
+      toast.success("Deleted");
+      fetchData();
+    } catch { toast.error("Delete failed"); }
+    setShowDeleteModal(false);
   };
 
   const toggleForm = () => {
@@ -189,18 +189,18 @@ export default function HolidaySettings() {
 
   const handleEdit = (item) => {
     setEditingItem(item);
-    setFormData({ 
-        scheduleDate: [new Date(item.fromDate), new Date(item.toDate)],
-        doctorId: item.doctorId 
+    setFormData({
+      scheduleDate: [new Date(item.fromDate), new Date(item.toDate)],
+      doctorId: item.doctorId
     });
     setShowForm(true);
-    window.scrollTo({top:0, behavior:'smooth'});
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // --- EXPORTS ---
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(sortedData.map(h => ({
-        ID: h.id, Doctor: h.doctorName, From: h.from, To: h.to
+      ID: h.id, Doctor: h.doctorName, From: h.from, To: h.to
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Holidays");
@@ -220,42 +220,42 @@ export default function HolidaySettings() {
   const exportPDF = async () => {
     const doc = new jsPDF();
     try {
-        const logoBase64 = await getBase64Image(`${window.location.origin}/logo.png`);
-        if(logoBase64) doc.addImage(logoBase64, "PNG", 15, 10, 20, 20);
-    } catch(e) {}
+      const logoBase64 = await getBase64Image(`${window.location.origin}/logo.png`);
+      if (logoBase64) doc.addImage(logoBase64, "PNG", 15, 10, 20, 20);
+    } catch (e) { }
     doc.text("Clinic Holiday List", 14, 40);
     autoTable(doc, {
-       head: [['ID', 'Doctor', 'From', 'To']],
-       body: sortedData.map(h => [h.id, h.doctorName, h.from, h.to]),
-       startY: 50,
+      head: [['ID', 'Doctor', 'From', 'To']],
+      body: sortedData.map(h => [h.id, h.doctorName, h.from, h.to]),
+      startY: 50,
     });
     doc.save("Holidays.pdf");
   };
 
   const handleExport = (type) => {
-      if(type === "Excel") exportExcel();
-      if(type === "CSV") exportCSV();
-      if(type === "PDF") exportPDF();
+    if (type === "Excel") exportExcel();
+    if (type === "CSV") exportCSV();
+    if (type === "PDF") exportPDF();
   };
 
   // --- Sort & Filter Logic ---
   const requestSort = (key) => {
-      let direction = "asc";
-      if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
-      setSortConfig({ key, direction });
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
+    setSortConfig({ key, direction });
   };
 
   const filteredData = useMemo(() => {
-      return holidays.filter(item => {
-          const searchMatch = !searchTerm || item.doctorName?.toLowerCase().includes(searchTerm.toLowerCase());
-          
-          const idMatch = !filters.id || item.id.toString().includes(filters.id);
-          const docMatch = !filters.doctor || item.doctorName?.toLowerCase().includes(filters.doctor.toLowerCase());
-          const fromMatch = !filters.fromDate || new Date(item.fromDate) >= new Date(filters.fromDate);
-          const toMatch = !filters.toDate || new Date(item.toDate) <= new Date(filters.toDate);
+    return holidays.filter(item => {
+      const searchMatch = !searchTerm || item.doctorName?.toLowerCase().includes(searchTerm.toLowerCase());
 
-          return searchMatch && idMatch && docMatch && fromMatch && toMatch;
-      });
+      const idMatch = !filters.id || item.id.toString().includes(filters.id);
+      const docMatch = !filters.doctor || item.doctorName?.toLowerCase().includes(filters.doctor.toLowerCase());
+      const fromMatch = !filters.fromDate || new Date(item.fromDate) >= new Date(filters.fromDate);
+      const toMatch = !filters.toDate || new Date(item.toDate) <= new Date(filters.toDate);
+
+      return searchMatch && idMatch && docMatch && fromMatch && toMatch;
+    });
   }, [holidays, searchTerm, filters]);
 
   const sortedData = useMemo(() => {
@@ -263,7 +263,7 @@ export default function HolidaySettings() {
     return [...filteredData].sort((a, b) => {
       let valA = a[sortConfig.key];
       let valB = b[sortConfig.key];
-      if(sortConfig.key.startsWith('raw')) { valA = new Date(valA); valB = new Date(valB); }
+      if (sortConfig.key.startsWith('raw')) { valA = new Date(valA); valB = new Date(valB); }
       if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
       if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
@@ -274,142 +274,148 @@ export default function HolidaySettings() {
   const pageItems = sortedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   const SortIcon = ({ active, dir }) => {
-      if(!active) return <FaSort size={10} className="text-muted opacity-50 ms-1"/>;
-      return dir === 'asc' ? <span className="ms-1">▲</span> : <span className="ms-1">▼</span>;
+    if (!active) return <FaSort size={10} className="text-muted opacity-50 ms-1" />;
+    return dir === 'asc' ? <span className="ms-1">▲</span> : <span className="ms-1">▼</span>;
   };
 
   return (
     <div className="holiday-scope">
       <style>{holidayStyles}</style>
-      <Toaster position="top-right"/>
+      <Toaster position="top-right" />
 
       <div className="container-fluid p-0">
         <div className="table-card">
-            
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className="d-flex align-items-center gap-2">
-                    <h5 className="mb-0 fw-bold text-dark">Holiday List</h5>
-                    <FaQuestionCircle className="text-secondary opacity-50" size={14} />
-                </div>
-                <button className="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3" onClick={toggleForm}>
-                   {showForm ? <><FaTimes/> Close</> : <><FaPlus/> Add Holiday</>}
-                </button>
+
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="d-flex align-items-center gap-2">
+              <h5 className="mb-0 fw-bold text-dark">Holiday List</h5>
+              <FaQuestionCircle className="text-secondary opacity-50" size={14} />
             </div>
+            <button className="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3" onClick={toggleForm}>
+              {showForm ? <><FaTimes /> Close</> : <><FaPlus /> Add Holiday</>}
+            </button>
+          </div>
 
-            {/* FORM */}
-            {showForm && (
-                <div className="bg-light p-4 rounded border mb-4 slide-down">
-                   <form onSubmit={handleSave}>
-                      <div className="row g-3">
-                         <div className="col-md-6">
-                            <label className="form-label small fw-bold">Select Doctor *</label>
-                            <select 
-                                className="form-select" 
-                                value={formData.doctorId} 
-                                onChange={e => setFormData({...formData, doctorId: e.target.value})}
-                                required
-                            >
-                                <option value="">-- Select --</option>
-                                {doctors.map(d => (
-                                    <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>
-                                ))}
-                            </select>
-                         </div>
-
-                         <div className="col-md-6">
-                            <label className="form-label small fw-bold">Date Range *</label>
-                            <div className="input-group">
-                                <span className="input-group-text bg-white"><FaCalendarAlt className="text-muted"/></span>
-                                <Flatpickr
-                                    className="form-control"
-                                    placeholder="Select Date Range"
-                                    options={{ mode: "range", dateFormat: "Y-m-d", minDate: "today" }}
-                                    value={formData.scheduleDate}
-                                    onChange={(date) => setFormData({ ...formData, scheduleDate: date })}
-                                />
-                            </div>
-                         </div>
-                      </div>
-                      <div className="text-end mt-3">
-                         <button className="btn btn-primary btn-sm px-4">{editingItem ? "Update" : "Save"}</button>
-                      </div>
-                   </form>
-                </div>
-            )}
-
-            {/* CONTROLS */}
-            <div className="search-container">
-                 <div className="search-input-group">
-                    <FaSearch className="text-muted" />
-                    <input className="search-input" placeholder="Search doctor or ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
-                 </div>
-                 <div className="export-group">
-                    <button className="btn-export excel" onClick={exportExcel}><FaFileExcel/></button>
-                    <button className="btn-export csv" onClick={exportCSV}><FaFileCsv/></button>
-                    <button className="btn-export pdf" onClick={exportPDF}><FaFilePdf/></button>
-                 </div>
-            </div>
-
-            {/* TABLE */}
-            <div className="table-responsive border rounded">
-                 <table className="custom-table">
-                    <thead className="bg-light">
-                        <tr>
-                            <th style={{width:'60px'}} onClick={() => requestSort("id")} style={{cursor:'pointer'}}>ID <SortIcon active={sortConfig.key==='id'} dir={sortConfig.direction}/></th>
-                            <th onClick={() => requestSort("name")} style={{cursor:'pointer'}}>Doctor Name <SortIcon active={sortConfig.key==='name'} dir={sortConfig.direction}/></th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th className="text-end">Action</th>
-                        </tr>
-                        {/* Filters */}
-                        <tr style={{background:'#fff'}}>
-                            <td><input className="filter-input" placeholder="ID" onChange={e => setFilters({...filters, id:e.target.value})}/></td>
-                            <td><input className="filter-input" placeholder="Filter doctor" onChange={e => setFilters({...filters, doctor:e.target.value})}/></td>
-                            <td><input type="date" className="filter-input" onChange={e => setFilters({...filters, fromDate:e.target.value})}/></td>
-                            <td><input type="date" className="filter-input" onChange={e => setFilters({...filters, toDate:e.target.value})}/></td>
-                            <td></td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr><td colSpan="5" className="text-center py-4">Loading...</td></tr>
-                        ) : pageItems.length === 0 ? (
-                            <tr><td colSpan="5" className="text-center py-4 text-muted">No holidays found</td></tr>
-                        ) : (
-                            pageItems.map((item, i) => (
-                                <tr key={item._id}>
-                                    <td className="text-muted ps-3">{item.id}</td>
-                                    <td>{item.name}</td>
-                                    <td>{item.from}</td>
-                                    <td>{item.to}</td>
-                                    <td className="text-end">
-                                        <div className="d-flex justify-content-end gap-2">
-                                            <button className="action-btn edit" onClick={() => handleEdit(item)}><FaEdit/></button>
-                                            <button className="action-btn delete" onClick={() => { setItemToDelete(item._id); setShowDeleteModal(true); }}><FaTrash/></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                 </table>
-            </div>
-
-            {/* PAGINATION */}
-            <div className="d-flex justify-content-between align-items-center mt-3">
-                 <div className="small text-muted">
-                    Rows per page: 
-                    <select className="ms-1 border rounded p-1" value={rowsPerPage} onChange={e => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>
-                        <option value="10">10</option>
-                        <option value="20">20</option>
+          {/* FORM */}
+          {showForm && (
+            <div className="bg-light p-4 rounded border mb-4 slide-down">
+              <form onSubmit={handleSave}>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label small fw-bold">Select Doctor *</label>
+                    <select
+                      className="form-select"
+                      value={formData.doctorId}
+                      onChange={e => setFormData({ ...formData, doctorId: e.target.value })}
+                      required
+                    >
+                      <option value="">-- Select --</option>
+                      {doctors.map(d => (
+                        <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>
+                      ))}
                     </select>
-                 </div>
-                 <div className="d-flex align-items-center gap-2">
-                    <button className="btn btn-sm btn-outline-secondary" disabled={page<=1} onClick={()=>setPage(p=>p-1)}><FaChevronLeft/> Prev</button>
-                    <span className="small mx-2">Page {page} of {totalPages || 1}</span>
-                    <button className="btn btn-sm btn-outline-secondary" disabled={page>=totalPages} onClick={()=>setPage(p=>p+1)}>Next <FaChevronRight/></button>
-                 </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label small fw-bold">Date Range *</label>
+                    <div className="input-group">
+                      <span className="input-group-text bg-white"><FaCalendarAlt className="text-muted" /></span>
+                      <Flatpickr
+                        className="form-control"
+                        placeholder="Select Date Range"
+                        options={{ mode: "range", dateFormat: "Y-m-d", minDate: "today" }}
+                        value={formData.scheduleDate}
+                        onChange={(date) => setFormData({ ...formData, scheduleDate: date })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="text-end mt-3">
+                  <button className="btn btn-primary btn-sm px-4">{editingItem ? "Update" : "Save"}</button>
+                </div>
+              </form>
             </div>
+          )}
+
+          {/* CONTROLS */}
+          <div className="search-container">
+            <div className="search-input-group">
+              <FaSearch className="text-muted" />
+              <input className="search-input" placeholder="Search doctor or ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            </div>
+            <div className="export-group">
+              <button className="btn-export excel" onClick={exportExcel}><FaFileExcel /></button>
+              <button className="btn-export csv" onClick={exportCSV}><FaFileCsv /></button>
+              <button className="btn-export pdf" onClick={exportPDF}><FaFilePdf /></button>
+            </div>
+          </div>
+
+          {/* TABLE */}
+          <div className="table-responsive border rounded">
+            <table className="custom-table">
+              <thead className="bg-light">
+                <tr>
+                  {/* <th style={{width:'60px'}} onClick={() => requestSort("id")} style={{cursor:'pointer'}}>ID <SortIcon active={sortConfig.key==='id'} dir={sortConfig.direction}/></th> */}
+                  <th
+                    style={{ width: '60px', cursor: 'pointer' }}
+                    onClick={() => requestSort("id")}
+                  >
+                    ID <SortIcon active={sortConfig.key === "id"} direction={sortConfig.direction} />
+                  </th>
+                  <th onClick={() => requestSort("name")} style={{ cursor: 'pointer' }}>Doctor Name <SortIcon active={sortConfig.key === 'name'} dir={sortConfig.direction} /></th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th className="text-end">Action</th>
+                </tr>
+                {/* Filters */}
+                <tr style={{ background: '#fff' }}>
+                  <td><input className="filter-input" placeholder="ID" onChange={e => setFilters({ ...filters, id: e.target.value })} /></td>
+                  <td><input className="filter-input" placeholder="Filter doctor" onChange={e => setFilters({ ...filters, doctor: e.target.value })} /></td>
+                  <td><input type="date" className="filter-input" onChange={e => setFilters({ ...filters, fromDate: e.target.value })} /></td>
+                  <td><input type="date" className="filter-input" onChange={e => setFilters({ ...filters, toDate: e.target.value })} /></td>
+                  <td></td>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan="5" className="text-center py-4">Loading...</td></tr>
+                ) : pageItems.length === 0 ? (
+                  <tr><td colSpan="5" className="text-center py-4 text-muted">No holidays found</td></tr>
+                ) : (
+                  pageItems.map((item, i) => (
+                    <tr key={item._id}>
+                      <td className="text-muted ps-3">{item.id}</td>
+                      <td>{item.name}</td>
+                      <td>{item.from}</td>
+                      <td>{item.to}</td>
+                      <td className="text-end">
+                        <div className="d-flex justify-content-end gap-2">
+                          <button className="action-btn edit" onClick={() => handleEdit(item)}><FaEdit /></button>
+                          <button className="action-btn delete" onClick={() => { setItemToDelete(item._id); setShowDeleteModal(true); }}><FaTrash /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* PAGINATION */}
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <div className="small text-muted">
+              Rows per page:
+              <select className="ms-1 border rounded p-1" value={rowsPerPage} onChange={e => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>
+                <option value="10">10</option>
+                <option value="20">20</option>
+              </select>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <button className="btn btn-sm btn-outline-secondary" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><FaChevronLeft /> Prev</button>
+              <span className="small mx-2">Page {page} of {totalPages || 1}</span>
+              <button className="btn btn-sm btn-outline-secondary" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next <FaChevronRight /></button>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -422,12 +428,12 @@ export default function HolidaySettings() {
             <div className="modal-dialog modal-dialog-centered modal-sm">
               <div className="modal-content border-0 shadow">
                 <div className="modal-body text-center p-4">
-                   <h5 className="mb-2 text-danger">Confirm Delete</h5>
-                   <p className="text-muted small mb-4">Are you sure?</p>
-                   <div className="d-flex justify-content-center gap-2">
-                       <button className="btn btn-light btn-sm px-3 border" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-                       <button className="btn btn-danger btn-sm px-3" onClick={handleDelete}>Delete</button>
-                   </div>
+                  <h5 className="mb-2 text-danger">Confirm Delete</h5>
+                  <p className="text-muted small mb-4">Are you sure?</p>
+                  <div className="d-flex justify-content-center gap-2">
+                    <button className="btn btn-light btn-sm px-3 border" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+                    <button className="btn btn-danger btn-sm px-3" onClick={handleDelete}>Delete</button>
+                  </div>
                 </div>
               </div>
             </div>

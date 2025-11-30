@@ -202,14 +202,14 @@ export default function AddClinic() {
         error: "Failed to save clinic. Please try again.",
       });
 
-      navigate("/clinics"); // Ensure this route matches your main list route
+      navigate("/clinic-list"); // Ensure this route matches your main list route
     } catch (err) {
       console.error(err);
     }
   };
 
   const handleCancel = () => {
-    navigate("/clinics");
+    navigate("/clinic-list");
   };
 
   return (
