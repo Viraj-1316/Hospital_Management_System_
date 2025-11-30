@@ -354,7 +354,7 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
   useEffect(() => {
     const fetchCategories = async () => {
         try {
-            const res = await api.get("/listings?type=service type&status=Active");
+            const res = await api.get("/listings?type=Service type&status=Active");
             const catNames = res.data.map(item => item.name);
             setCategories(catNames);
         } catch (err) {
@@ -573,7 +573,7 @@ export default function Services({ sidebarCollapsed = false, toggleSidebar }) {
             </div>
           </div>
 
-          <div className="mt-3 text-secondary small">© Western State Pain Institute</div>
+          <div className="mt-3 text-secondary small">© OneCare</div>
           
           {/* Pass dynamic categories to form */}
           {modalOpen && <ServiceForm initial={editing} onClose={() => setModalOpen(false)} onSave={save} availableCategories={categories} />}

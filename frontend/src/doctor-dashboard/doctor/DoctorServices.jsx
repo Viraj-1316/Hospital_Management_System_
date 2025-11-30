@@ -320,7 +320,7 @@ export default function DoctorServices({ sidebarCollapsed = false, toggleSidebar
     const fetchCategories = async () => {
         try {
             // Only fetch where type is 'service type' and status is 'Active'
-            const res = await api.get("/listings?type=service type&status=Active");
+            const res = await api.get("/listings?type=Service type&status=Active");
             // listings endpoint returns array of objects {name, type, status, ...}
             // We map to just names
             const catNames = res.data.map(item => item.name);
@@ -540,7 +540,7 @@ export default function DoctorServices({ sidebarCollapsed = false, toggleSidebar
             </div>
           </div>
 
-          <div className="mt-3 text-secondary small">© Western State Pain Institute</div>
+          <div className="mt-3 text-secondary small">© OneCare</div>
           
           {/* Modal passes doctorInfo AND availableCategories */}
           {modalOpen && (
