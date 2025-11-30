@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom"; // Added useLocation
 import axios from "axios";
 import { ArrowLeft, Printer, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
 import PatientLayout from "../layouts/PatientLayout";
 
-// API Setup
+// --- API Setup ---
 const api = axios.create({ baseURL: "http://localhost:3001" });
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token") || localStorage.getItem("userToken");
+  const token = localStorage.getItem("token") || localStorage.getItem("patientToken");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -15,23 +15,70 @@ api.interceptors.request.use((config) => {
 const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); // ✅ Hook to access passed state
+  
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
+    // ✅ STRATEGY 1: Check if data was passed from Dashboard
+    if (location.state && location.state.appointmentData) {
+        console.log("Using data passed from Dashboard");
+        setAppointment(location.state.appointmentData);
+        setLoading(false);
+        return;
+    }
+
+    // ✅ STRATEGY 2: If no data passed (e.g., page refresh), fetch from API
     const fetchDetails = async () => {
       try {
+        console.log("Fetching from API for ID:", id);
         const response = await api.get(`/appointments/${id}`);
-        setAppointment(response.data.data || response.data);
+        
+        const data = response.data.data || response.data;
+        // Handle array response if API returns [object]
+        const finalData = Array.isArray(data) ? data[0] : data;
+
+        if (finalData) {
+            setAppointment(finalData);
+        } else {
+            setErrorMsg("Appointment not found in database.");
+        }
       } catch (err) {
-        console.error("Error fetching appointment:", err);
+        console.error("Fetch error:", err);
+        setErrorMsg("Could not load appointment details. Please try again.");
       } finally {
         setLoading(false);
       }
     };
-    if (id) fetchDetails();
-  }, [id]);
 
+    if (id) fetchDetails();
+  }, [id, location.state]);
+
+  // --- Helper: Parse Services ---
+  const getServiceData = () => {
+    if (!appointment) return { list: [], pricePerItem: 0 };
+
+    const rawServices = appointment.serviceName || appointment.services || "General Consultation";
+    let list = [];
+
+    if (Array.isArray(rawServices)) {
+        list = rawServices;
+    } else if (typeof rawServices === "string") {
+        list = rawServices.split(",").map(s => s.trim()).filter(Boolean);
+    } else {
+        list = ["General Consultation"];
+    }
+
+    const total = Number(appointment.charges) || 0;
+    const count = list.length || 1;
+    const pricePerItem = count > 0 ? (total / count).toFixed(0) : 0;
+
+    return { list, pricePerItem };
+  };
+
+  // --- RENDER ---
   if (loading) return (
     <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
         <div className="d-flex justify-content-center align-items-center" style={{height:'80vh'}}>
@@ -42,146 +89,135 @@ const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
 
   if (!appointment) return (
     <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
-        <div className="p-5 text-center">Receipt not found</div>
+        <div className="p-5 text-center mt-5">
+            <h4 className="text-danger fw-bold">Receipt Not Found</h4>
+            <p className="text-muted">{errorMsg || "We couldn't locate the details for this appointment."}</p>
+            <button className="btn btn-outline-dark mt-3" onClick={() => navigate(-1)}>
+                <ArrowLeft size={16} className="me-2"/> Go Back
+            </button>
+        </div>
     </PatientLayout>
   );
+
+  const { list: serviceList, pricePerItem } = getServiceData();
 
   return (
     <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="container py-4">
         
-        {/* Top Controls (Hidden when printing via CSS class 'no-print') */}
+        {/* Navigation & Print Buttons */}
         <div className="d-flex justify-content-between align-items-center mb-4 no-print">
-          <button className="btn btn-light border" onClick={() => navigate(-1)}>
-            <ArrowLeft size={16} className="me-2"/> Back
+          <button className="btn btn-light border shadow-sm" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} className="me-2"/> Back to Dashboard
           </button>
-          <button className="btn btn-primary" onClick={() => window.print()}>
+          <button className="btn btn-primary shadow-sm" onClick={() => window.print()}>
             <Printer size={16} className="me-2"/> Print Receipt
           </button>
         </div>
 
-        {/* ✅ ADDED ID: "printable-receipt" 
-            This ID is crucial for the CSS below to identify what to print.
-        */}
-        <div id="printable-receipt" className="card border-0 shadow-sm mx-auto" style={{ maxWidth: '700px' }}>
+        {/* RECEIPT CARD */}
+        <div id="printable-receipt" className="card border-0 shadow mx-auto" style={{ maxWidth: '750px', borderRadius: '12px' }}>
           <div className="card-body p-5">
             
             {/* Header */}
-            <div className="text-center mb-5 border-bottom pb-4">
-              <h3 className="fw-bold text-primary mb-1">MEDICAL RECEIPT</h3>
-              <p className="text-muted small text-uppercase mb-0">Receipt #{appointment._id?.slice(-6).toUpperCase()}</p>
+            <div className="d-flex justify-content-between border-bottom pb-4 mb-4">
+                <div>
+                    <h3 className="fw-bold text-primary mb-1">MEDICAL RECEIPT</h3>
+                    <div className="text-muted small">ID: #{appointment._id?.slice(-6).toUpperCase() || "---"}</div>
+                </div>
+                <div className="text-end">
+                    <div className="badge bg-success fs-6 px-3 py-2 text-uppercase">
+                        {appointment.paymentStatus || "PAID"}
+                    </div>
+                </div>
             </div>
 
-            {/* Doctor & Clinic Info */}
-            <div className="row mb-4">
-              <div className="col-6">
-                <small className="text-muted fw-bold text-uppercase d-block mb-1">Provider</small>
-                <h5 className="fw-bold mb-0">{appointment.doctorName || "Doctor"}</h5>
-                <div className="text-muted small mt-1 d-flex align-items-center">
-                   <MapPin size={12} className="me-1"/>
-                   {appointment.clinic || appointment.clinicName || "Main Clinic"}
+            {/* Info Grid */}
+            <div className="row g-4 mb-4">
+                <div className="col-md-6">
+                    <label className="text-muted text-uppercase small fw-bold mb-1">Doctor / Provider</label>
+                    <h5 className="fw-bold mb-1">{appointment.doctorName || "Doctor"}</h5>
+                    <div className="text-muted small d-flex align-items-center">
+                        <MapPin size={14} className="me-1"/> 
+                        {appointment.clinic || appointment.clinicName || "Health Center"}
+                    </div>
                 </div>
-              </div>
-              <div className="col-6 text-end">
-                <small className="text-muted fw-bold text-uppercase d-block mb-1">Date & Time</small>
-                <div className="fw-bold text-dark d-flex align-items-center justify-content-end">
-                   <Calendar size={14} className="me-1 text-primary"/>
-                   {new Date(appointment.date).toLocaleDateString()}
+                <div className="col-md-6 text-md-end">
+                    <label className="text-muted text-uppercase small fw-bold mb-1">Appointment Date</label>
+                    <h5 className="fw-bold mb-1">
+                        {new Date(appointment.date).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </h5>
+                    <div className="text-muted small d-flex align-items-center justify-content-md-end">
+                        <Clock size={14} className="me-1"/> 
+                        {appointment.time || "Scheduled Time"}
+                    </div>
                 </div>
-                <div className="text-muted small mt-1 d-flex align-items-center justify-content-end">
-                   <Clock size={12} className="me-1"/>
-                   {appointment.time || "Time not specified"}
-                </div>
-              </div>
             </div>
 
-            {/* Line Items */}
-            <div className="table-responsive mb-4">
-              <table className="table table-bordered">
-                <thead className="bg-light">
+            {/* Services Table */}
+            <div className="table-responsive mb-4 border rounded">
+              <table className="table table-borderless mb-0">
+                <thead className="bg-light border-bottom">
                   <tr>
-                    <th className="py-2">Service Description</th>
-                    <th className="py-2 text-end" style={{width: '120px'}}>Amount</th>
+                    <th className="py-3 ps-4 text-uppercase small text-muted">Service Description</th>
+                    <th className="py-3 pe-4 text-end text-uppercase small text-muted">Cost</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="py-3">
-                      <span className="fw-semibold d-block">
-                        {appointment.serviceName || appointment.services || "General Consultation"}
-                      </span>
-                      <small className="text-muted">Medical Services</small>
-                    </td>
-                    <td className="py-3 text-end align-middle fw-bold">
-                      ₹{appointment.charges || 0}
-                    </td>
-                  </tr>
+                  {serviceList.length > 0 ? (
+                      serviceList.map((service, index) => (
+                        <tr key={index} className="border-bottom">
+                          <td className="py-3 ps-4">
+                            <span className="fw-semibold text-dark">{service}</span>
+                          </td>
+                          <td className="py-3 pe-4 text-end fw-bold">₹{pricePerItem}</td>
+                        </tr>
+                      ))
+                  ) : (
+                      <tr>
+                          <td className="py-3 ps-4">Consultation Fee</td>
+                          <td className="py-3 pe-4 text-end fw-bold">₹{appointment.charges}</td>
+                      </tr>
+                  )}
                 </tbody>
                 <tfoot className="bg-light">
                   <tr>
-                    <td className="text-end fw-bold">Total Paid</td>
-                    <td className="text-end fw-bold text-primary">₹{appointment.charges || 0}</td>
+                    <td className="ps-4 py-3 fw-bold fs-5">Total</td>
+                    <td className="pe-4 py-3 text-end fw-bold fs-5 text-primary">₹{appointment.charges || 0}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
 
-            {/* Status Badge */}
-            <div className="d-flex justify-content-between align-items-center bg-light p-3 rounded">
-               <div className="d-flex align-items-center">
-                  <CreditCard size={18} className="text-muted me-2"/>
-                  <span className="text-muted small">Payment Status</span>
-               </div>
-               <span className="badge bg-success text-uppercase px-3 py-2">
-                 {appointment.paymentStatus || "PAID"}
-               </span>
-            </div>
-
             {/* Footer */}
-            <div className="text-center mt-5 pt-4 border-top">
-              <p className="text-muted small mb-0">Thank you for visiting us.</p>
-              <p className="text-muted small">For questions, please contact support.</p>
+            <div className="text-center pt-4">
+               <p className="text-muted small mb-1">Thank you for choosing our services.</p>
+               <p className="text-muted small">Generated on {new Date().toLocaleDateString()}</p>
             </div>
 
           </div>
         </div>
 
       </div>
-      
-      {/* ✅ UPDATED PRINT STYLES 
-          This logic hides the body and fixes the receipt to the top-left corner.
-      */}
+
+      {/* Print Specific CSS */}
       <style>
         {`
           @media print {
-            /* 1. Hide everything in the body */
-            body * {
-              visibility: hidden;
-            }
-
-            /* 2. Hide the sidebar specifically if it persists */
-            .sidebar, .navbar, .no-print {
-              display: none !important;
-            }
-
-            /* 3. Make ONLY the receipt card visible */
-            #printable-receipt, #printable-receipt * {
-              visibility: visible;
-            }
-
-            /* 4. Position the receipt absolutely at the top-left of the page */
+            body * { visibility: hidden; }
+            .no-print, nav, header, aside { display: none !important; }
+            #printable-receipt, #printable-receipt * { visibility: visible; }
             #printable-receipt {
-              position: fixed;
+              position: absolute;
               left: 0;
               top: 0;
               width: 100%;
               margin: 0;
-              padding: 20px;
-              z-index: 9999;
-              background: white; /* Ensure it has a white background */
-              box-shadow: none !important; /* Remove shadow for cleaner print */
-              border: 1px solid #ddd !important; /* Optional border */
+              padding: 0;
+              border: none !important;
+              box-shadow: none !important;
             }
+            @page { margin: 20px; }
           }
         `}
       </style>

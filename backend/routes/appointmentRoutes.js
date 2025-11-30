@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 const AppointmentModel = require("../models/Appointment");
 const PatientModel = require("../models/Patient");
 const DoctorModel = require("../models/Doctor");
-const HolidayModel = require("../models/Holiday"); // <--- IMPORT HOLIDAY MODEL
+const HolidayModel = require("../models/Holiday"); 
 const { sendEmail } = require("../utils/emailService");
 const { appointmentBookedTemplate } = require("../utils/emailTemplates");
 const { sendWhatsAppMessage } = require("../utils/whatsappService");
@@ -30,102 +30,62 @@ const generateTimeSlots = (startStr, endStr, intervalMins) => {
 };
 
 // ==========================================
-// 1. GET AVAILABLE SLOTS (Logic for Frontend)
+// 1. GET AVAILABLE SLOTS
 // ==========================================
 router.get("/slots", async (req, res) => {
   try {
     const { doctorId, date } = req.query;
+    if (!doctorId || !date) return res.status(400).json({ message: "Doctor ID and Date are required" });
 
-    if (!doctorId || !date) {
-      return res.status(400).json({ message: "Doctor ID and Date are required" });
-    }
-
-    // 1. CHECK IF DOCTOR IS ON HOLIDAY
-    // We convert the requested date to a Date object
     const requestDate = new Date(date); 
-    
-    // Check if the requested date falls within any holiday range for this doctor
     const holiday = await HolidayModel.findOne({
       doctorId: doctorId,
       fromDate: { $lte: requestDate },
       toDate: { $gte: requestDate }
     });
 
-    if (holiday) {
-      // If on holiday, return empty array immediately
-      return res.json({ 
-        message: "Doctor is on holiday", 
-        slots: [], 
-        isHoliday: true 
-      });
-    }
+    if (holiday) return res.json({ message: "Doctor is on holiday", slots: [], isHoliday: true });
 
-    // 2. IF NOT ON HOLIDAY, GENERATE SLOTS
-    // (Assuming standard 9 AM - 5 PM for now, customize based on DoctorModel if needed)
     const allSlots = generateTimeSlots("09:00:00", "17:00:00", 30);
-
-    // 3. REMOVE BOOKED SLOTS
-    // Find existing appointments for this doctor on this date
-    // Note: Assuming 'date' in AppointmentModel is stored as YYYY-MM-DD string or Date object. 
-    // Adjust query matches your DB format.
     const bookedAppointments = await AppointmentModel.find({
-      doctorId: doctorId,
-      date: date, // Ensuring string match "YYYY-MM-DD"
-      status: { $ne: "cancelled" }
+      doctorId: doctorId, date: date, status: { $ne: "cancelled" }
     }).select("time");
 
     const bookedTimes = bookedAppointments.map(a => a.time);
-
-    // Filter out booked times
     const availableSlots = allSlots.filter(time => !bookedTimes.includes(time));
 
     res.json({ slots: availableSlots, isHoliday: false });
-
   } catch (err) {
-    console.error("Error fetching slots:", err);
     res.status(500).json({ message: "Server error checking slots" });
   }
 });
 
-
 // ==========================================
-// 2. CREATE APPOINTMENT (With Holiday Block)
+// 2. CREATE APPOINTMENT
 // ==========================================
 router.post("/", async (req, res) => {
   try {
-    // --- STEP 1: HOLIDAY VALIDATION ---
     if (req.body.doctorId && req.body.date) {
         const apptDate = new Date(req.body.date);
-        
-        // Check if date falls in a holiday range
         const onHoliday = await HolidayModel.findOne({
             doctorId: req.body.doctorId,
             fromDate: { $lte: apptDate },
             toDate: { $gte: apptDate }
         });
-
-        if (onHoliday) {
-            return res.status(400).json({ 
-                message: `Doctor is on holiday from ${new Date(onHoliday.fromDate).toLocaleDateString()} to ${new Date(onHoliday.toDate).toLocaleDateString()}. Please choose another date.` 
-            });
-        }
+        if (onHoliday) return res.status(400).json({ message: `Doctor is on holiday.` });
     }
-    // ----------------------------------
 
     const payload = {
       patientId: req.body.patientId || null,
       patientName: req.body.patientName || req.body.patient || "Patient",
       patientEmail: req.body.patientEmail || req.body.email || "",
       patientPhone: req.body.patientPhone || req.body.phone || "",
-
       doctorId: req.body.doctorId || null,
       doctorName: req.body.doctorName || req.body.doctor || "",
-
       clinic: req.body.clinic || "",
       date: req.body.date || "",
       time: req.body.time || "",
       services: req.body.services || req.body.servicesDetail || "",
-      servicesDetail: req.body.servicesDetail || "",
       charges: req.body.charges || 0,
       paymentMode: req.body.paymentMode || "",
       status: req.body.status || "upcoming",
@@ -134,29 +94,16 @@ router.post("/", async (req, res) => {
 
     const created = await AppointmentModel.create(payload);
 
-    // Logic to fetch email/phone if missing
-    let targetEmail = payload.patientEmail;
-    let targetPhone = payload.patientPhone;
-
-    if ((!targetEmail || !targetPhone) && payload.patientId) {
-      try {
-        const patientDoc = await PatientModel.findById(payload.patientId);
-        if (patientDoc) {
-          if (!targetEmail) targetEmail = patientDoc.email;
-          if (!targetPhone) targetPhone = patientDoc.phone || patientDoc.mobile;
-        }
-      } catch (e) {
-        console.log("Warning: Could not fetch patient details for notification");
-      }
+    // Notifications
+    if (payload.patientEmail) {
+      sendEmail({
+        to: payload.patientEmail,
+        subject: "Confirmed | OneCare",
+        html: appointmentBookedTemplate(payload),
+      });
     }
 
-    // Notifications
-    let formattedDate = payload.date;
-    try {
-        if (payload.date) formattedDate = new Date(payload.date).toLocaleDateString("en-GB");
-    } catch (e) {}
-
-    if (targetEmail) {
+        if (targetEmail) {
       sendEmail({
         to: targetEmail,
         subject: "Your Appointment is Confirmed | OneCare",
@@ -178,8 +125,77 @@ router.post("/", async (req, res) => {
 
     return res.status(201).json(created);
   } catch (err) {
-    console.error("Error creating appointment:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// ==========================================
+// 3. GET SINGLE APPOINTMENT (✅ THIS WAS MISSING)
+// ==========================================
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check validity of ID to prevent server crash
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Invalid Appointment ID" });
+    }
+
+    const appt = await AppointmentModel.findById(id)
+      .populate("patientId", "firstName lastName email phone")
+      .populate("doctorId", "name clinic firstName lastName")
+      .lean();
+
+    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+
+    // Data Normalization (Essential for Frontend consistency)
+    // This ensures 'doctorName' exists even if it's inside the 'doctorId' object
+    if (appt.doctorId && typeof appt.doctorId === "object") {
+        appt.doctorName = appt.doctorName || appt.doctorId.name || `${appt.doctorId.firstName} ${appt.doctorId.lastName}`;
+        appt.clinic = appt.clinic || appt.doctorId.clinic;
+    }
+
+    if (appt.patientId && typeof appt.patientId === "object") {
+        appt.patientName = appt.patientName || `${appt.patientId.firstName} ${appt.patientId.lastName}`;
+        appt.patientEmail = appt.patientEmail || appt.patientId.email;
+        appt.patientPhone = appt.patientPhone || appt.patientId.phone;
+    }
+
+    return res.json(appt);
+  } catch (err) {
+    console.error("Error fetching single appointment:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// ==========================================
+// 4. LIST APPOINTMENTS (With Search)
+// ==========================================
+router.get("/", async (req, res) => {
+  try {
+    const q = {};
+    if (req.query.date) q.date = req.query.date;
+    if (req.query.patientId && mongoose.Types.ObjectId.isValid(req.query.patientId)) q.patientId = req.query.patientId;
+    if (req.query.status) q.status = req.query.status;
+
+    const list = await AppointmentModel.find(q)
+      .sort({ createdAt: -1 })
+      .populate("patientId", "firstName lastName email phone")
+      .populate("doctorId", "name clinic firstName lastName")
+      .lean();
+
+    const normalized = list.map(a => {
+      const copy = { ...a };
+      if (copy.doctorId && typeof copy.doctorId === "object") {
+         copy.doctorName = copy.doctorName || copy.doctorId.name || "";
+         copy.clinic = copy.clinic || copy.doctorId.clinic || "";
+      }
+      return copy;
+    });
+
+    res.json(normalized);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
@@ -384,45 +400,52 @@ router.post("/import", upload.single("file"), async (req, res) => {
   }
 });
 
-// PDF Generation
+// ==========================================
+// 5. PDF GENERATION
+// ==========================================
 router.get("/:id/pdf", async (req, res) => {
   try {
     const { id } = req.params;
     const appt = await AppointmentModel.findById(id);
     if (!appt) return res.status(404).json({ message: "Appointment not found" });
 
+    // --- Prepare Data ---
     let doctor = null;
     if (appt.doctorName) {
       const parts = appt.doctorName.split(" ");
-      const first = parts[0];
-      const last = parts.slice(1).join(" ");
-      doctor = await DoctorModel.findOne({ firstName: first, lastName: last });
+      doctor = await DoctorModel.findOne({ firstName: parts[0] });
     }
 
-    const clinicName = appt.clinic || doctor?.clinic || "Valley Clinic";
-    const clinicEmail = doctor?.email || "info@medicalcenter.com";
-    const clinicPhone = doctor?.phone || "+1 234 567 890";
-    const rawAddress = doctor?.address || "123 Health Street\nMedical District, City, 000000";
-    const addressLines = String(rawAddress).split(/\r?\n/).slice(0, 2);
-    const patientName = appt.patientName || "N/A";
+    const clinicName = appt.clinic || doctor?.clinic || "OneCare Medical Center";
+    const clinicEmail = doctor?.email || "support@onecare.com";
+    const clinicPhone = doctor?.phone || "+91 12345 67890";
     
-    // Dates
+    // Dates & ID
     const todayFormatted = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    const apptDateObj = appt.date ? new Date(appt.date) : null;
-    const apptDateFormatted = apptDateObj ? apptDateObj.toLocaleDateString("en-US", { weekday: 'short', year: "numeric", month: "long", day: "numeric" }) : "N/A";
-    const generatedDate = new Date().toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: '2-digit', minute:'2-digit' });
-
+    const apptDateFormatted = appt.date ? new Date(appt.date).toLocaleDateString("en-US", { weekday: 'short', year: "numeric", month: "long", day: "numeric" }) : "N/A";
     const apptId = String(appt._id).substring(0, 8).toUpperCase(); 
-    const apptTime = appt.slot || appt.time || "N/A";
-    const apptStatus = (appt.status || "Booked").toUpperCase();
-    const paymentMode = appt.paymentMode || "Manual";
-    const serviceText = appt.services || "General Consultation";
-    const totalBill = appt.charges ? `Rs. ${appt.charges}/-` : "Rs. 0/-";
 
-    // PDF Creation
+    // --- Services & Charges Calculation ---
+    let serviceLines = [];
+    const rawService = appt.services || appt.serviceName || "General Consultation";
+    if (typeof rawService === 'string') {
+        serviceLines = rawService.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (Array.isArray(rawService)) {
+        serviceLines = rawService;
+    } else {
+        serviceLines = ["General Consultation"];
+    }
+
+    const totalCharges = Number(appt.charges) || 0;
+    const serviceCount = serviceLines.length || 1;
+    const perItemCost = (totalCharges / serviceCount).toFixed(0); 
+    const totalBillText = `Rs. ${totalCharges}/-`;
+
+    // --- PDF Setup ---
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595, 842]);
     const { width, height } = page.getSize();
+    
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
@@ -434,55 +457,39 @@ router.get("/:id/pdf", async (req, res) => {
     let cursorY = height - 50;
     const margin = 50;
 
-    // Logo
-    try {
-      const logoPath = path.join(__dirname, "../assets", "logo.png");
-      if (fs.existsSync(logoPath)) {
-        const logoBytes = fs.readFileSync(logoPath);
-        const logoImg = await pdfDoc.embedPng(logoBytes);
-        const logoDims = logoImg.scale(0.25); 
-        page.drawImage(logoImg, { x: margin, y: cursorY - logoDims.height + 10, width: logoDims.width, height: logoDims.height });
-      }
-    } catch (e) {}
-
-    const textStartX = 180; 
-    page.drawText(clinicName.toUpperCase(), { x: textStartX, y: cursorY, size: 18, font: fontBold, color: primaryColor });
-    
+    // Header
+    page.drawText(clinicName.toUpperCase(), { x: margin, y: cursorY, size: 18, font: fontBold, color: primaryColor });
     page.drawText(`Date: ${todayFormatted}`, { x: width - margin - 130, y: cursorY, size: 10, font: fontRegular, color: black });
     page.drawText(`Booking ID: #${apptId}`, { x: width - margin - 130, y: cursorY - 15, size: 10, font: fontBold, color: black });
 
     let detailsY = cursorY - 18;
-    page.drawText(addressLines.join(", "), { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+    page.drawText(`Phone: ${clinicPhone}`, { x: margin, y: detailsY, size: 10, font: fontRegular, color: gray });
     detailsY -= 12;
-    page.drawText(`Phone: ${clinicPhone}`, { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
-    detailsY -= 12;
-    page.drawText(`Email: ${clinicEmail}`, { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+    page.drawText(`Email: ${clinicEmail}`, { x: margin, y: detailsY, size: 10, font: fontRegular, color: gray });
 
     cursorY -= 80;
+
+    // Title Bar
     page.drawRectangle({ x: 0, y: cursorY - 10 , width: width, height: 30, color: primaryColor });
     const titleText = "APPOINTMENT CONFIRMATION";
     const titleWidth = fontBold.widthOfTextAtSize(titleText, 14);
     page.drawText(titleText, { x: (width - titleWidth) / 2, y: cursorY, size: 14, font: fontBold, color: rgb(1,1,1) });
 
     cursorY -= 50;
-    const col1 = margin;
+
+    // Patient & Doctor
     const col2 = 320;
+    page.drawText("PATIENT DETAILS", { x: margin, y: cursorY+15, size: 10, font: fontBold, color: gray });
+    page.drawText(appt.patientName || "N/A", { x: margin, y: cursorY, size: 14, font: fontBold, color: black });
 
-    page.drawText("PATIENT DETAILS", { x: col1, y: cursorY, size: 10, font: fontBold, color: gray });
-    cursorY -= 15;
-    page.drawText(patientName, { x: col1, y: cursorY, size: 14, font: fontBold, color: black });
-    cursorY -= 15;
-    page.drawText("Patient ID: --", { x: col1, y: cursorY, size: 10, font: fontRegular, color: black });
-
-    const sectionTopY = cursorY + 30; 
-    page.drawText("DOCTOR DETAILS", { x: col2, y: sectionTopY, size: 10, font: fontBold, color: gray });
-    page.drawText(`Dr. ${appt.doctorName}`, { x: col2, y: sectionTopY - 15, size: 14, font: fontBold, color: black });
-    page.drawText("General Physician", { x: col2, y: sectionTopY - 30, size: 10, font: fontRegular, color: black });
-
+    page.drawText("DOCTOR DETAILS", { x: col2, y: cursorY+15, size: 10, font: fontBold, color: gray });
+    page.drawText(`Dr. ${appt.doctorName || "Unknown"}`, { x: col2, y: cursorY, size: 14, font: fontBold, color: black });
+    
     cursorY -= 40;
     page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
     cursorY -= 30;
 
+    // Appointment Info
     page.drawText("APPOINTMENT DETAILS", { x: margin, y: cursorY, size: 12, font: fontBold, color: primaryColor });
     cursorY -= 20;
 
@@ -492,38 +499,50 @@ router.get("/:id/pdf", async (req, res) => {
     };
 
     drawDetailRow("Date", apptDateFormatted, margin, cursorY);
-    drawDetailRow("Time", apptTime, margin + 180, cursorY);
+    drawDetailRow("Time", appt.time || "N/A", margin + 180, cursorY);
     
     let statusColor = black;
-    if(apptStatus === 'BOOKED' || apptStatus === 'CONFIRMED') statusColor = rgb(0, 0.6, 0);
-    if(apptStatus === 'CANCELLED') statusColor = rgb(0.8, 0, 0);
+    const st = (appt.status || "Booked").toUpperCase();
+    if(st === 'BOOKED') statusColor = rgb(0, 0.6, 0);
+    if(st === 'CANCELLED') statusColor = rgb(0.8, 0, 0);
     page.drawText("Status", { x: width - margin - 80, y: cursorY, size: 9, font: fontRegular, color: gray });
-    page.drawText(apptStatus, { x: width - margin - 80, y: cursorY - 12, size: 11, font: fontBold, color: statusColor });
+    page.drawText(st, { x: width - margin - 80, y: cursorY - 12, size: 11, font: fontBold, color: statusColor });
 
     cursorY -= 50;
+
+    // Table Header
     page.drawRectangle({ x: margin, y: cursorY, width: width - (margin*2), height: 25, color: lightGray });
     page.drawText("Service / Description", { x: margin + 10, y: cursorY + 7, size: 10, font: fontBold, color: black });
     page.drawText("Amount", { x: width - margin - 70, y: cursorY + 7, size: 10, font: fontBold, color: black });
 
-    cursorY -= 25;
-    page.drawText(serviceText, { x: margin + 10, y: cursorY + 8, size: 10, font: fontRegular, color: black });
-    page.drawText(totalBill, { x: width - margin - 70, y: cursorY + 8, size: 10, font: fontRegular, color: black });
+    cursorY -= 20; 
+
+    serviceLines.forEach((service, index) => {
+        const lineText = `${index + 1}. ${service}`;
+        const amountText = `Rs. ${perItemCost}/-`;
+        page.drawText(lineText, { x: margin + 10, y: cursorY, size: 10, font: fontRegular, color: black });
+        page.drawText(amountText, { x: width - margin - 70, y: cursorY, size: 10, font: fontRegular, color: black });
+        cursorY -= 20; 
+    });
+
+    cursorY += 5; 
     page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
 
-    cursorY -= 35;
+    // Footer & Totals
+    cursorY -= 30;
+    
     page.drawText("Total Amount:", { x: width - margin - 150, y: cursorY, size: 12, font: fontBold, color: black });
-    page.drawText(totalBill, { x: width - margin - 70, y: cursorY, size: 12, font: fontBold, color: primaryColor });
+    page.drawText(totalBillText, { x: width - margin - 70, y: cursorY, size: 12, font: fontBold, color: primaryColor });
     
     cursorY -= 15;
-    page.drawText(`Payment Mode: ${paymentMode}`, { x: width - margin - 150, y: cursorY, size: 9, font: fontRegular, color: gray });
+    page.drawText(`Payment Mode: ${appt.paymentMode || "Manual"}`, { x: width - margin - 150, y: cursorY, size: 9, font: fontRegular, color: gray });
 
     const footerY = 50;
-    page.drawText("Note:", { x: margin, y: footerY + 45, size: 9, font: fontBold, color: black });
-    page.drawText("Please arrive 15 minutes prior to your appointment time. If you need to reschedule, contact us 24 hours in advance.", { x: margin, y: footerY + 33, size: 9, font: fontRegular, color: black });
-
     page.drawLine({ start: { x: margin, y: footerY + 15 }, end: { x: width - margin, y: footerY + 15 }, thickness: 1, color: lightGray });
+    
+    const generatedDate = new Date().toLocaleString("en-US");
     page.drawText(`Generated on: ${generatedDate}`, { x: margin, y: footerY, size: 8, font: fontRegular, color: gray });
-    page.drawText("This is a computer-generated document. No signature is required.", { x: margin, y: footerY - 10, size: 8, font: fontRegular, color: gray });
+    page.drawText("Note: This assumes services are priced equally.", { x: margin, y: footerY - 10, size: 8, font: fontRegular, color: gray });
 
     const pdfBytes = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
@@ -531,12 +550,11 @@ router.get("/:id/pdf", async (req, res) => {
     res.send(Buffer.from(pdfBytes));
 
   } catch (err) {
-    console.error("Appointment PDF error:", err);
     res.status(500).json({ message: "PDF generation failed" });
   }
 });
 
-// Get appointment by ID
+// // Get appointment by ID
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -588,21 +606,6 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Cancel appointment
-router.put("/:id/cancel", async (req, res) => {
-  try {
-    const appt = await AppointmentModel.findByIdAndUpdate(
-      req.params.id,
-      { status: "cancelled" },
-      { new: true }
-    );
-    if (!appt) return res.status(404).json({ message: "Appointment not found" });
-    res.json({ message: "Appointment cancelled", data: appt });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
 // UPDATE appointment
 router.put("/:id", async (req, res) => {
   try {
@@ -624,6 +627,23 @@ router.delete("/:id", async (req, res) => {
     const deleted = await AppointmentModel.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: "Appointment not found" });
     res.json({ message: "Appointment deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// ==========================================
+// 6. CANCEL APPOINTMENT (Optional but recommended)
+// ==========================================
+router.put("/:id/cancel", async (req, res) => {
+  try {
+    const appt = await AppointmentModel.findByIdAndUpdate(
+      req.params.id,
+      { status: "cancelled" },
+      { new: true }
+    );
+    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+    res.json({ message: "Appointment cancelled", data: appt });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
