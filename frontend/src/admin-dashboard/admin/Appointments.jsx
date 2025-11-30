@@ -548,7 +548,7 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                     </div>
 
                     <label className="form-label">Service Detail (Price)</label>
-                    <input name="servicesDetail" className="form-control mb-3" placeholder="Service price" value={form.servicesDetail} onChange={handleFormChange} />
+                    <input name="servicesDetail" className="form-control mb-3" placeholder="Service price" value={form.servicesDetail} disabled onChange={handleFormChange} />
 
                     <label className="form-label">Tax</label>
                     <input className="form-control mb-3" value="Tax not available" disabled />
