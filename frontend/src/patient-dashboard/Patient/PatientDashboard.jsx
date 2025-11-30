@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
-
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import PatientLayout from "../layouts/PatientLayout";
@@ -18,10 +16,9 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
   const [rawAppointments, setRawAppointments] = useState([]); 
   const [filters, setFilters] = useState({ doctor: "", status: "" });
 
-  // --- NEW: State for Appointment Details Modal ---
+  // --- State for Appointment Details Modal ---
   const [selectedAppointment, setSelectedAppointment] = useState(null); 
-  // -----------------------------------------------
-
+  
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [errorEvents, setErrorEvents] = useState(null);
@@ -62,7 +59,6 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
       allDay: true,
       backgroundColor: bgColor,
       borderColor: bgColor,
-      // We store the full appointment object here to use in the modal
       extendedProps: { raw: a }, 
     };
   };
@@ -122,22 +118,18 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
     return () => { mounted = false; };
   }, [patientId, token]);
 
-  // --- Calendar Interactions ---
+  // --- Handlers ---
   const handleDateSelect = (selectInfo) => {
     const selectedDate = selectInfo.startStr;
     navigate(`/patient/book?date=${encodeURIComponent(selectedDate)}`);
     selectInfo.view.calendar.unselect();
   };
 
-  // --- UPDATED: Handle Click to Open Details Modal ---
   const handleEventClick = (clickInfo) => {
-    // 1. Get raw data from extendedProps
     const rawData = clickInfo.event.extendedProps.raw;
-    // 2. Set state to open modal
     setSelectedAppointment(rawData);
   };
 
-  // --- Handlers ---
   const handleFilterChange = (e) => setFilters((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   
   return (
@@ -148,7 +140,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h3 className="fw-bold text-primary m-0">Appointment</h3>
           <button className="btn btn-outline-secondary" onClick={() => setShowFilterModal(true)}>
-             Apply filters
+              Apply filters
           </button>
         </div>
 
@@ -158,7 +150,6 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
           {/* Calendar Column */}
           <div className="col-lg-9">
             <div className="card shadow-sm p-3">
-              {/* Calendar Controls */}
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
                   <button className="btn btn-sm btn-primary me-1" onClick={() => calendarRef.current?.getApi().prev()}>◀</button>
@@ -181,7 +172,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
                 selectMirror={true}
                 select={handleDateSelect}
                 events={events}
-                eventClick={handleEventClick} // <--- Connected Handler
+                eventClick={handleEventClick}
                 height="auto"
                 dayMaxEvents={3}
               />
@@ -244,7 +235,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
           </div>
         )}
 
-        {/* --- 2. APPOINTMENT DETAILS MODAL (NEW) --- */}
+        {/* --- 2. APPOINTMENT DETAILS MODAL --- */}
         {selectedAppointment && (
           <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1060 }}>
             <div className="modal-dialog modal-dialog-centered">
@@ -255,45 +246,54 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
                 </div>
                 <div className="modal-body">
                   <div className="text-center mb-4">
-                     <div className="display-6 text-primary mb-1">
-                        {new Date(selectedAppointment.date).getDate()}
-                     </div>
-                     <div className="text-muted text-uppercase small fw-bold">
-                        {new Date(selectedAppointment.date).toLocaleString('default', { month: 'long', year: 'numeric' })}
-                     </div>
-                     <div className="badge bg-warning text-dark mt-2">{selectedAppointment.status?.toUpperCase() || 'BOOKED'}</div>
+                      <div className="display-6 text-primary mb-1">
+                         {new Date(selectedAppointment.date).getDate()}
+                      </div>
+                      <div className="text-muted text-uppercase small fw-bold">
+                         {new Date(selectedAppointment.date).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                      </div>
+                      <div className="badge bg-warning text-dark mt-2">{selectedAppointment.status?.toUpperCase() || 'BOOKED'}</div>
                   </div>
 
                   <div className="row g-3">
-                     <div className="col-6">
-                        <small className="text-muted d-block">Doctor</small>
-                        <span className="fw-semibold">{selectedAppointment.doctorName || "Unknown"}</span>
-                     </div>
-                     <div className="col-6">
-                        <small className="text-muted d-block">Clinic</small>
-                        <span className="fw-semibold">{selectedAppointment.clinic || "Unknown"}</span>
-                     </div>
-                     <div className="col-6">
-                        <small className="text-muted d-block">Time</small>
-                        <span className="fw-semibold">{selectedAppointment.time || "Not set"}</span>
-                     </div>
-                     <div className="col-6">
-                        <small className="text-muted d-block">Charges</small>
-                        <span className="fw-semibold">₹{selectedAppointment.charges || 0}</span>
-                     </div>
-                     <div className="col-12">
-                        <small className="text-muted d-block">Service(s)</small>
-                        <div className="p-2 bg-light rounded border mt-1">
-                           {selectedAppointment.services || selectedAppointment.serviceName || "Consultation"}
-                        </div>
-                     </div>
+                      <div className="col-6">
+                         <small className="text-muted d-block">Doctor</small>
+                         <span className="fw-semibold">{selectedAppointment.doctorName || "Unknown"}</span>
+                      </div>
+                      <div className="col-6">
+                         <small className="text-muted d-block">Clinic</small>
+                         <span className="fw-semibold">{selectedAppointment.clinic || "Unknown"}</span>
+                      </div>
+                      <div className="col-6">
+                         <small className="text-muted d-block">Time</small>
+                         <span className="fw-semibold">{selectedAppointment.time || "Not set"}</span>
+                      </div>
+                      <div className="col-6">
+                         <small className="text-muted d-block">Charges</small>
+                         <span className="fw-semibold">₹{selectedAppointment.charges || 0}</span>
+                      </div>
+                      <div className="col-12">
+                         <small className="text-muted d-block">Service(s)</small>
+                         <div className="p-2 bg-light rounded border mt-1">
+                            {selectedAppointment.services || selectedAppointment.serviceName || "Consultation"}
+                         </div>
+                      </div>
                   </div>
                 </div>
                 <div className="modal-footer">
-                  {/* Optional: Add a button to go to full details page */}
+                  {/* ✅ UPDATED: Robust Navigation to Receipt */}
                   <button 
                     className="btn btn-outline-primary btn-sm"
-                    onClick={() => navigate(`/patient/appointments/${selectedAppointment._id}`)}
+                    onClick={() => {
+                        // Handle both _id (MongoDB) and id (FullCalendar or custom)
+                        const targetId = selectedAppointment._id || selectedAppointment.id;
+                        if (targetId) {
+                            navigate(`/patient/appointments/${targetId}`);
+                        } else {
+                            console.error("No valid ID found on appointment object:", selectedAppointment);
+                            alert("Error: Cannot find appointment ID.");
+                        }
+                    }}
                   >
                     View Full Receipt
                   </button>

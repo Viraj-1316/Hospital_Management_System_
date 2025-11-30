@@ -56,6 +56,7 @@ import PatientChangePassword from "./patient-dashboard/Patient/PatientChangePass
 import Encounters from "./patient-dashboard/Patient/Encounters";
 import PatientBilling from "./patient-dashboard/Patient/PatientBills";
 import PatientReport from "./patient-dashboard/Patient/MedicalReport";
+import AppointmentDetails from "./patient-dashboard/Patient/PatientAppointmentDetails.jsx";
 
 /* Doctor */
 import DoctorDashboard from "./doctor-dashboard/doctor/DoctorDashboard";
@@ -79,7 +80,7 @@ import DoctorAddBill from "./doctor-dashboard/doctor/DoctorAddBill.jsx";
 import SettingLayout from "./doctor-dashboard/doctor/Settings/SettingLayout";
 import Holidays from "./doctor-dashboard/doctor/Settings/Holidays";
 import DoctorSessions from "./doctor-dashboard/doctor/Settings/DoctorSessions";
-import Listings from "./doctor-dashboard/doctor/Settings/Listings"; 
+import Listings from "./doctor-dashboard/doctor/Settings/Listings";
 import GoogleMeetIntegration from "./doctor-dashboard/doctor/Settings/GoogleMeetIntegration";
 
 // Receptionist
@@ -294,13 +295,13 @@ function App() {
 
         {/* NEW: Settings Routes (Nested) */}
         <Route path="/doctor/settings" element={<SettingLayout />}>
-           <Route index element={<Holidays />} /> {/* Default to Holidays */}
-           <Route path="holidays" element={<Holidays />} />
-           <Route path="sessions" element={<DoctorSessions />} />
-           <Route path="listings" element={<Listings />} />
-           <Route path="integration" element={<GoogleMeetIntegration />} />
+          <Route index element={<Holidays />} /> {/* Default to Holidays */}
+          <Route path="holidays" element={<Holidays />} />
+          <Route path="sessions" element={<DoctorSessions />} />
+          <Route path="listings" element={<Listings />} />
+          <Route path="integration" element={<GoogleMeetIntegration />} />
         </Route>
-        
+
         {/* Patient Section */}
 
         <Route path="/patient" element={
@@ -330,7 +331,8 @@ function App() {
           path="/patient/reports"
           element={<PatientReport sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
         />
-        
+        <Route path="/patient/appointments/:id" element={<AppointmentDetails />} />
+
         {/* Others */}
 
         <Route path="/reception-dashboard" element={<ReptionistDashboard />} />
