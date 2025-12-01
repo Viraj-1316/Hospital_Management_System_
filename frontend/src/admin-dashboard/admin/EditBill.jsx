@@ -3,8 +3,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-const BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 const EditBill = () => {
   const { id } = useParams();
@@ -34,9 +33,9 @@ const EditBill = () => {
     const loadData = async () => {
       try {
         const [docRes, patRes, billRes] = await Promise.all([
-          axios.get(`${BASE}/doctors`),
-          axios.get(`${BASE}/patients`),
-          axios.get(`${BASE}/bills/${id}`),
+          axios.get(`${API_BASE}/doctors`),
+          axios.get(`${API_BASE}/patients`),
+          axios.get(`${API_BASE}/api/bills/${id}`),
         ]);
 
         setDoctors(docRes.data);
@@ -104,7 +103,7 @@ const EditBill = () => {
 
     try {
       setSaving(true);
-      await axios.put(`${BASE}/bills/${id}`, payload);
+      await axios.put(`${API_BASE}/api/bills/${id}`, payload);
       alert("Bill updated successfully!");
       navigate("/BillingRecords");
     } catch (err) {

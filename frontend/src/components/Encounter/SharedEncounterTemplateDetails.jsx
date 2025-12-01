@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaTimes, FaPlus, FaTrash, FaEdit } from "react-icons/fa";
 import axios from "axios";
+import { FaPlus, FaTimes, FaTrash, FaEdit } from "react-icons/fa";
 import toast from "react-hot-toast";
 import "../../admin-dashboard/styles/admin-shared.css";
+import API_BASE from "../../config";
 
-export default function SharedEncounterTemplateDetails({ role }) {
+export default function SharedEncounterTemplateDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [template, setTemplate] = useState(null);
@@ -36,7 +37,7 @@ export default function SharedEncounterTemplateDetails({ role }) {
 
   const fetchTemplateDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:3001/encounter-templates/${id}`);
+      const res = await axios.get(`${API_BASE}/encounter-templates/${id}`);
       setTemplate(res.data);
       setProblems(res.data.problems || []);
       setObservations(res.data.observations || []);
@@ -66,7 +67,7 @@ export default function SharedEncounterTemplateDetails({ role }) {
         });
       }
 
-      await axios.put(`http://localhost:3001/encounter-templates/${id}`, payload);
+      await axios.put(`${API_BASE}/encounter-templates/${id}`, payload);
     } catch (err) {
       console.error("Error updating template:", err);
       toast.error("Failed to save changes");

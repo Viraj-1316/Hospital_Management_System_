@@ -22,7 +22,7 @@ import autoTable from "jspdf-autotable";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/light.css";
 
-const BASE_URL = "http://localhost:3001";
+import API_BASE from "../../../../config";
 
 /* ---------- SCOPED CSS ---------- */
 const holidayStyles = `
@@ -97,32 +97,22 @@ export default function HolidaySettings() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Filters & Sort
-  const [filters, setFilters] = useState({ id: "", fromDate: "", toDate: "", doctor: "" });
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
-
-  // Delete Modal
+  const [filters, setFilters] = useState({});
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  // --- Fetch Data ---
   const fetchData = async () => {
-    setLoading(true);
     try {
-      const [resHolidays, resDoctors] = await Promise.all([
-        axios.get(`${BASE_URL}/holidays`),
-        axios.get(`${BASE_URL}/doctors`)
+      setLoading(true);
+      const [hRes, dRes] = await Promise.all([
+        axios.get(`${API_BASE}/holidays`),
+        axios.get(`${API_BASE}/doctors`)
       ]);
-
-      setHolidays(resHolidays.data.map((h) => ({
-        ...h,
-        id: h.autoId,
-        from: new Date(h.fromDate).toLocaleDateString(),
-        to: new Date(h.toDate).toLocaleDateString()
-      })));
-
-      setDoctors(Array.isArray(resDoctors.data) ? resDoctors.data : resDoctors.data.data || []);
-
-    } catch (error) {
+      setHolidays(hRes.data || []);
+      setDoctors(dRes.data || []);
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to load data");
     } finally {
       setLoading(false);
@@ -158,10 +148,10 @@ export default function HolidaySettings() {
       };
 
       if (editingItem) {
-        await axios.put(`${BASE_URL}/holidays/${editingItem._id}`, payload);
+        await axios.put(`${API_BASE}/holidays/${editingItem._id}`, payload);
         toast.success("Holiday updated");
       } else {
-        await axios.post(`${BASE_URL}/holidays`, payload);
+        await axios.post(`${API_BASE}/holidays`, payload);
         toast.success("Holiday added");
       }
       toggleForm();
@@ -174,7 +164,7 @@ export default function HolidaySettings() {
   const handleDelete = async () => {
     if (!itemToDelete) return;
     try {
-      await axios.delete(`${BASE_URL}/holidays/${itemToDelete}`);
+      await axios.delete(`${API_BASE}/holidays/${itemToDelete}`);
       toast.success("Deleted");
       fetchData();
     } catch { toast.error("Delete failed"); }

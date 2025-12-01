@@ -6,7 +6,7 @@ import { FaSearch, FaPlus, FaTrash, FaEdit, FaFilePdf } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast"; // Ensure you have this installed
 
-const BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 /* ---------- SCOPED CSS ---------- */
 const billingStyles = `
@@ -213,30 +213,6 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
     encounterId: "",
     doctor: "",
     clinic: "",
-    patient: "",
-    date: "",
-    status: "",
-  });
-
-  // --- FETCH ---
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [billsRes, encRes] = await Promise.all([
-          axios.get(`${BASE}/bills`),
-          axios.get(`${BASE}/encounters`),
-        ]);
-        setBills(billsRes.data || []);
-        setEncountersList(Array.isArray(encRes.data) ? encRes.data : encRes.data.encounters || []);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError("Failed to load records.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
   }, []);
 
   // --- DELETE HANDLERS ---
@@ -255,7 +231,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
     setShowDeleteModal(false);
 
     try {
-      await axios.delete(`${BASE}/bills/${billToDelete}`);
+      await axios.delete(`${API_BASE}/bills/${billToDelete}`);
       setBills((p) => p.filter((b) => b._id !== billToDelete));
       setBillToDelete(null);
       toast.success("Bill deleted successfully");
@@ -424,7 +400,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                             <FaTrash size={14}/>
                           </button>
                           
-                          <a href={`${BASE}/bills/${bill._id}/pdf`} target="_blank" rel="noopener noreferrer" className="pdf-link">
+                          <a href={`${API_BASE}/bills/${bill._id}/pdf`} target="_blank" rel="noopener noreferrer" className="pdf-link">
                             <FaFilePdf /> PDF
                           </a>
                         </div>

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API_BASE from "../../config";
 
 
 export default function PdfPreviewPane({ appointmentId, layout, refreshToken }) {
@@ -22,7 +23,7 @@ export default function PdfPreviewPane({ appointmentId, layout, refreshToken }) 
       }
 
       try {
-        const res = await axios.post("http://localhost:3001/pdf/preview", {
+        const res = await axios.post(`${API_BASE}/pdf/preview`, {
           appointmentId,
           layout,
         });

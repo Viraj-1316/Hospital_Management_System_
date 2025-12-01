@@ -9,6 +9,7 @@ import {
   FaCog,
   FaClipboardList,
 } from "react-icons/fa";
+import API_BASE from "../../config";
 import { toast } from "react-hot-toast";
 import "../styles/reception.css";
 import PageTransition from "../../components/PageTransition";
@@ -32,7 +33,7 @@ const ReceptionLayout = () => {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/api/receptionists/${userId}`);
+      const res = await fetch(`${API_BASE}/api/receptionists/${userId}`);
       if (res.ok) {
         const json = await res.json();
         const data = json.data || json;

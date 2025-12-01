@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import API_BASE from "../../config";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -19,7 +20,7 @@ const Login = () => {
 
     // Connection with server
     axios
-      .post("http://localhost:3001/Login", { email, password })
+      .post(`${API_BASE}/Login`, { email, password })
       .then((res) => {
         console.log("server msg:", res.data);
 

@@ -21,9 +21,10 @@ import { toast, Toaster } from "react-hot-toast";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import API_BASE from "../../config";
 
 // Configure your base URL
-const BASE_URL = "http://localhost:3001/listings";
+const BASE_URL = `${API_BASE}/listings`;
 
 const SharedListingSettings = () => {
   // --- Data State ---

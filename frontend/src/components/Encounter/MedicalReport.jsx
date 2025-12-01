@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { FaPlus, FaTimes, FaEdit, FaEye, FaTrash } from "react-icons/fa";
 import axios from "axios";
+import { FaPlus, FaTimes, FaTrash, FaEdit, FaEye } from "react-icons/fa";
 import toast from "react-hot-toast";
 import "../../admin-dashboard/styles/admin-shared.css";
+import API_BASE from "../../config";
 
-export default function MedicalReport({ role }) {
+export default function MedicalReport() {
   const { id } = useParams();
-
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const patientId = searchParams.get("patientId");
@@ -33,7 +33,7 @@ export default function MedicalReport({ role }) {
 
   const fetchEncounterDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:3001/encounters`);
+      const res = await axios.get(`${API_BASE}/encounters`);
       
       if (id) {
         // Single encounter mode
@@ -96,12 +96,12 @@ export default function MedicalReport({ role }) {
       }
 
       if (editingReportId) {
-         res = await axios.put(`http://localhost:3001/encounters/${targetEncounterId}/reports/${editingReportId}`, formData, {
+         res = await axios.put(`${API_BASE}/encounters/${targetEncounterId}/reports/${editingReportId}`, formData, {
             headers: { "Content-Type": "multipart/form-data" }
          });
          toast.success("Report updated successfully");
       } else {
-         res = await axios.post(`http://localhost:3001/encounters/${targetEncounterId}/reports`, formData, {
+         res = await axios.post(`${API_BASE}/encounters/${targetEncounterId}/reports`, formData, {
             headers: { "Content-Type": "multipart/form-data" }
          });
          toast.success("Report added successfully");
@@ -156,7 +156,7 @@ export default function MedicalReport({ role }) {
     }
 
     try {
-      await axios.delete(`http://localhost:3001/encounters/${targetEncounterId}/reports/${reportToDelete._id}`);
+      await axios.delete(`${API_BASE}/encounters/${targetEncounterId}/reports/${reportToDelete._id}`);
       // Refresh data
       fetchEncounterDetails();
       toast.success("Report deleted");
@@ -296,7 +296,7 @@ export default function MedicalReport({ role }) {
                            <FaEdit />
                          </button>
                          <a 
-                           href={`http://localhost:3001${report.file}`} 
+                           href={`${API_BASE}${report.file}`} 
                            target="_blank" 
                            rel="noopener noreferrer"
                            className="btn btn-sm btn-outline-primary"

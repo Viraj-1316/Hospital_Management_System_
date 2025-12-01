@@ -4,8 +4,9 @@ import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import toast from 'react-hot-toast';
+import API_BASE from "../../config";
 
-const BASE = "http://localhost:3001";
+const BASE = API_BASE;
 
 const EditBill = () => {
   const navigate = useNavigate();
@@ -314,6 +315,7 @@ const EditBill = () => {
                 />
               </div>
 
+              {/* Discount */}
               <div className="col-md-4 mb-3">
                 <label className="form-label">Discount (₹)</label>
                 <input
@@ -325,6 +327,7 @@ const EditBill = () => {
                 />
               </div>
 
+              {/* Amount Due */}
               <div className="col-md-4 mb-3">
                 <label className="form-label">Amount Due (₹)</label>
                 <input

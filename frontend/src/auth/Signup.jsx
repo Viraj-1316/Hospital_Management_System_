@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import PhoneInput from "react-phone-input-2";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../config";
 
 function Signup() {
   const navigate = useNavigate();

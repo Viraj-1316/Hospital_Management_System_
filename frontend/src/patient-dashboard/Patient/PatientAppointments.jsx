@@ -12,10 +12,11 @@ import {
   FaStop,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import API_BASE from "../../config";
 
 export default function PatientAppointments({ sidebarCollapsed, toggleSidebar }) {
   const navigate = useNavigate();
-  const API_BASE = "http://localhost:3001";
+
   const token =
     localStorage.getItem("token") ||
     localStorage.getItem("patientToken");

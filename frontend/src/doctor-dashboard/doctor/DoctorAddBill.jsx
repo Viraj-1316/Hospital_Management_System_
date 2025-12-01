@@ -5,8 +5,9 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import toast, { Toaster } from 'react-hot-toast'; 
 import Sidebar from "../components/DoctorSidebar"; 
 import Navbar from "../components/DoctorNavbar";   
+import API_BASE from "../../config";
 
-const BASE = "http://localhost:3001";
+const BASE = API_BASE;
 
 const DoctorAddBill = ({ sidebarCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();

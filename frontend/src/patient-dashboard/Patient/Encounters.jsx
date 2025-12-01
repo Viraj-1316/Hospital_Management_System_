@@ -19,11 +19,12 @@ import axios from "axios";
 // --- 1. Import Layout ---
 import PatientLayout from "../layouts/PatientLayout"; 
 import "../styles/encounters.css";
+import API_BASE from "../../config";
 
 /* -------------------------------------------------------------------------- */
 /* AXIOS SETUP                                                                */
 /* -------------------------------------------------------------------------- */
-const api = axios.create({ baseURL: "http://localhost:3001" });
+const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use(
   (config) => {

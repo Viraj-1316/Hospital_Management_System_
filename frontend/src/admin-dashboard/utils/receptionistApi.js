@@ -1,7 +1,8 @@
 import axios from "axios";
+import API_BASE from "../../config";
 
 const API = axios.create({
-  baseURL: "http://localhost:3001/api/receptionists",
+  baseURL: `${API_BASE}/api/receptionists`,
 });
 
 // Get all receptionists

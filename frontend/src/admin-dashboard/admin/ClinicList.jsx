@@ -16,7 +16,7 @@ import {
 } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 
-const API_BASE_URL = "http://localhost:3001";
+import API_BASE from "../../config";
 
 const SPECIALIZATION_OPTIONS = [
   "General Physician",
@@ -62,7 +62,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
       setLoading(true);
       setErr(null);
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/clinics`);
+        const res = await axios.get(`${API_BASE}/api/clinics`);
         if (!mounted) return;
         const raw = Array.isArray(res.data)
           ? res.data
@@ -106,7 +106,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
         specialization,
         address: addressParts.join(", "),
         status: (c.status || "Inactive").toLowerCase(),
-        logo: c.clinicLogo ? `${API_BASE_URL}/uploads/${c.clinicLogo}` : null,
+        logo: c.clinicLogo ? `${API_BASE}/uploads/${c.clinicLogo}` : null,
       };
     };
 
@@ -164,7 +164,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
     setShowDeleteModal(false);
 
     const promise = axios
-      .delete(`${API_BASE_URL}/api/clinics/${clinicToDelete}`)
+      .delete(`${API_BASE}/api/clinics/${clinicToDelete}`)
       .then(() => {
         setClinics((list) => list.filter((c) => c._id !== clinicToDelete));
         setClinicToDelete(null);
@@ -179,7 +179,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
 
   const handleResend = async (row) => {
     const promise = axios.post(
-      `${API_BASE_URL}/api/clinics/${row._id}/resend-credentials`
+      `${API_BASE}/api/clinics/${row._id}/resend-credentials`
     );
 
     await toast.promise(promise, {

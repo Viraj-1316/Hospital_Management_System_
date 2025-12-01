@@ -5,8 +5,9 @@ import Navbar from "../components/DoctorNavbar";   // Doctor Navbar
 import { FaSearch, FaPlus, FaTrash, FaEdit, FaFilePdf } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+import API_BASE from "../../config";
 
-const BASE = "http://localhost:3001";
+const BASE = API_BASE;
 
 /* ---------- SCOPED CSS (Reused) ---------- */
 const billingStyles = `

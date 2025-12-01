@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import API_BASE from "../../config";
 
 export default function DoctorNavbar({ onToggle }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -23,7 +24,7 @@ export default function DoctorNavbar({ onToggle }) {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/doctors/profile/${userId}`);
+      const res = await fetch(`${API_BASE}/doctors/profile/${userId}`);
       if (res.ok) {
         const data = await res.json();
         setProfileData({

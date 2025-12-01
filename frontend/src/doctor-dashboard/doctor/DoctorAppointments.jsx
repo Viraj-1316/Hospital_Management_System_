@@ -1,25 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
-import "bootstrap/dist/css/bootstrap.min.css";
-import { FaPlus, FaDownload, FaFilter } from "react-icons/fa";
-import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
-
-// ✅ Import Doctor Layout
-import DoctorLayout from "../layouts/DoctorLayout"; 
-import "../../admin-dashboard/styles/appointments.css"; // Reuse existing styles
-
-const API_BASE = "http://localhost:3001";
+import { toast } from "react-hot-toast";
+import { FaFilter, FaPlus } from "react-icons/fa";
+import DoctorLayout from "../layouts/DoctorLayout";
+import API_BASE from "../../config";
 
 const DoctorAppointments = () => {
-  const navigate = useNavigate();
-
-  // --- 1. Get Logged-In Doctor Info ---
   const storedDoctor = (() => {
     try {
-      const doc = localStorage.getItem("doctor");
-      return doc ? JSON.parse(doc) : null;
-    } catch { return null; }
+      return JSON.parse(localStorage.getItem("doctor"));
+    } catch (e) {
+      return null;
+    }
   })();
 
   const doctorId = storedDoctor?._id || storedDoctor?.id;

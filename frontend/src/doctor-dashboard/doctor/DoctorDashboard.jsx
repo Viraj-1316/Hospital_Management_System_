@@ -17,9 +17,7 @@ import {
   FaCalendarCheck,
   FaListAlt,
 } from "react-icons/fa";
-
-// ✅ Simple base URL for backend
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();

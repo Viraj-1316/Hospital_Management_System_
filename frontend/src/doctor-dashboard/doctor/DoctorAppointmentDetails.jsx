@@ -3,8 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import DoctorLayout from "../layouts/DoctorLayout";
-
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 export default function DoctorAppointmentDetails() {
   const { id } = useParams();

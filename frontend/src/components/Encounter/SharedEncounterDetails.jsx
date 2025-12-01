@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaPrint, FaFileUpload, FaTimes, FaPlus, FaTrash, FaEdit, FaEye } from "react-icons/fa";
 import axios from "axios";
+import { FaPlus, FaTimes, FaTrash, FaEdit, FaPrint, FaEnvelope, FaFileImport } from "react-icons/fa";
 import toast from "react-hot-toast";
-import { read, utils } from "xlsx";
-import "../../admin-dashboard/styles/admin-shared.css"; 
+import { read, utils } from 'xlsx';
+import "../../admin-dashboard/styles/admin-shared.css";
+import API_BASE from "../../config";
 
-export default function SharedEncounterDetails({ role }) {
+export default function SharedEncounterDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const medicalReportRef = useRef(null);
@@ -55,7 +56,7 @@ export default function SharedEncounterDetails({ role }) {
 
   const fetchListings = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/listings");
+      const res = await axios.get(`${API_BASE}/listings`);
       const data = res.data;
       setProblemOptions(data.filter(item => item.type === 'Problems' && item.status === 'Active'));
       setObservationOptions(data.filter(item => item.type === 'Observations' && item.status === 'Active'));
@@ -69,7 +70,7 @@ export default function SharedEncounterDetails({ role }) {
 
   const fetchEncounterTemplates = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/encounter-templates");
+      const res = await axios.get(`${API_BASE}/encounter-templates`);
       setEncounterTemplates(res.data);
     } catch (err) {
       console.error("Error fetching templates:", err);
@@ -81,7 +82,7 @@ export default function SharedEncounterDetails({ role }) {
     if (!templateId) return;
 
     try {
-      const res = await axios.get(`http://localhost:3001/encounter-templates/${templateId}`);
+      const res = await axios.get(`${API_BASE}/encounter-templates/${templateId}`);
       const template = res.data;
 
       const newProblems = [...new Set([...problems, ...(template.problems || [])])];
@@ -116,7 +117,7 @@ export default function SharedEncounterDetails({ role }) {
 
   const fetchEncounterDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:3001/encounters`); 
+      const res = await axios.get(`${API_BASE}/encounters`); 
       const found = res.data.find(e => e._id === id);
       
       if (found) {
@@ -135,7 +136,7 @@ export default function SharedEncounterDetails({ role }) {
 
         if (pId) {
           try {
-            const patientRes = await axios.get(`http://localhost:3001/patients/${pId}`);
+            const patientRes = await axios.get(`${API_BASE}/patients/${pId}`);
             setPatientEmail(patientRes.data.email || "No email found");
             setPatientPhone(patientRes.data.mobile || patientRes.data.phone || "No records found");
             setPatientAddress(patientRes.data.address || "No records found");
@@ -162,7 +163,7 @@ export default function SharedEncounterDetails({ role }) {
         if (dId) {
             try {
                 // Fetch all doctors to find the matching one
-                const doctorRes = await axios.get("http://localhost:3001/doctors");
+                const doctorRes = await axios.get(`${API_BASE}/doctors`);
                 const doctors = Array.isArray(doctorRes.data) ? doctorRes.data : [];
                 const doctorObj = doctors.find(d => d._id === dId);
                 if (doctorObj) {
@@ -208,7 +209,7 @@ export default function SharedEncounterDetails({ role }) {
         });
       }
 
-      await axios.put(`http://localhost:3001/encounters/${id}`, payload);
+      await axios.put(`${API_BASE}/encounters/${id}`, payload);
     } catch (err) {
       console.error("Error updating encounter:", err);
       toast.error("Failed to save changes");
@@ -384,7 +385,7 @@ export default function SharedEncounterDetails({ role }) {
         prescriptions
       };
 
-      await axios.post("http://localhost:3001/api/email/send-encounter-details", {
+      await axios.post(`${API_BASE}/api/email/send-encounter-details`, {
         to: patientEmail,
         encounterDetails
       });
@@ -812,15 +813,8 @@ export default function SharedEncounterDetails({ role }) {
 
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-    printWindow.focus();
-    // Delay to ensure styles are loaded
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    printWindow.print();
   };
-
-
 
   if (loading) return <div className="p-5 text-center">Loading...</div>;
   if (!encounter) return <div className="p-5 text-center">Encounter not found</div>;
@@ -837,212 +831,145 @@ export default function SharedEncounterDetails({ role }) {
           >
             Back
           </button>
-          <button 
-            className="btn btn-light btn-sm d-flex align-items-center gap-2 text-dark hover-light-blue"
-            style={{ transition: 'all 0.3s' }}
-            onClick={handlePrint}
-          >
-            <FaPrint /> Print Encounter
+          <button className="btn btn-light btn-sm d-flex align-items-center gap-2" onClick={handlePrint}>
+            <FaPrint /> Print
           </button>
-          <button 
-            className="btn btn-light btn-sm d-flex align-items-center gap-2 text-dark hover-light-blue"
-            style={{ transition: 'all 0.3s' }}
-            onClick={() => {
-              if (role === 'doctor') {
-                navigate(`/doctor/encounters/${id}/reports`);
-              } else {
-                navigate(`/encounters/${id}/reports`);
-              }
-            }}
-          >
-            <FaFileUpload /> Upload Report
-          </button>
-          <button 
-            className="btn btn-danger btn-sm d-flex align-items-center gap-2"
-            onClick={() => navigate(-1)}
-          >
-            <FaTimes /> Close Encounter
+          <button className="btn btn-light btn-sm d-flex align-items-center gap-2" onClick={handleEmailEncounter}>
+            <FaEnvelope /> Email
           </button>
         </div>
       </div>
 
-      <div className="row g-3">
-        {/* Left Column: Encounter Details */}
-        <div className="col-md-3">
-          <div className="bg-white shadow-sm rounded p-3 h-100">
-            <h6 className="fw-bold text-primary mb-3">Encounter details</h6>
-            
-            <div className="mb-2">
-              <small className="text-muted d-block">Name:</small>
-              <span className="fw-semibold">{patientName || encounter.patient}</span>
+      <div className="bg-white shadow-sm rounded p-3 mb-3">
+         <div className="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 className="fw-bold text-primary mb-1">Encounter ID: {encounter.encounterId || "PENDING"}</h6>
+                <small className="text-muted">Date: {new Date(encounter.date).toLocaleDateString()}</small>
             </div>
-            <div className="mb-2">
-              <small className="text-muted d-block">Email:</small>
-              <span className="fw-semibold text-primary">{patientEmail || "Loading..."}</span>
+            <div className="d-flex align-items-center gap-3">
+                <select className="form-select form-select-sm" style={{width: '250px'}} onChange={handleTemplateSelect} defaultValue="">
+                    <option value="" disabled>Load Template...</option>
+                    {encounterTemplates.map(t => (
+                        <option key={t._id} value={t._id}>{t.name}</option>
+                    ))}
+                </select>
             </div>
-            <div className="mb-2">
-              <small className="text-muted d-block">Encounter Date:</small>
-              <span>{new Date(encounter.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+         </div>
+      </div>
+
+      {/* Clinical Detail */}
+      <div className="bg-white shadow-sm rounded p-3 mb-3">
+        <div className="row g-3">
+          {/* Problems Column */}
+          <div className="col-md-4">
+            <label className="form-label fw-bold small text-muted">Problems</label>
+            <div className="border rounded p-3 mb-2 bg-white" style={{minHeight: '200px', maxHeight: '300px', overflowY: 'auto'}}>
+              {problems.length === 0 ? (
+                <small className="text-danger text-center d-block mt-5">No records found</small>
+              ) : (
+                <ul className="list-unstyled mb-0">
+                  {problems.map((prob, index) => (
+                    <li key={index} className="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                      <span>{index + 1}. {prob}</span>
+                      <FaTimes 
+                        className="text-danger cursor-pointer" 
+                        style={{cursor: 'pointer'}}
+                        onClick={() => handleRemoveProblem(index)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <div className="mb-2">
-              <small className="text-muted d-block">Address:</small>
-              <span>{patientAddress}</span>
-            </div>
-            <hr />
-            <div className="mb-2">
-              <small className="text-muted d-block">Clinic name:</small>
-              <span>{encounter.clinic}</span>
-            </div>
-            <div className="mb-2">
-              <small className="text-muted d-block">Doctor name:</small>
-              <span>{doctorName || encounter.doctor}</span>
-            </div>
-            <div className="mb-2">
-              <small className="text-muted d-block">Description:</small>
-              <span className="text-secondary">{encounter.description || "No description"}</span>
-            </div>
-            <div className="mt-3">
-              <span className={`badge ${encounter.status === 'active' ? 'bg-success' : 'bg-secondary'}`}>
-                {encounter.status.toUpperCase()}
-              </span>
-            </div>
-            
-            <div className="mt-4">
-              <label className="form-label small fw-bold text-muted">Select Encounter Templates</label>
-              <select 
-                className="form-select form-select-sm"
-                onChange={handleTemplateSelect}
-                defaultValue=""
-              >
-                <option value="" disabled>Select Template</option>
-                {encounterTemplates.map(t => (
-                  <option key={t._id} value={t._id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
+            <select 
+              className="form-select form-select-sm mt-2"
+              onChange={handleAddProblem}
+              defaultValue="Select Problem"
+            >
+              <option disabled>Select Problem</option>
+              {problemOptions.map(opt => (
+                  <option key={opt._id} value={opt.name}>{opt.name}</option>
+              ))}
+            </select>
+            <small className="text-primary d-block mt-1" style={{fontSize: '0.75rem'}}>Note: Type and press enter to create new problem</small>
           </div>
-        </div>
 
-        {/* Right Column: Clinical Detail */}
-        <div className="col-md-9">
-          <div className="bg-white shadow-sm rounded p-3 h-100">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h6 className="fw-bold text-primary mb-0">Clinical Detail</h6>
-            </div>
-
-            <div className="row g-3">
-              {/* Problems Column */}
-              <div className="col-md-4">
-                <label className="form-label fw-bold small text-muted">Problems</label>
-                <div className="border rounded p-3 mb-2 bg-white" style={{minHeight: '200px', maxHeight: '300px', overflowY: 'auto'}}>
-                  {problems.length === 0 ? (
-                    <small className="text-danger text-center d-block mt-5">No records found</small>
-                  ) : (
-                    <ul className="list-unstyled mb-0">
-                      {problems.map((prob, index) => (
-                        <li key={index} className="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
-                          <span>{index + 1}. {prob}</span>
-                          <FaTimes 
-                            className="text-danger cursor-pointer" 
-                            style={{cursor: 'pointer'}}
-                            onClick={() => handleRemoveProblem(index)}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <select 
-                  className="form-select form-select-sm mt-2"
-                  onChange={handleAddProblem}
-                  defaultValue="Select Problem"
-                >
-                  <option disabled>Select Problem</option>
-                  {problemOptions.map((opt) => (
-                    <option key={opt._id} value={opt.name}>{opt.name}</option>
+          {/* Observations Column */}
+          <div className="col-md-4">
+            <label className="form-label fw-bold small text-muted">Observations</label>
+            <div className="border rounded p-3 mb-2 bg-white" style={{minHeight: '200px', maxHeight: '300px', overflowY: 'auto'}}>
+              {observations.length === 0 ? (
+                <small className="text-danger text-center d-block mt-5">No records found</small>
+              ) : (
+                <ul className="list-unstyled mb-0">
+                  {observations.map((obs, index) => (
+                    <li key={index} className="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                      <span>{index + 1}. {obs}</span>
+                      <FaTimes 
+                        className="text-danger cursor-pointer" 
+                        style={{cursor: 'pointer'}}
+                        onClick={() => handleRemoveObservation(index)}
+                      />
+                    </li>
                   ))}
-                </select>
-                <small className="text-primary d-block mt-1" style={{fontSize: '0.75rem'}}>Note: Type and press enter to create new problem</small>
-              </div>
-
-              {/* Observations Column */}
-              <div className="col-md-4">
-                <label className="form-label fw-bold small text-muted">Observations</label>
-                <div className="border rounded p-3 mb-2 bg-white" style={{minHeight: '200px', maxHeight: '300px', overflowY: 'auto'}}>
-                  {observations.length === 0 ? (
-                    <small className="text-danger text-center d-block mt-5">No records found</small>
-                  ) : (
-                    <ul className="list-unstyled mb-0">
-                      {observations.map((obs, index) => (
-                        <li key={index} className="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
-                          <span>{index + 1}. {obs}</span>
-                          <FaTimes 
-                            className="text-danger cursor-pointer" 
-                            style={{cursor: 'pointer'}}
-                            onClick={() => handleRemoveObservation(index)}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <select 
-                  className="form-select form-select-sm mt-2"
-                  onChange={handleAddObservation}
-                  defaultValue="Select Observation"
-                >
-                  <option disabled>Select Observation</option>
-                  {observationOptions.map((opt) => (
-                    <option key={opt._id} value={opt.name}>{opt.name}</option>
-                  ))}
-                </select>
-                <small className="text-primary d-block mt-1" style={{fontSize: '0.75rem'}}>Note: Type and press enter to create new observation</small>
-              </div>
-
-              {/* Notes Column */}
-              <div className="col-md-4">
-                 <label className="form-label fw-bold small text-muted">Notes</label>
-                 <div className="border rounded p-3 mb-2 bg-white" style={{minHeight: '200px', maxHeight: '300px', overflowY: 'auto'}}>
-                    {notes.length === 0 ? (
-                      <small className="text-danger text-center d-block mt-5">No records found</small>
-                    ) : (
-                      <ul className="list-unstyled mb-0">
-                        {notes.map((note, index) => (
-                          <li key={index} className="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
-                            <span>{index + 1}. {note}</span>
-                            <FaTimes 
-                              className="text-danger cursor-pointer" 
-                              style={{cursor: 'pointer'}}
-                              onClick={() => handleRemoveNote(index)}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                 </div>
-                 <div className="mt-2">
-                   <textarea 
-                      className="form-control form-control-sm mb-2" 
-                      placeholder="Enter Notes"
-                      rows="2"
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleAddNote();
-                        }
-                      }}
-                   ></textarea>
-                   <button 
-                     className="btn btn-primary btn-sm w-100"
-                     onClick={handleAddNote}
-                   >
-                     + Add
-                   </button>
-                 </div>
-              </div>
+                </ul>
+              )}
             </div>
+            <select 
+              className="form-select form-select-sm mt-2"
+              onChange={handleAddObservation}
+              defaultValue="Select Observation"
+            >
+              <option disabled>Select Observation</option>
+              {observationOptions.map(opt => (
+                  <option key={opt._id} value={opt.name}>{opt.name}</option>
+              ))}
+            </select>
+            <small className="text-primary d-block mt-1" style={{fontSize: '0.75rem'}}>Note: Type and press enter to create new observation</small>
+          </div>
+
+          {/* Notes Column */}
+          <div className="col-md-4">
+             <label className="form-label fw-bold small text-muted">Notes</label>
+             <div className="border rounded p-3 mb-2 bg-white" style={{minHeight: '200px', maxHeight: '300px', overflowY: 'auto'}}>
+                {notes.length === 0 ? (
+                  <small className="text-danger text-center d-block mt-5">No records found</small>
+                ) : (
+                  <ul className="list-unstyled mb-0">
+                    {notes.map((note, index) => (
+                      <li key={index} className="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                        <span>{index + 1}. {note}</span>
+                        <FaTimes 
+                          className="text-danger cursor-pointer" 
+                          style={{cursor: 'pointer'}}
+                          onClick={() => handleRemoveNote(index)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+             </div>
+             <div className="mt-2">
+               <textarea 
+                  className="form-control form-control-sm mb-2" 
+                  placeholder="Enter Notes"
+                  rows="2"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAddNote();
+                    }
+                  }}
+               ></textarea>
+               <button 
+                 className="btn btn-primary btn-sm w-100"
+                 onClick={handleAddNote}
+               >
+                 + Add
+               </button>
+             </div>
           </div>
         </div>
       </div>
@@ -1053,16 +980,10 @@ export default function SharedEncounterDetails({ role }) {
            <h6 className="fw-bold text-muted mb-0">Prescription</h6>
            <div className="d-flex gap-2">
              <button 
-               className="btn btn-primary btn-sm d-flex align-items-center gap-1"
-               onClick={handleEmailEncounter}
+                className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+                onClick={handleImportData}
              >
-               <FaFileUpload /> Email
-             </button>
-             <button 
-               className="btn btn-primary btn-sm d-flex align-items-center gap-1"
-               onClick={handleImportData}
-             >
-               <FaFileUpload /> Import data
+                <FaFileImport /> Import Data
              </button>
              <button 
                className="btn btn-primary btn-sm d-flex align-items-center gap-1"
@@ -1121,145 +1042,125 @@ export default function SharedEncounterDetails({ role }) {
           </div>
        </div>
 
-       {/* Add/Edit Prescription Modal */}
-       {isPrescriptionModalOpen && (
-         <>
-           <div className="modal-backdrop fade show"></div>
-           <div className="modal fade show d-block" tabIndex="-1">
-             <div className="modal-dialog modal-lg modal-dialog-centered">
-               <div className="modal-content">
-                 <div className="modal-header border-0 pb-0">
-                   <h5 className="modal-title fw-bold text-primary">
-                     {editingPrescriptionIndex !== null ? "Edit prescription" : "Add prescription"}
-                   </h5>
-                   <button type="button" className="btn-close" onClick={handleClosePrescriptionModal}></button>
-                 </div>
-                 <div className="modal-body">
-                   <form onSubmit={handleAddPrescription}>
-                     <div className="row g-3">
-                       <div className="col-md-6">
-                         <label className="form-label fw-bold small">Name <span className="text-danger">*</span></label>
-                         <input 
-                           type="text" 
-                           className="form-control" 
-                           placeholder="Medicine Name"
-                           name="name"
-                           value={newPrescription.name}
-                           onChange={handlePrescriptionChange}
-                           list="prescription-options"
-                           required
-                         />
-                         <datalist id="prescription-options">
-                            {prescriptionOptions.map((opt) => (
-                              <option key={opt._id} value={opt.name} />
-                            ))}
-                         </datalist>
-                       </div>
-                       <div className="col-md-6">
-                         <label className="form-label fw-bold small">Frequency <span className="text-danger">*</span></label>
-                         <input 
-                           type="text" 
-                           className="form-control" 
-                           placeholder="e.g. 1-0-1"
-                           name="frequency"
-                           value={newPrescription.frequency}
-                           onChange={handlePrescriptionChange}
-                           required
-                         />
-                       </div>
-                       <div className="col-md-6">
-                         <label className="form-label fw-bold small">Duration (In Days) <span className="text-danger">*</span></label>
-                         <input 
-                           type="text" 
-                           className="form-control" 
-                           placeholder="e.g. 5 days"
-                           name="duration"
-                           value={newPrescription.duration}
-                           onChange={handlePrescriptionChange}
-                           required
-                         />
-                       </div>
-                       <div className="col-md-6">
-                         <label className="form-label fw-bold small">Instruction</label>
-                         <textarea 
-                           className="form-control" 
-                           rows="1"
-                           name="instruction"
-                           value={newPrescription.instruction}
-                           onChange={handlePrescriptionChange}
-                           list="prescription-options"
-                           required
-                         />
-                         <datalist id="prescription-options">
-                            {prescriptionOptions.map((opt) => (
-                              <option key={opt._id} value={opt.name} />
-                            ))}
-                         </datalist>
-                       </div>
-                     </div>
-                     <div className="d-flex justify-content-end gap-2 mt-4">
-                       <button 
-                         type="button" 
-                         className="btn btn-outline-secondary"
-                         onClick={handleClosePrescriptionModal}
-                       >
-                         Cancel
-                       </button>
-                       <button type="submit" className="btn btn-primary px-4">
-                         <FaPlus className="me-1" /> 
-                         {editingPrescriptionIndex !== null ? "Update" : "Save"}
-                       </button>
-                     </div>
-                   </form>
-                 </div>
-               </div>
-             </div>
-           </div>
-         </>
-       )}
-
-       {/* Medical Report Section Removed - Moved to separate page */}
-
-      {/* Import Data Modal */}
-      {isImportModalOpen && (
+      {/* Add/Edit Prescription Modal */}
+      {isPrescriptionModalOpen && (
         <>
           <div className="modal-backdrop fade show"></div>
           <div className="modal fade show d-block" tabIndex="-1">
-            <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content">
                 <div className="modal-header border-0 pb-0">
-                  <h5 className="modal-title fw-bold text-primary">Import Prescriptions</h5>
-                  <button type="button" className="btn-close" onClick={handleCloseImportModal}></button>
+                  <h5 className="modal-title fw-bold text-primary">
+                    {editingPrescriptionIndex !== null ? "Edit prescription" : "Add prescription"}
+                  </h5>
+                  <button type="button" className="btn-close" onClick={handleClosePrescriptionModal}></button>
                 </div>
                 <div className="modal-body">
-                  <div className="alert alert-info small">
-                    <strong>Note:</strong> Upload an Excel or CSV file with the following columns:
-                    <br />
-                    <code>Name, Frequency, Duration, Instruction</code>
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label small fw-bold">Select File</label>
-                    <input 
-                      type="file" 
-                      className="form-control" 
-                      accept=".xlsx, .xls, .csv"
-                      onChange={handleFileImport}
-                      ref={fileInputRef}
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer border-0 pt-0">
-                  <button 
-                    type="button" 
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={handleCloseImportModal}
-                  >
-                    Cancel
-                  </button>
+                  <form onSubmit={handleAddPrescription}>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold small">Name <span className="text-danger">*</span></label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="Medicine Name"
+                          name="name"
+                          value={newPrescription.name}
+                          onChange={handlePrescriptionChange}
+                          required
+                          list="prescription-options"
+                        />
+                        <datalist id="prescription-options">
+                            {prescriptionOptions.map(opt => (
+                                <option key={opt._id} value={opt.name} />
+                            ))}
+                        </datalist>
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold small">Frequency <span className="text-danger">*</span></label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="e.g. 1-0-1"
+                          name="frequency"
+                          value={newPrescription.frequency}
+                          onChange={handlePrescriptionChange}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold small">Duration (In Days) <span className="text-danger">*</span></label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="e.g. 5 days"
+                          name="duration"
+                          value={newPrescription.duration}
+                          onChange={handlePrescriptionChange}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold small">Instruction</label>
+                        <textarea 
+                          className="form-control" 
+                          rows="1"
+                          name="instruction"
+                          value={newPrescription.instruction}
+                          onChange={handlePrescriptionChange}
+                        ></textarea>
+                      </div>
+                    </div>
+                    <div className="d-flex justify-content-end gap-2 mt-4">
+                      <button 
+                        type="button" 
+                        className="btn btn-outline-secondary"
+                        onClick={handleClosePrescriptionModal}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="btn btn-primary px-4">
+                        <FaPlus className="me-1" /> 
+                        {editingPrescriptionIndex !== null ? "Update" : "Save"}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             </div>
           </div>
+        </>
+      )}
+
+      {/* Import Data Modal */}
+      {isImportModalOpen && (
+        <>
+            <div className="modal-backdrop fade show"></div>
+            <div className="modal fade show d-block" tabIndex="-1">
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">Import Prescriptions</h5>
+                            <button type="button" className="btn-close" onClick={handleCloseImportModal}></button>
+                        </div>
+                        <div className="modal-body">
+                            <p className="small text-muted mb-3">
+                                Upload an Excel or CSV file with the following columns: <b>Name, Frequency, Duration, Instruction</b>.
+                            </p>
+                            <input 
+                                type="file" 
+                                className="form-control" 
+                                accept=".xlsx, .xls, .csv"
+                                onChange={handleFileImport}
+                                ref={fileInputRef}
+                            />
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn btn-secondary" onClick={handleCloseImportModal}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </>
       )}
     </div>

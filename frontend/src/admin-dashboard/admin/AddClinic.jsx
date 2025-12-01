@@ -7,7 +7,7 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import "../styles/AddClinic.css"; // Ensure you have this or remove if using inline styles
 
-const API_BASE_URL = "http://localhost:3001";
+import API_BASE from "../../config";
 
 export default function AddClinic() {
   const navigate = useNavigate();
@@ -55,7 +55,7 @@ export default function AddClinic() {
     const fetchSpecializations = async () => {
       try {
         // Fetch all listings
-        const res = await axios.get(`${API_BASE_URL}/listings`);
+        const res = await axios.get(`${API_BASE}/listings`);
         
         // Filter manually since backend returns all listings
         const options = res.data
@@ -81,7 +81,7 @@ export default function AddClinic() {
     (async () => {
       try {
         const res = await axios.get(
-          `${API_BASE_URL}/api/clinics/${clinicId}`
+          `${API_BASE}/api/clinics/${clinicId}`
         );
         const c = res.data.clinic;
 
@@ -110,10 +110,10 @@ export default function AddClinic() {
         setGender(c.admin?.gender || "");
 
         if (c.clinicLogo) {
-          setClinicLogoPreview(`${API_BASE_URL}/uploads/${c.clinicLogo}`);
+          setClinicLogoPreview(`${API_BASE}/uploads/${c.clinicLogo}`);
         }
         if (c.admin?.photo) {
-          setAdminPhotoPreview(`${API_BASE_URL}/uploads/${c.admin.photo}`);
+          setAdminPhotoPreview(`${API_BASE}/uploads/${c.admin.photo}`);
         }
       } catch (err) {
         console.error("Failed to load clinic:", err);
@@ -191,8 +191,8 @@ export default function AddClinic() {
 
     try {
       const endpoint = isEditing
-        ? `${API_BASE_URL}/api/clinics/${clinicId}`
-        : `${API_BASE_URL}/api/clinics`;
+        ? `${API_BASE}/api/clinics/${clinicId}`
+        : `${API_BASE}/api/clinics`;
 
       const method = isEditing ? axios.put : axios.post;
 

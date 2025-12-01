@@ -21,6 +21,7 @@ import {
   FaSave,
 } from "react-icons/fa";
 import { toast } from "react-hot-toast";
+import API_BASE from "../../../config";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/light.css";
 
@@ -130,7 +131,7 @@ const Holidays = () => {
       setLoading(true);
       const token = localStorage.getItem("doctorToken");
 
-      const res = await axios.get("http://localhost:3001/holidays", {
+      const res = await axios.get(`${API_BASE}/holidays`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -173,7 +174,7 @@ const Holidays = () => {
   // 2. Confirm Delete
   const confirmDelete = async () => {
     try {
-      await axios.delete(`http://localhost:3001/holidays/${itemToDelete}`, {
+      await axios.delete(`${API_BASE}/holidays/${itemToDelete}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("doctorToken")}`,
         },
@@ -235,10 +236,10 @@ const Holidays = () => {
       const payload = editingItem ? { fromDate, toDate } : { doctorId, fromDate, toDate };
 
       if (editingItem) {
-        await axios.put(`http://localhost:3001/holidays/${editingItem._id}`, payload);
+        await axios.put(`${API_BASE}/holidays/${editingItem._id}`, payload);
         toast.success("Holiday updated!");
       } else {
-        await axios.post("http://localhost:3001/holidays", payload);
+        await axios.post(`${API_BASE}/holidays`, payload);
         toast.success("Holiday added!");
       }
 

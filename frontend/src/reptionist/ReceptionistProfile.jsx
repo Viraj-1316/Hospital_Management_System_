@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../config";
 
 function ReceptionistProfile() {
   const navigate = useNavigate();

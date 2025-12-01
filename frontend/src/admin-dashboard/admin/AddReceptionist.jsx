@@ -11,7 +11,7 @@ import {
 import axios from "axios";
 import "../styles/AddReceptionist.css";
 
-const API_BASE_URL = "http://localhost:3001";
+import API_BASE from "../../config";
 
 export default function AddReceptionist() {
   const navigate = useNavigate();
@@ -46,7 +46,7 @@ export default function AddReceptionist() {
   useEffect(() => {
     const loadClinics = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/clinics`);
+        const res = await axios.get(`${API_BASE}/api/clinics`);
         const rows = Array.isArray(res.data) ? res.data : res.data.clinics ?? [];
         setClinics(rows);
       } catch (err) {

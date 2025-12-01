@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import "../../admin-dashboard/styles/admin-shared.css";
+import API_BASE from "../../config";
 
 export default function SharedEncounterTemplateList({ role }) {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function SharedEncounterTemplateList({ role }) {
 
   const fetchTemplates = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/encounter-templates");
+      const res = await axios.get(`${API_BASE}/encounter-templates`);
       setTemplates(res.data);
     } catch (err) {
       console.error("Error fetching templates:", err);
@@ -50,13 +51,13 @@ export default function SharedEncounterTemplateList({ role }) {
     try {
       if (editingTemplate) {
         // Update existing template
-        await axios.put(`http://localhost:3001/encounter-templates/${editingTemplate._id}`, { name: templateName });
+        await axios.put(`${API_BASE}/encounter-templates/${editingTemplate._id}`, { name: templateName });
         toast.success("Template updated successfully");
         handleCloseModal();
         fetchTemplates();
       } else {
         // Create new template
-        const res = await axios.post("http://localhost:3001/encounter-templates", { name: templateName });
+        const res = await axios.post(`${API_BASE}/encounter-templates`, { name: templateName });
         toast.success("Template created successfully");
         handleCloseModal();
         // Redirect to details page to edit the rest
@@ -75,7 +76,7 @@ export default function SharedEncounterTemplateList({ role }) {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this template?")) {
       try {
-        await axios.delete(`http://localhost:3001/encounter-templates/${id}`);
+        await axios.delete(`${API_BASE}/encounter-templates/${id}`);
         toast.success("Template deleted");
         fetchTemplates();
       } catch (err) {

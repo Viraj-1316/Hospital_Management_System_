@@ -6,6 +6,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import PatientLayout from "../layouts/PatientLayout";
+import API_BASE from "../../config";
 
 export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
 
   const patientId = storedPatient?._id || storedPatient?.id || localStorage.getItem("patientId");
   const token = localStorage.getItem("token") || localStorage.getItem("patientToken");
-  const API_BASE = "http://localhost:3001";
+
 
   // --- 1. NEW HELPER FUNCTION: FORMAT DATE ---
   const formatDate = (isoString) => {

@@ -3,9 +3,10 @@ import { useParams, useNavigate, useLocation } from "react-router-dom"; // Added
 import axios from "axios";
 import { ArrowLeft, Printer, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
 import PatientLayout from "../layouts/PatientLayout";
+import API_BASE from "../../config";
 
 // --- API Setup ---
-const api = axios.create({ baseURL: "http://localhost:3001" });
+const api = axios.create({ baseURL: API_BASE });
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token") || localStorage.getItem("patientToken");
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -24,7 +25,7 @@ const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
   useEffect(() => {
     // ✅ STRATEGY 1: Check if data was passed from Dashboard
     if (location.state && location.state.appointmentData) {
-        console.log("Using data passed from Dashboard");
+
         setAppointment(location.state.appointmentData);
         setLoading(false);
         return;
@@ -33,7 +34,7 @@ const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
     // ✅ STRATEGY 2: If no data passed (e.g., page refresh), fetch from API
     const fetchDetails = async () => {
       try {
-        console.log("Fetching from API for ID:", id);
+
         const response = await api.get(`/appointments/${id}`);
         
         const data = response.data.data || response.data;

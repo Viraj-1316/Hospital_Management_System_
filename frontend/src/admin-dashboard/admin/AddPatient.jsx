@@ -6,7 +6,7 @@ import { FaArrowLeft, FaSave } from "react-icons/fa";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 
-const API_BASE_URL = "http://localhost:3001";
+import API_BASE from "../../config";
 
 const AddPatient = () => {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const AddPatient = () => {
       try {
         setIsLoadingClinics(true);
         // Note: Ensure this endpoint matches your backend route exactly
-        const res = await axios.get(`${API_BASE_URL}/api/clinics`);
+        const res = await axios.get(`${API_BASE}/api/clinics`);
         
         console.log("Clinics API Response:", res.data); // Check your browser console to see the real structure
 
@@ -80,7 +80,7 @@ const AddPatient = () => {
     }
 
     try {
-      const promise = axios.post(`${API_BASE_URL}/patients`, formData);
+      const promise = axios.post(`${API_BASE}/patients`, formData);
 
       await toast.promise(promise, {
         loading: "Saving patient...",

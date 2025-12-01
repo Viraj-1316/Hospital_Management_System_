@@ -18,8 +18,9 @@ import toast, { Toaster } from "react-hot-toast";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import API_BASE from "../../../config";
 
-const BASE_URL = "http://localhost:3001";
+const BASE_URL = API_BASE;
 const DAYS_OPTIONS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /* ---------- SCOPED CSS ---------- */

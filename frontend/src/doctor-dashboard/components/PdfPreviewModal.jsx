@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import "../styles/PdfPreviewModal.css";
 import { FaDownload, FaPen, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import API_BASE from "../../config";
 
 export default function PdfPreviewModal({
   open,
@@ -34,7 +35,7 @@ export default function PdfPreviewModal({
       setError(null);
       try {
         const res = await fetch(
-          `http://localhost:3001/appointments/${appointmentId}/pdf`,
+          `${API_BASE}/appointments/${appointmentId}/pdf`,
           {
             method: "GET",
             headers: { Accept: "application/pdf" },
@@ -79,7 +80,7 @@ export default function PdfPreviewModal({
 
       setLoading(true);
       const res = await fetch(
-        `http://localhost:3001/appointments/${appointmentId}/pdf`
+        `${API_BASE}/appointments/${appointmentId}/pdf`
       );
       if (!res.ok) throw new Error("Failed to download");
       const blob = await res.blob();

@@ -4,8 +4,7 @@ import axios from "axios";
 import PhoneInput from "react-phone-input-2";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 export default function PatientProfileSetup() {
   const navigate = useNavigate();

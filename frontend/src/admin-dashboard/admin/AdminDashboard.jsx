@@ -14,7 +14,7 @@ import { FaCalendarCheck } from "react-icons/fa";
 import { FaMoneyBill1Wave } from "react-icons/fa6";
 import { setFavicon } from "../../utils/setFavicon.js";
 
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
   const navigate = useNavigate();

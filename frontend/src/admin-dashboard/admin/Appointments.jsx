@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ConfirmationModal from "../../components/ConfirmationModal";
 
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
   const navigate = useNavigate();

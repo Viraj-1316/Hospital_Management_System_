@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { FaCheckSquare, FaSave, FaPaperPlane } from "react-icons/fa";
+import API_BASE from "../../../../config";
 
 const EmailTemplates = () => {
   // Mock data for categories and templates
@@ -488,7 +489,7 @@ const EmailTemplates = () => {
 
     setSendingTestEmail(true);
     try {
-      const response = await fetch("http://localhost:3001/api/email/test-email", {
+      const response = await fetch(`${API_BASE}/api/email/test-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

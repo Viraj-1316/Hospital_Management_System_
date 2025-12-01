@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { FaBars } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate } from "react-router-dom";
+import API_BASE from "../../config";
 
 export default function PatientNavbar({ toggleSidebar }) {
   const [open, setOpen] = useState(false);
@@ -21,7 +22,7 @@ export default function PatientNavbar({ toggleSidebar }) {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/api/user/${userId}`);
+      const res = await fetch(`${API_BASE}/api/user/${userId}`);
       if (res.ok) {
         const data = await res.json();
         setProfileData({

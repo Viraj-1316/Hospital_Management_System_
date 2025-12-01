@@ -63,7 +63,7 @@ export default function PatientBookAppointment() {
     const loadData = async () => {
       try {
         setLoadingData(true);
-        console.log("🚀 Fetching booking data...");
+
 
         // A. Fetch Clinics
         const clinicRes = await axios.get(`${API_BASE}/api/clinics`);

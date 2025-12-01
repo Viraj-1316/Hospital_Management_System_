@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import API_BASE from "../../config";
+
 // variable to save data 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -21,7 +23,7 @@ const Signup = () => {
 
     // data server la send hoto 
     axios
-      .post("http://localhost:3001/signup", { name, email, password })
+      .post(`${API_BASE}/signup`, { name, email, password })
       .then((result) => {
         console.log("Signup successful:", result.data);
         setMessage("Signup successful!");

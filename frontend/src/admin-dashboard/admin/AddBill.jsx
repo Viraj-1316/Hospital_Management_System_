@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import toast from 'react-hot-toast';
 
-const BASE = "http://localhost:3001";
+import API_BASE from "../../config";
 
 const AddBill = () => {
   const navigate = useNavigate();
@@ -34,15 +34,15 @@ const AddBill = () => {
   const [clinics, setClinics] = useState([]); 
   const [encounters, setEncounters] = useState([]);
   const [saving, setSaving] = useState(false);
-
+        
   // --- 2. Fetch Initial Dropdown Data ---
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [docRes, patRes, clinicRes] = await Promise.all([
-          axios.get(`${BASE}/doctors`),
-          axios.get(`${BASE}/patients`),
-          axios.get(`${BASE}/api/clinics`)
+          axios.get(`${API_BASE}/doctors`),
+          axios.get(`${API_BASE}/patients`),
+          axios.get(`${API_BASE}/api/clinics`)
         ]);
 
         // Normalize Data
@@ -68,7 +68,7 @@ const AddBill = () => {
   // --- 3. Fetch Encounters (Server-Side Filter) ---
   useEffect(() => {
     if (form.patientId) {
-      axios.get(`${BASE}/encounters?patientId=${form.patientId}`)
+      axios.get(`${API_BASE}/encounters?patientId=${form.patientId}`)
         .then((res) => {
            const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
            setEncounters(data);
@@ -154,7 +154,7 @@ const AddBill = () => {
         clinicId: form.clinicId || null 
       };
 
-      await axios.post(`${BASE}/bills`, payload);
+      await axios.post(`${API_BASE}/bills`, payload);
       toast.success("Bill created successfully!");
       navigate("/BillingRecords");
     } catch (err) {

@@ -32,7 +32,7 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
         // 1. Get ID (Try patientId first, fallback to userId)
         const patientId = localStorage.getItem("patientId") || localStorage.getItem("userId");
         
-        console.log("🔍 Fetching reports for Patient ID:", patientId);
+
 
         if (!patientId) {
             console.warn("❌ No Patient ID found in localStorage");
@@ -45,7 +45,7 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
         // This avoids the Object vs String mismatch issues in frontend.
         const { data } = await api.get(`/encounters?patientId=${patientId}`);
         
-        console.log("✅ Encounters Found:", data.length);
+
 
         // 3. Extract Reports
         const aggregatedReports = data.flatMap(encounter => 
@@ -56,7 +56,7 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
             }))
         );
 
-        console.log("📄 Total Reports Extracted:", aggregatedReports.length);
+
         setReports(aggregatedReports);
 
       } catch (e) {

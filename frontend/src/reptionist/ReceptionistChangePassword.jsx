@@ -2,8 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-
-const API_BASE = "http://localhost:3001";
+import API_BASE from "../config";
 
 function ReceptionistChangePassword() {
   const navigate = useNavigate();
@@ -67,7 +66,7 @@ const handleSubmit = async (e) => {
 
     // ✅ Correct URL (no /auth prefix because app.use("/", authRoutes))
     const url = `${API_BASE}/receptionists/change-password/${authUser.id}`;
-    console.log("Calling change password API:", url);
+
 
     const res = await fetch(url, {
       method: "PUT",

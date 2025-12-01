@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import API_BASE from "../config";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -11,7 +12,7 @@ function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const API_BASE = "http://localhost:3001";
+
 
   const handleRoleClick = (newRole) => {
     setRole(newRole);

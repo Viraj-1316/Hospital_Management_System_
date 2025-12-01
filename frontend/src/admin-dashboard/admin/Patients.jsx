@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API_BASE from "../../config";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -34,7 +35,7 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
   const executeDelete = async () => {
     if (!deleteModal.id) return;
     try {
-      await axios.delete(`http://localhost:3001/patients/${deleteModal.id}`);
+      await axios.delete(`${API_BASE}/patients/${deleteModal.id}`);
       toast.success("Patient deleted successfully!");
       setPatients((prev) => prev.filter((p) => p._id !== deleteModal.id));
     } catch (error) {
@@ -48,7 +49,7 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
   const handleResendCredentials = async (id) => {
     try {
       toast.loading("Sending credentials...", { id: "resend" });
-      await axios.post(`http://localhost:3001/patients/${id}/resend-credentials`);
+      await axios.post(`${API_BASE}/patients/${id}/resend-credentials`);
       toast.success("Credentials sent successfully!", { id: "resend" });
     } catch (error) {
       console.error("Error resending credentials:", error);
@@ -59,7 +60,7 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
   // Fetch patients
   const fetchPatients = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/patients");
+      const res = await axios.get(`${API_BASE}/patients`);
       setPatients(res.data || []);
     } catch (error) {
       console.error("Error fetching patients:", error);
@@ -95,7 +96,7 @@ const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
       formData.append("type", importType);
 
       const res = await axios.post(
-        "http://localhost:3001/patients/import",
+        `${API_BASE}/patients/import`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
