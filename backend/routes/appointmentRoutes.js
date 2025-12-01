@@ -854,11 +854,12 @@ router.post("/import", upload.single("file"), async (req, res) => {
       .on("data", (row) => {
         results.push({
           date: row.date,
-          clinic: row["Clinic name"],
-          services: row.Service,
-          doctorName: row["Doctor name"],
-          patientName: row["Patient name"],
-          status: row.Status || "booked",
+          time: row.time,
+          clinic: row.clinic || row["Clinic name"],
+          services: row.service || row.Service,
+          doctorName: row.doctor || row["Doctor name"],
+          patientName: row.patient || row["Patient name"],
+          status: row.status || row.Status || "booked",
         });
       })
       .on("end", async () => {
