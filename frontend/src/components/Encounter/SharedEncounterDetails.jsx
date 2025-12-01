@@ -662,7 +662,7 @@ export default function SharedEncounterDetails() {
           <header class="header">
             <div class="clinic-info">
               <div class="clinic-logo">
-                VC
+                OC
               </div>
               <div class="clinic-text">
                 <div class="clinic-name">${encounter.clinic}</div>
