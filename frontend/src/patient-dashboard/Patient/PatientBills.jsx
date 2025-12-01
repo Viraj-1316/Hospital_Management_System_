@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { FiSearch, FiPrinter } from "react-icons/fi";
-import { FaSort } from "react-icons/fa";
 import axios from "axios";
-import PatientLayout from "../layouts/PatientLayout"; // <--- Using Layout
+import PatientLayout from "../layouts/PatientLayout";
+import API_BASE from "../../config";
 
-const api = axios.create({ baseURL: "http://127.0.0.1:3001" });
+const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -47,6 +47,11 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
 
   const handleFilter = (key, val) => setFilters(prev => ({ ...prev, [key]: val }));
 
+  // Handle PDF Function
+  const handlePdf = (id) => {
+    window.open(`${API_BASE}/bills/${id}/pdf`, "_blank");
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -83,7 +88,6 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
             // Column Filters
             if(filters.encounterId && !customEncId.toLowerCase().includes(filters.encounterId.toLowerCase())) return false;
             if(filters.doctor && !bill.doctorName?.toLowerCase().includes(filters.doctor.toLowerCase())) return false;
-            // ... (add other filters as needed based on previous code)
             
             return true;
         });
@@ -152,6 +156,8 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
                    <th>Clinic</th>
                    <th>Patient</th>
                    <th>Services</th>
+                   {/* Added Tax Column Header */}
+                   <th>Tax</th>
                    <th>Total</th>
                    <th>Disc</th>
                    <th>Due</th>
@@ -163,13 +169,21 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
                    <td className="p-2"></td>
                    <td className="p-2"><input className="filter-input" placeholder="Enc ID" onChange={e=>handleFilter('encounterId', e.target.value)}/></td>
                    <td className="p-2"><input className="filter-input" placeholder="Doctor" onChange={e=>handleFilter('doctor', e.target.value)}/></td>
-                   {/* Add other filter inputs here matching previous code */}
-                   <td colSpan={9}></td>
+                   <td className="p-2"></td> {/* Clinic */}
+                   <td className="p-2"></td> {/* Patient */}
+                   <td className="p-2"></td> {/* Services */}
+                   <td className="p-2"></td> {/* Tax placeholder */}
+                   <td className="p-2"></td> {/* Total */}
+                   <td className="p-2"></td> {/* Disc */}
+                   <td className="p-2"></td> {/* Due */}
+                   <td className="p-2"></td> {/* Date */}
+                   <td className="p-2"></td> {/* Status */}
+                   <td className="p-2"></td> {/* Action */}
                 </tr>
               </thead>
               <tbody>
-                {loading ? <tr><td colSpan="12" className="text-center py-5">Loading...</td></tr> : 
-                 rows.length === 0 ? <tr><td colSpan="12" className="text-center py-5 text-muted">No Data Found</td></tr> :
+                {loading ? <tr><td colSpan="13" className="text-center py-5">Loading...</td></tr> : 
+                 rows.length === 0 ? <tr><td colSpan="13" className="text-center py-5 text-muted">No Data Found</td></tr> :
                  rows.map((row, i) => (
                     <tr key={i}>
                         <td>{(page - 1) * limit + i + 1}</td>
@@ -178,18 +192,29 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
                         <td>{row.clinicName}</td>
                         <td>{row.patientName}</td>
                         <td>{Array.isArray(row.services) ? row.services.join(", ") : row.services}</td>
+                        
+                        {/* Display Tax: Checks for taxAmount, tax, or defaults to 0 */}
+                        <td>{row.taxAmount || row.tax || 0}</td>
+                        
                         <td>{row.totalAmount}</td>
                         <td>{row.discount}</td>
                         <td>{row.amountDue}</td>
                         <td>{formatDate(row.date)}</td>
                         <td>{getStatusBadge(row.status)}</td>
-                        <td><button className="btn btn-sm btn-link text-primary"><FiPrinter/></button></td>
+                        <td>
+                            <button 
+                                className="btn btn-sm btn-outline-dark" 
+                                onClick={() => handlePdf(row._id)}
+                                title="Print PDF"
+                            >
+                                <FiPrinter/>
+                            </button>
+                        </td>
                     </tr>
                  ))}
               </tbody>
             </table>
           </div>
-          {/* Pagination could go here */}
         </div>
       </div>
     </PatientLayout>
