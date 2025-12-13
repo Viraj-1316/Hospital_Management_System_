@@ -24,7 +24,7 @@ import EditBill from "./admin-dashboard/admin/EditBill";
 import Services from "./admin-dashboard/admin/Services";
 import Taxes from "./admin-dashboard/admin/Taxes";
 import DoctorSession from "./admin-dashboard/admin/DoctorSession";
-import ClinicList from "./admin-dashboard/admin/cliniclist";
+import ClinicList from "./admin-dashboard/admin/ClinicList";
 import AddClinic from "./admin-dashboard/admin/AddClinic";
 import AdminProfile from "./admin-dashboard/admin/AdminProfile";
 import AdminChangePassword from "./admin-dashboard/admin/AdminChangePassword";
