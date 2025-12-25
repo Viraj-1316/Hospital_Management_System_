@@ -126,47 +126,112 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Signup for normal patient user
+// Signup route - supports Patient, Doctor, and Receptionist
 router.post("/signup", async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, role, hospitalId } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const existing = await User.findOne({ email });
-    if (existing) {
+    const normalizedRole = (role || "patient").toLowerCase();
+
+    // Check for existing email in all collections
+    const existingUser = await User.findOne({ email });
+    const existingDoctor = await DoctorModel.findOne({ email });
+    const existingReceptionist = await Receptionist.findOne({ email });
+
+    if (existingUser || existingDoctor || existingReceptionist) {
       return res.status(400).json({ message: "Email already registered" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({
-      email,
-      password: hashedPassword,
-      role: "patient",
-      name,
-      phone,
-      profileCompleted: false,
-    });
+    // Route to appropriate creation logic based on role
+    if (normalizedRole === "doctor") {
+      // Create Doctor record
+      const nameParts = name.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
 
-    // Create basic patient record linked with this user
-    await PatientModel.create({
-      userId: newUser._id,
-      firstName: name,
-      email,
-      phone,
-    });
+      const newDoctor = await DoctorModel.create({
+        firstName,
+        lastName,
+        email,
+        phone,
+        password: hashedPassword,
+        passwordPlain: "", // Don't store plain password
+        mustChangePassword: true, // Require password change on first login
+        status: "Active",
+        hospitalId: hospitalId || "",
+      });
 
-    res.status(201).json({
-      id: newUser._id,
-      email: newUser.email,
-      role: newUser.role,
-      name: newUser.name,
-      phone: newUser.phone,
-      profileCompleted: newUser.profileCompleted,
-    });
+      console.log("DOCTOR SIGNUP SUCCESS:", email);
+
+      return res.status(201).json({
+        id: newDoctor._id,
+        email: newDoctor.email,
+        role: "doctor",
+        name: `${firstName} ${lastName}`.trim(),
+        phone: newDoctor.phone,
+        mustChangePassword: true,
+      });
+
+    } else if (normalizedRole === "receptionist") {
+      // Create Receptionist record
+      const newReceptionist = await Receptionist.create({
+        name,
+        email,
+        mobile: phone,
+        password: hashedPassword,
+        passwordPlain: "", // Don't store plain password
+        mustChangePassword: true, // Require password change on first login
+        status: true,
+        hospitalId: hospitalId || "",
+      });
+
+      console.log("RECEPTIONIST SIGNUP SUCCESS:", email);
+
+      return res.status(201).json({
+        id: newReceptionist._id,
+        email: newReceptionist.email,
+        role: "receptionist",
+        name: newReceptionist.name,
+        phone: newReceptionist.mobile,
+        mustChangePassword: true,
+      });
+
+    } else {
+      // Default: Create Patient (existing logic)
+      const newUser = await User.create({
+        email,
+        password: hashedPassword,
+        role: "patient",
+        name,
+        phone,
+        profileCompleted: false,
+      });
+
+      // Create basic patient record linked with this user
+      await PatientModel.create({
+        userId: newUser._id,
+        firstName: name,
+        email,
+        phone,
+      });
+
+      console.log("PATIENT SIGNUP SUCCESS:", email);
+
+      return res.status(201).json({
+        id: newUser._id,
+        email: newUser.email,
+        role: newUser.role,
+        name: newUser.name,
+        phone: newUser.phone,
+        profileCompleted: newUser.profileCompleted,
+      });
+    }
   } catch (err) {
     console.error("Signup error:", err);
     res.status(500).json({ message: "Server error during signup" });
