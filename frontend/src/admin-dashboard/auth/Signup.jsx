@@ -25,7 +25,6 @@ const Signup = () => {
     axios
       .post(`${API_BASE}/signup`, { name, email, password })
       .then((result) => {
-        console.log("Signup successful:", result.data);
         setMessage("Signup successful!");
         setName("");
         setEmail("");

@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Listing = require('../models/Listing'); // Ensure path is correct
+const { verifyToken } = require('../middleware/auth');
 
 // GET
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
     const { type, status } = req.query;
     const filter = {};
@@ -16,7 +17,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   try {
     const newListing = new Listing(req.body);
     const saved = await newListing.save();
@@ -25,7 +26,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
   try {
     const updated = await Listing.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json(updated);
@@ -33,7 +34,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
   try {
     await Listing.findByIdAndDelete(req.params.id);
     res.json({ message: 'Deleted' });

@@ -8,6 +8,7 @@ const multer = require("multer");
 const csv = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
+const { verifyToken } = require("../middleware/auth");
 
 // Configure Multer for CSV import
 const upload = multer({ dest: path.join(__dirname, "../uploads") });
@@ -17,9 +18,9 @@ const upload = multer({ dest: path.join(__dirname, "../uploads") });
  * =============================== */
 
 // Create Doctor (with auto-generated password)
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
-    console.log("Incoming doctor data:", req.body);
+
 
     const { email, firstName, lastName } = req.body;
 
@@ -36,7 +37,6 @@ router.post("/", async (req, res) => {
     const doctorData = {
       ...req.body,
       password: hashedPassword,
-      passwordPlain: randomPassword, // Optional: for debugging/resend if needed
       mustChangePassword: true,
     };
 
@@ -66,7 +66,7 @@ router.post("/", async (req, res) => {
 });
 
 // Get all doctors
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   try {
     const doctors = await DoctorModel.find();
     res.json(doctors);
@@ -76,7 +76,7 @@ router.get("/", async (req, res) => {
 });
 
 // Delete doctor
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     await DoctorModel.findByIdAndDelete(req.params.id);
     res.json({ message: "Doctor deleted successfully" });
@@ -86,14 +86,15 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Update Doctor
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    
+
+    // Ensure qualifications is always an array
     if (updateData.qualifications && !Array.isArray(updateData.qualifications)) {
-     
+      updateData.qualifications = [updateData.qualifications];
     }
 
     const updatedDoctor = await DoctorModel.findByIdAndUpdate(
@@ -114,7 +115,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // Resend Credentials (Regenerate password and email)
-router.post("/:id/resend-credentials", async (req, res) => {
+router.post("/:id/resend-credentials", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const doctor = await DoctorModel.findById(id);
@@ -128,7 +129,6 @@ router.post("/:id/resend-credentials", async (req, res) => {
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
     doctor.password = hashedPassword;
-    doctor.passwordPlain = randomPassword;
     doctor.mustChangePassword = true;
     await doctor.save();
 
@@ -156,9 +156,9 @@ router.post("/:id/resend-credentials", async (req, res) => {
 });
 
 // Doctor Csv Import
-router.post("/import", upload.single("file"), async (req, res) => {
+router.post("/import", verifyToken, upload.single("file"), async (req, res) => {
   try {
-    console.log("📥 /doctors/import hit");
+
 
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -185,7 +185,7 @@ router.post("/import", upload.single("file"), async (req, res) => {
       })
       .on("end", async () => {
         try {
-          console.log("Parsed doctors from CSV:", results.length);
+
           if (results.length > 0) {
             await DoctorModel.insertMany(results);
           }
@@ -220,11 +220,11 @@ router.post("/import", upload.single("file"), async (req, res) => {
  * =============================== */
 
 // Get Doctor Profile by ID
-router.get("/profile/:id", async (req, res) => {
+router.get("/profile/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const doctor = await DoctorModel.findById(id).select("-password -passwordPlain");
-    
+
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
     }
@@ -254,7 +254,7 @@ router.get("/profile/:id", async (req, res) => {
 });
 
 // Update Doctor Profile by ID
-router.put("/profile/:id", async (req, res) => {
+router.put("/profile/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const {

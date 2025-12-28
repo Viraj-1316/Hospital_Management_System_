@@ -37,7 +37,10 @@ function AdminProfile() {
 
   const loadProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/user/${userId}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/user/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) {
         toast.error("Failed to load profile");
         setLoading(false);
@@ -90,9 +93,13 @@ function AdminProfile() {
     setSaving(true);
 
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(`${API_BASE}/api/user/${userId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(form),
       });
 

@@ -25,5 +25,11 @@ const PatientSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+// Database Indexes for improved query performance
+PatientSchema.index({ email: 1 });
+PatientSchema.index({ userId: 1 });
+PatientSchema.index({ clinic: 1 });
+PatientSchema.index({ isActive: 1 });
+
 const PatientModel = mongoose.model("Patient", PatientSchema);
 module.exports = PatientModel;

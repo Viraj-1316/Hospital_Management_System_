@@ -1,728 +1,445 @@
-// // src/Login.jsx
-// import { Link } from "react-router-dom";
-// import React, { useState } from "react";
-// import { useNavigate } from "react-router-dom";
-// import toast from "react-hot-toast";
-// import API_BASE from "../config";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import {
+  loginUser,
+  signupUser,
+  fetchPatientData,
+  fetchDoctorData,
+  validators,
+  formatPhone,
+  saveAuthData,
+  savePatientData,
+  saveDoctorData,
+  clearRoleData,
+} from './authService';
+import './OneCareAuth.css';
 
-// function Login() {
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [role, setRole] = useState("patient");
-//   const [error, setError] = useState("");
-//   const navigate = useNavigate();
-
-
-
-//   const handleRoleClick = (newRole) => {
-//     setRole(newRole);
-//   };
-
-//   const handleSubmit = async (event) => {
-//     event.preventDefault();
-
-//     if (!email || !password) {
-//       const msg = "Please enter both email and password.";
-//       setError(msg);
-//       toast.error(msg);
-//       return;
-//     }
-
-//     setError("");
-
-//     try {
-//       const res = await fetch(`${API_BASE}/login`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ email, password }),
-//       });
-
-//       if (!res.ok) {
-//         const errData = await res.json().catch(() => ({}));
-//         const msg = errData.message || "Login failed";
-//         setError(msg);
-//         toast.error(msg);
-//         return;
-//       }
-
-//       const data = await res.json();
-//       const user = data.user || data;
-
-//       console.log("Login response user:", user);
-
-//       if (user.role !== role) {
-//         const msg = "Invalid Credentials";
-//         setError(msg);
-//         toast.error(msg);
-//         return;
-//       }
-
-//       // --- FIX START: Save Token & User ID ---
-//       if (data.token) {
-//         localStorage.setItem("token", data.token);
-//       }
-      
-//       // Important: Save the ID as a standalone string for Navbar/Reports to find
-//       const userId = user.id || user._id;
-//       if (userId) {
-//         localStorage.setItem("userId", userId);
-//         localStorage.setItem("userRole", user.role); 
-//       }
-//       // --- FIX END ---
-
-//       const authUser = {
-//         id: userId || null,
-//         _id: userId || null,
-//         email: user.email || "",
-//         role: user.role || "",
-//         name: user.name || "",
-//         profileCompleted: !!user.profileCompleted,
-//         mustChangePassword:
-//           typeof user.mustChangePassword === "boolean"
-//             ? user.mustChangePassword
-//             : false,
-//       };
-
-//       console.log("Saving authUser to localStorage:", authUser);
-//       localStorage.setItem("authUser", JSON.stringify(authUser));
-
-//       // Try to fetch patient doc by userId
-//       try {
-//         const pid = authUser.id || authUser._id;
-//         if (pid) {
-//           const pRes = await fetch(`${API_BASE}/patients/by-user/${pid}`);
-//           if (pRes.ok) {
-//             const patientDoc = await pRes.json();
-//             const patientObj = {
-//               id: patientDoc._id || patientDoc.id || pid,
-//               _id: patientDoc._id || patientDoc.id || pid,
-//               userId: patientDoc.userId || pid,
-//               firstName: patientDoc.firstName || "",
-//               lastName: patientDoc.lastName || "",
-//               name: (patientDoc.firstName || patientDoc.lastName)
-//                   ? `${patientDoc.firstName || ""} ${patientDoc.lastName || ""}`.trim()
-//                   : patientDoc.name || authUser.name || "",
-//               email: patientDoc.email || authUser.email || "",
-//               phone: patientDoc.phone || "",
-//               clinic: patientDoc.clinic || "",
-//               dob: patientDoc.dob || "",
-//               address: patientDoc.address || "",
-//             };
-            
-//             console.log("Saving patient to localStorage:", patientObj);
-//             localStorage.setItem("patient", JSON.stringify(patientObj));
-            
-//             // --- FIX: Save patientId specifically ---
-//             localStorage.setItem("patientId", patientObj.id); 
-//             // ----------------------------------------
-
-//           } else {
-//             localStorage.removeItem("patient");
-//             localStorage.removeItem("patientId"); // Clean up
-//           }
-//         }
-//       } catch (errFetchPatient) {
-//         console.warn("Could not fetch patient doc:", errFetchPatient);
-//       }
-
-//       // Try to fetch doctor doc (if doctor)
-//       if (authUser.role === "doctor") {
-//         try {
-//           const doctorRes = await fetch(
-//             `${API_BASE}/doctors?email=${encodeURIComponent(authUser.email)}`
-//           );
-//           if (doctorRes.ok) {
-//             const doctorsData = await doctorRes.json();
-//             const doctorDoc = Array.isArray(doctorsData)
-//               ? doctorsData.find((d) => d.email === authUser.email)
-//               : null;
-
-//             if (doctorDoc) {
-//               const doctorObj = {
-//                 id: doctorDoc._id || doctorDoc.id,
-//                 _id: doctorDoc._id || doctorDoc.id,
-//                 firstName: doctorDoc.firstName || "",
-//                 lastName: doctorDoc.lastName || "",
-//                 name: doctorDoc.firstName || doctorDoc.lastName
-//                     ? `${doctorDoc.firstName || ""} ${doctorDoc.lastName || ""}`.trim()
-//                     : authUser.name || "",
-//                 email: doctorDoc.email || authUser.email || "",
-//                 phone: doctorDoc.phone || "",
-//                 clinic: doctorDoc.clinic || "",
-//                 specialization: doctorDoc.specialization || "",
-//               };
-//               console.log("Saving doctor to localStorage:", doctorObj);
-//               localStorage.setItem("doctor", JSON.stringify(doctorObj));
-//             } else {
-//               localStorage.removeItem("doctor");
-//             }
-//           } else {
-//             localStorage.removeItem("doctor");
-//           }
-//         } catch (errFetchDoctor) {
-//           console.warn("Could not fetch doctor doc:", errFetchDoctor);
-//         }
-//       }
-
-//       // Redirect Logic
-//       if (authUser.role === "admin") {
-//         navigate("/admin-dashboard");
-//       } else if (authUser.role === "doctor") {
-//         if (authUser.mustChangePassword) {
-//           toast("Please change your default password.", { icon: "🔐" });
-//           navigate("/doctor/change-password-first");
-//         } else {
-//           navigate("/doctor-dashboard");
-//         }
-//       } else if (authUser.role === "receptionist") {
-//         if (authUser.mustChangePassword) {
-//           toast("Please change your default password.", { icon: "🔐" });
-//           navigate("/receptionist/change-password");
-//         } else {
-//           navigate("/reception-dashboard");
-//         }
-//       } else if (authUser.role === "patient") {
-//         if (!authUser.profileCompleted) navigate("/patient/profile-setup");
-//         else navigate("/patient-dashboard");
-//       } else {
-//         navigate("/");
-//       }
-
-//       toast.success("Login successful");
-//     } catch (err) {
-//       console.error("Network/login error:", err);
-//       const msg = "Network error: backend not responding";
-//       setError(msg);
-//       toast.error(msg);
-//     }
-//   };
-
-//   return (
-//     <div
-//       style={{
-//         minHeight: "100vh",
-//         display: "flex",
-//         justifyContent: "center",
-//         alignItems: "center",
-//         backgroundColor: "#f5f7fb",
-//       }}
-//     >
-//       <div
-//         style={{
-//           width: "380px",
-//           backgroundColor: "white",
-//           borderRadius: "12px",
-//           boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-//           padding: "24px 28px",
-//         }}
-//       >
-//         <h3 style={{ textAlign: "center", marginBottom: "20px" }}>Login</h3>
-
-//         <form onSubmit={handleSubmit}>
-//           <div style={{ marginBottom: "12px" }}>
-//             <label style={{ display: "block", marginBottom: "4px", fontSize: "14px" }}>
-//               Username or Email Address
-//             </label>
-//             <input
-//               type="email"
-//               placeholder="Enter email"
-//               value={email}
-//               onChange={(e) => setEmail(e.target.value)}
-//               style={{
-//                 width: "100%",
-//                 padding: "8px 10px",
-//                 borderRadius: "4px",
-//                 border: "1px solid #ccc",
-//                 fontSize: "14px",
-//               }}
-//             />
-//           </div>
-
-//           <div style={{ marginBottom: "16px" }}>
-//             <label style={{ display: "block", marginBottom: "4px", fontSize: "14px" }}>
-//               Password
-//             </label>
-//             <input
-//               type="password"
-//               placeholder="Enter password"
-//               value={password}
-//               onChange={(e) => setPassword(e.target.value)}
-//               style={{
-//                 width: "100%",
-//                 padding: "8px 10px",
-//                 borderRadius: "4px",
-//                 border: "1px solid #ccc",
-//                 fontSize: "14px",
-//               }}
-//             />
-//           </div>
-
-//           <div style={{ display: "flex", gap: "8px", marginBottom: "16px", justifyContent: "space-between" }}>
-//             <button
-//               type="button"
-//               onClick={() => handleRoleClick("doctor")}
-//               style={{
-//                 flex: 1,
-//                 padding: "6px 0",
-//                 borderRadius: "4px",
-//                 border: "none",
-//                 cursor: "pointer",
-//                 fontSize: "14px",
-//                 backgroundColor: role === "doctor" ? "#0d6efd" : "#6c757d",
-//                 color: "white",
-//               }}
-//             >
-//               Doctor
-//             </button>
-
-//             <button
-//               type="button"
-//               onClick={() => handleRoleClick("receptionist")}
-//               style={{
-//                 flex: 1,
-//                 padding: "6px 0",
-//                 borderRadius: "4px",
-//                 border: "none",
-//                 cursor: "pointer",
-//                 fontSize: "14px",
-//                 backgroundColor: role === "receptionist" ? "#0d6efd" : "#6c757d",
-//                 color: "white",
-//               }}
-//             >
-//               Receptionist
-//             </button>
-
-//             <button
-//               type="button"
-//               onClick={() => handleRoleClick("patient")}
-//               style={{
-//                 flex: 1,
-//                 padding: "6px 0",
-//                 borderRadius: "4px",
-//                 border: "none",
-//                 cursor: "pointer",
-//                 fontSize: "14px",
-//                 backgroundColor: role === "patient" ? "#0d6efd" : "#6c757d",
-//                 color: "white",
-//               }}
-//             >
-//               Patient
-//             </button>
-//           </div>
-
-//           <div style={{ display: "flex", marginBottom: "16px", justifyContent: "center" }}>
-//             <button
-//               type="button"
-//               onClick={() => setRole("admin")}
-//               style={{
-//                 padding: "6px 16px",
-//                 borderRadius: "4px",
-//                 border: "none",
-//                 cursor: "pointer",
-//                 fontSize: "14px",
-//                 backgroundColor: role === "admin" ? "#0d6efd" : "#6c757d",
-//                 color: "white",
-//               }}
-//             >
-//               Admin Login
-//             </button>
-//           </div>
-
-//           <button
-//             type="submit"
-//             style={{
-//               width: "100%",
-//               padding: "8px 0",
-//               backgroundColor: "#0d6efd",
-//               color: "white",
-//               border: "none",
-//               borderRadius: "4px",
-//               fontSize: "15px",
-//               cursor: "pointer",
-//               marginBottom: "8px",
-//             }}
-//           >
-//             Login
-//           </button>
-
-//           {error && (
-//             <div style={{ color: "red", fontSize: "13px", textAlign: "center", marginBottom: "8px" }}>
-//               {error}
-//             </div>
-//           )}
-
-//           <div style={{ textAlign: "center", fontSize: "12px", marginTop: "8px" }}>
-//             <Link to="/signup" style={{ color: "blue" }}>
-//               Don't have an account? Signup
-//             </Link>
-//           </div>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default Login;
-
-import { Link } from "react-router-dom";
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
-import API_BASE from "../config";
-
+/**
+ * OneCare Auth Page - Combined Login and Signup
+ * Modern UI with sliding panel animation
+ */
 function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("patient");
-  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleRoleClick = (newRole) => {
-    setRole(newRole);
+  // UI State
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPanelActive, setIsPanelActive] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
+
+  // Login Form
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [loginErrors, setLoginErrors] = useState({});
+
+  // Signup Form
+  const [signupForm, setSignupForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'PATIENT',
+    hospitalId: '',
+  });
+  const [signupErrors, setSignupErrors] = useState({});
+
+  // Initial loading animation
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Toggle panel with animation re-trigger
+  const togglePanel = useCallback((active) => {
+    setIsPanelActive(active);
+    setAnimationKey(prev => prev + 1); // Forces re-render of animated elements
+    // Clear errors when switching
+    setLoginErrors({});
+    setSignupErrors({});
+  }, []);
+
+  // Handle login form changes
+  const handleLoginChange = (field, value) => {
+    setLoginForm(prev => ({ ...prev, [field]: value }));
+    // Clear error on change
+    if (loginErrors[field]) {
+      setLoginErrors(prev => ({ ...prev, [field]: null }));
+    }
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  // Handle signup form changes
+  const handleSignupChange = (field, value) => {
+    setSignupForm(prev => ({ ...prev, [field]: value }));
+    // Clear hospital ID if switching to patient
+    if (field === 'role' && value === 'PATIENT') {
+      setSignupForm(prev => ({ ...prev, hospitalId: '' }));
+    }
+    // Clear error on change
+    if (signupErrors[field]) {
+      setSignupErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
 
-    if (!email || !password) {
-      const msg = "Please enter both email and password.";
-      setError(msg);
-      toast.error(msg);
+  // Validate login form
+  const validateLoginForm = () => {
+    const errors = {};
+    const emailError = validators.email(loginForm.email);
+    const passwordError = validators.password(loginForm.password);
+
+    if (emailError) errors.email = emailError;
+    if (passwordError) errors.password = passwordError;
+
+    setLoginErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Validate signup form
+  const validateSignupForm = () => {
+    const errors = {};
+
+    const nameError = validators.name(signupForm.name);
+    const emailError = validators.email(signupForm.email);
+    const phoneError = validators.phone(signupForm.phone);
+    const passwordError = validators.password(signupForm.password);
+
+    if (nameError) errors.name = nameError;
+    if (emailError) errors.email = emailError;
+    if (phoneError) errors.phone = phoneError;
+    if (passwordError) errors.password = passwordError;
+
+    // Hospital ID required for staff
+    if ((signupForm.role === 'DOCTOR' || signupForm.role === 'RECEPTIONIST') && !signupForm.hospitalId) {
+      errors.hospitalId = 'Hospital ID is required for staff';
+    }
+
+    setSignupErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle login submission
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateLoginForm()) return;
+
+    setIsSubmitting(true);
+
+    const result = await loginUser(loginForm.email, loginForm.password);
+
+    if (!result.success) {
+      toast.error(result.error);
+      setIsSubmitting(false);
       return;
     }
 
-    setError("");
+    const user = result.data;
+    const authUser = saveAuthData(user, result.token);
 
-    try {
-      const res = await fetch(`${API_BASE}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    // Fetch and save role-specific data
+    clearRoleData();
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        const msg = errData.message || "Login failed";
-        setError(msg);
-        toast.error(msg);
-        return;
+    if (authUser.role === 'patient' && authUser.id) {
+      const patientDoc = await fetchPatientData(authUser.id);
+      if (patientDoc) {
+        savePatientData(patientDoc, authUser.id);
       }
+    }
 
-      const data = await res.json();
-      const user = data.user || data;
 
-      console.log("Login response user:", user);
-
-      if (user.role !== role) {
-        const msg = "Invalid Credentials";
-        setError(msg);
-        toast.error(msg);
-        return;
+    if (authUser.role === 'doctor') {
+      const doctorDoc = await fetchDoctorData(authUser.email);
+      if (doctorDoc) {
+        saveDoctorData(doctorDoc);
       }
+    }
 
-      // --- Save Token & User ID ---
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-      
-      const userId = user.id || user._id;
-      if (userId) {
-        localStorage.setItem("userId", userId);
-        localStorage.setItem("userRole", user.role); 
-      }
+    // Redirect based on role
+    toast.success('Login successful');
+    redirectUser(authUser);
 
-      const authUser = {
-        id: userId || null,
-        _id: userId || null,
-        email: user.email || "",
-        role: user.role || "",
-        name: user.name || "",
-        profileCompleted: !!user.profileCompleted,
-        mustChangePassword:
-          typeof user.mustChangePassword === "boolean"
-            ? user.mustChangePassword
-            : false,
-      };
+    setIsSubmitting(false);
+  };
 
-      console.log("Saving authUser to localStorage:", authUser);
-      localStorage.setItem("authUser", JSON.stringify(authUser));
+  // Handle signup submission
+  const handleSignupSubmit = async (e) => {
+    e.preventDefault();
 
-      // --- FIX APPLIED HERE: Only fetch patient data if the user is actually a patient ---
-      try {
-        const pid = authUser.id || authUser._id;
-        
-        // CHECK: Only run this if role is 'patient' AND it's not the admin placeholder
-        if (pid && authUser.role === "patient" && pid !== "admin-id") {
-          
-          const pRes = await fetch(`${API_BASE}/patients/by-user/${pid}`);
-          
-          if (pRes.ok) {
-            const patientDoc = await pRes.json();
-            const patientObj = {
-              id: patientDoc._id || patientDoc.id || pid,
-              _id: patientDoc._id || patientDoc.id || pid,
-              userId: patientDoc.userId || pid,
-              firstName: patientDoc.firstName || "",
-              lastName: patientDoc.lastName || "",
-              name: (patientDoc.firstName || patientDoc.lastName)
-                  ? `${patientDoc.firstName || ""} ${patientDoc.lastName || ""}`.trim()
-                  : patientDoc.name || authUser.name || "",
-              email: patientDoc.email || authUser.email || "",
-              phone: patientDoc.phone || "",
-              clinic: patientDoc.clinic || "",
-              dob: patientDoc.dob || "",
-              address: patientDoc.address || "",
-            };
-            
-            console.log("Saving patient to localStorage:", patientObj);
-            localStorage.setItem("patient", JSON.stringify(patientObj));
-            
-            // Save patientId specifically for booking appointments
-            localStorage.setItem("patientId", patientObj.id); 
+    if (!validateSignupForm()) return;
 
-          } else {
-            // Clear old patient data if fetch fails
-            localStorage.removeItem("patient");
-            localStorage.removeItem("patientId"); 
-          }
-        }
-      } catch (errFetchPatient) {
-        console.warn("Could not fetch patient doc:", errFetchPatient);
-      }
+    setIsSubmitting(true);
 
-      // Try to fetch doctor doc (if doctor)
-      if (authUser.role === "doctor") {
-        try {
-          const doctorRes = await fetch(
-            `${API_BASE}/doctors?email=${encodeURIComponent(authUser.email)}`
-          );
-          if (doctorRes.ok) {
-            const doctorsData = await doctorRes.json();
-            const doctorDoc = Array.isArray(doctorsData)
-              ? doctorsData.find((d) => d.email === authUser.email)
-              : null;
+    const result = await signupUser({
+      name: signupForm.name,
+      email: signupForm.email,
+      password: signupForm.password,
+      phone: formatPhone(signupForm.phone),
+      role: signupForm.role.toLowerCase(),
+      hospitalId: signupForm.hospitalId || undefined,
+    });
 
-            if (doctorDoc) {
-              const doctorObj = {
-                id: doctorDoc._id || doctorDoc.id,
-                _id: doctorDoc._id || doctorDoc.id,
-                firstName: doctorDoc.firstName || "",
-                lastName: doctorDoc.lastName || "",
-                name: doctorDoc.firstName || doctorDoc.lastName
-                    ? `${doctorDoc.firstName || ""} ${doctorDoc.lastName || ""}`.trim()
-                    : authUser.name || "",
-                email: doctorDoc.email || authUser.email || "",
-                phone: doctorDoc.phone || "",
-                clinic: doctorDoc.clinic || "",
-                specialization: doctorDoc.specialization || "",
-              };
-              console.log("Saving doctor to localStorage:", doctorObj);
-              localStorage.setItem("doctor", JSON.stringify(doctorObj));
-            } else {
-              localStorage.removeItem("doctor");
-            }
-          } else {
-            localStorage.removeItem("doctor");
-          }
-        } catch (errFetchDoctor) {
-          console.warn("Could not fetch doctor doc:", errFetchDoctor);
-        }
-      }
+    if (!result.success) {
+      toast.error(result.error);
+      setIsSubmitting(false);
+      return;
+    }
 
-      // Redirect Logic
-      if (authUser.role === "admin") {
-        navigate("/admin-dashboard");
-      } else if (authUser.role === "doctor") {
+    toast.success('Signup successful! You can now login.');
+
+    // Reset form and switch to login
+    setSignupForm({
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      role: 'PATIENT',
+      hospitalId: '',
+    });
+
+    setTimeout(() => togglePanel(false), 1500);
+    setIsSubmitting(false);
+  };
+
+  // Redirect user based on role
+  const redirectUser = (authUser) => {
+    switch (authUser.role) {
+      case 'admin':
+        navigate('/admin-dashboard');
+        break;
+      case 'doctor':
         if (authUser.mustChangePassword) {
-          toast("Please change your default password.", { icon: "🔐" });
-          navigate("/doctor/change-password-first");
+          toast('Please change your default password.', { icon: '🔐' });
+          navigate('/doctor/change-password-first');
         } else {
-          navigate("/doctor-dashboard");
+          navigate('/doctor-dashboard');
         }
-      } else if (authUser.role === "receptionist") {
+        break;
+      case 'receptionist':
         if (authUser.mustChangePassword) {
-          toast("Please change your default password.", { icon: "🔐" });
-          navigate("/receptionist/change-password");
+          toast('Please change your default password.', { icon: '🔐' });
+          navigate('/receptionist/change-password');
         } else {
-          navigate("/reception-dashboard");
+          navigate('/reception-dashboard');
         }
-      } else if (authUser.role === "patient") {
-        if (!authUser.profileCompleted) navigate("/patient/profile-setup");
-        else navigate("/patient-dashboard");
-      } else {
-        navigate("/");
-      }
-
-      toast.success("Login successful");
-    } catch (err) {
-      console.error("Network/login error:", err);
-      const msg = "Network error: backend not responding";
-      setError(msg);
-      toast.error(msg);
+        break;
+      case 'patient':
+        navigate(authUser.profileCompleted ? '/patient-dashboard' : '/patient/profile-setup');
+        break;
+      default:
+        navigate('/');
     }
   };
 
+  // Role options for signup
+  const roles = [
+    { value: 'PATIENT', icon: 'fa-user-injured', label: 'Patient' },
+    { value: 'DOCTOR', icon: 'fa-user-md', label: 'Doctor' },
+    { value: 'RECEPTIONIST', icon: 'fa-clinic-medical', label: 'Staff' },
+  ];
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f5f7fb",
-      }}
-    >
-      <div
-        style={{
-          width: "380px",
-          backgroundColor: "white",
-          borderRadius: "12px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-          padding: "24px 28px",
-        }}
-      >
-        <h3 style={{ textAlign: "center", marginBottom: "20px" }}>Login</h3>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "12px" }}>
-            <label style={{ display: "block", marginBottom: "4px", fontSize: "14px" }}>
-              Username or Email Address
-            </label>
-            <input
-              type="email"
-              placeholder="Enter email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            />
+    <div className="onecare-auth-page">
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loader-box">
+            <div className="medical-cross"></div>
+            <h2 className="loading-text">OneCare</h2>
           </div>
+        </div>
+      )}
 
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ display: "block", marginBottom: "4px", fontSize: "14px" }}>
-              Password
-            </label>
-            <input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: "8px", marginBottom: "16px", justifyContent: "space-between" }}>
-            <button
-              type="button"
-              onClick={() => handleRoleClick("doctor")}
-              style={{
-                flex: 1,
-                padding: "6px 0",
-                borderRadius: "4px",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "14px",
-                backgroundColor: role === "doctor" ? "#0d6efd" : "#6c757d",
-                color: "white",
-              }}
-            >
-              Doctor
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleRoleClick("receptionist")}
-              style={{
-                flex: 1,
-                padding: "6px 0",
-                borderRadius: "4px",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "14px",
-                backgroundColor: role === "receptionist" ? "#0d6efd" : "#6c757d",
-                color: "white",
-              }}
-            >
-              Receptionist
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleRoleClick("patient")}
-              style={{
-                flex: 1,
-                padding: "6px 0",
-                borderRadius: "4px",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "14px",
-                backgroundColor: role === "patient" ? "#0d6efd" : "#6c757d",
-                color: "white",
-              }}
-            >
-              Patient
-            </button>
-          </div>
-
-          <div style={{ display: "flex", marginBottom: "16px", justifyContent: "center" }}>
-            <button
-              type="button"
-              onClick={() => setRole("admin")}
-              style={{
-                padding: "6px 16px",
-                borderRadius: "4px",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "14px",
-                backgroundColor: role === "admin" ? "#0d6efd" : "#6c757d",
-                color: "white",
-              }}
-            >
-              Admin Login
-            </button>
-          </div>
-
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              padding: "8px 0",
-              backgroundColor: "#0d6efd",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              fontSize: "15px",
-              cursor: "pointer",
-              marginBottom: "8px",
-            }}
-          >
-            Login
-          </button>
-
-          {error && (
-            <div style={{ color: "red", fontSize: "13px", textAlign: "center", marginBottom: "8px" }}>
-              {error}
-            </div>
-          )}
-
-          <div style={{ textAlign: "center", fontSize: "12px", marginTop: "8px" }}>
-            <Link to="/signup" style={{ color: "blue" }}>
-              Don't have an account? Signup
-            </Link>
-          </div>
-        </form>
+      {/* Background Shapes */}
+      <div className="bg-shapes" aria-hidden="true">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
       </div>
+
+      <main className={`auth-wrapper ${isPanelActive ? 'panel-active' : ''}`}>
+
+        {/* ===== REGISTER FORM ===== */}
+        <div className="auth-form-box register-form-box">
+          <form onSubmit={handleSignupSubmit} key={`signup-${animationKey}`}>
+            <h1 className="animate-enter" style={{ '--i': 0 }}>Create Account</h1>
+
+            <div className="social-links animate-enter" style={{ '--i': 1 }}>
+              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
+              <a href="#" aria-label="Google"><i className="fab fa-google"></i></a>
+              <a href="#" aria-label="Apple"><i className="fab fa-apple"></i></a>
+            </div>
+            <span className="animate-enter" style={{ '--i': 2 }}>or use your email for registration</span>
+
+            <div className={`input-group animate-enter ${signupErrors.name ? 'has-error' : ''}`} style={{ '--i': 3 }}>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={signupForm.name}
+                onChange={(e) => handleSignupChange('name', e.target.value)}
+                autoComplete="name"
+              />
+              <i className="fas fa-user input-icon"></i>
+              {signupErrors.name && <span className="error-text">{signupErrors.name}</span>}
+            </div>
+
+            <div className={`input-group animate-enter ${signupErrors.email ? 'has-error' : ''}`} style={{ '--i': 4 }}>
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={signupForm.email}
+                onChange={(e) => handleSignupChange('email', e.target.value)}
+                autoComplete="email"
+              />
+              <i className="fas fa-envelope input-icon"></i>
+              {signupErrors.email && <span className="error-text">{signupErrors.email}</span>}
+            </div>
+
+            <div className={`input-group animate-enter ${signupErrors.phone ? 'has-error' : ''}`} style={{ '--i': 5 }}>
+              <input
+                type="tel"
+                placeholder="Phone Number"
+                value={signupForm.phone}
+                onChange={(e) => handleSignupChange('phone', e.target.value)}
+                autoComplete="tel"
+              />
+              <i className="fas fa-phone input-icon"></i>
+              {signupErrors.phone && <span className="error-text">{signupErrors.phone}</span>}
+            </div>
+
+            <div className={`input-group animate-enter ${signupErrors.password ? 'has-error' : ''}`} style={{ '--i': 6 }}>
+              <input
+                type="password"
+                placeholder="Password (min 6 characters)"
+                value={signupForm.password}
+                onChange={(e) => handleSignupChange('password', e.target.value)}
+                autoComplete="new-password"
+              />
+              <i className="fas fa-lock input-icon"></i>
+              {signupErrors.password && <span className="error-text">{signupErrors.password}</span>}
+            </div>
+
+            <div className="role-group animate-enter" style={{ '--i': 7 }}>
+              <span className="role-label">I am a:</span>
+              <div className="role-options">
+                {roles.map((role) => (
+                  <label className="role-radio-btn" key={role.value}>
+                    <input
+                      type="radio"
+                      name="role"
+                      value={role.value}
+                      checked={signupForm.role === role.value}
+                      onChange={() => handleSignupChange('role', role.value)}
+                    />
+                    <div className="role-card">
+                      <i className={`fas ${role.icon}`}></i>
+                      <span className="role-text">{role.label}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Hospital ID - shown for Doctor/Receptionist */}
+            <div className={`role-extra ${(signupForm.role === 'DOCTOR' || signupForm.role === 'RECEPTIONIST') ? 'show' : ''}`}>
+              <div className={`input-group ${signupErrors.hospitalId ? 'has-error' : ''}`}>
+                <input
+                  type="text"
+                  placeholder="Hospital ID"
+                  value={signupForm.hospitalId}
+                  onChange={(e) => handleSignupChange('hospitalId', e.target.value)}
+                />
+                <i className="fas fa-id-badge input-icon"></i>
+                {signupErrors.hospitalId && <span className="error-text">{signupErrors.hospitalId}</span>}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="animate-enter"
+              style={{ '--i': 8 }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> Signing Up...</> : 'Sign Up'}
+            </button>
+
+            <div className="mobile-switch">
+              <p>Already have an account?</p>
+              <button type="button" onClick={() => togglePanel(false)}>Sign In</button>
+            </div>
+          </form>
+        </div>
+
+        {/* ===== LOGIN FORM ===== */}
+        <div className="auth-form-box login-form-box">
+          <form onSubmit={handleLoginSubmit} key={`login-${animationKey}`}>
+            <h1 className="animate-enter" style={{ '--i': 0 }}>Welcome Back</h1>
+
+            <div className="social-links animate-enter" style={{ '--i': 1 }}>
+              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
+              <a href="#" aria-label="Google"><i className="fab fa-google"></i></a>
+              <a href="#" aria-label="Apple"><i className="fab fa-apple"></i></a>
+            </div>
+            <span className="animate-enter" style={{ '--i': 2 }}>or use your account</span>
+
+            <div className={`input-group animate-enter ${loginErrors.email ? 'has-error' : ''}`} style={{ '--i': 3 }}>
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={loginForm.email}
+                onChange={(e) => handleLoginChange('email', e.target.value)}
+                autoComplete="email"
+              />
+              <i className="fas fa-envelope input-icon"></i>
+              {loginErrors.email && <span className="error-text">{loginErrors.email}</span>}
+            </div>
+
+            <div className={`input-group animate-enter ${loginErrors.password ? 'has-error' : ''}`} style={{ '--i': 4 }}>
+              <input
+                type="password"
+                placeholder="Password"
+                value={loginForm.password}
+                onChange={(e) => handleLoginChange('password', e.target.value)}
+                autoComplete="current-password"
+              />
+              <i className="fas fa-lock input-icon"></i>
+              {loginErrors.password && <span className="error-text">{loginErrors.password}</span>}
+            </div>
+
+            <div className="forgot-pass-box animate-enter" style={{ '--i': 5 }}>
+              <Link to="/forgot-password" className="forgot-pass-link">Forgot your password?</Link>
+            </div>
+
+            <button
+              type="submit"
+              className="animate-enter"
+              style={{ '--i': 6 }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> Signing In...</> : 'Sign In'}
+            </button>
+
+            <div className="mobile-switch">
+              <p>Don't have an account?</p>
+              <button type="button" onClick={() => togglePanel(true)}>Sign Up</button>
+            </div>
+          </form>
+        </div>
+
+        {/* ===== SLIDING PANEL ===== */}
+        <div className="slide-panel-wrapper">
+          <div className="slide-panel">
+            <div className="panel-content panel-content-left">
+              <h1>OneCare</h1>
+              <p>Access your medical records, appointments, and prescriptions in one secure place.</p>
+              <button className="transparent-btn" type="button" onClick={() => togglePanel(false)}>Sign In</button>
+            </div>
+            <div className="panel-content panel-content-right">
+              <h1>Join Us</h1>
+              <p>Connect with the best healthcare professionals. Your journey to better health starts here.</p>
+              <button className="transparent-btn" type="button" onClick={() => togglePanel(true)}>Sign Up</button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

@@ -121,7 +121,6 @@ export default function PdfEditor() {
         { appointmentId, layout }
       );
       toast.success("Next appointment created successfully.");
-      console.log("Next appointment:", res.data);
     } catch (err) {
       console.error("Create next appointment failed:", err);
       toast.error("Failed to create next appointment. Check console.");

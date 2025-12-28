@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const { verifyToken } = require("../middleware/auth");
 
 // 1) by email – this MUST come first
-router.get("/api/user/email/:email", async (req, res) => {
+router.get("/api/user/email/:email", verifyToken, async (req, res) => {
   try {
     const email = decodeURIComponent(req.params.email);
     const user = await User.findOne({ email }).select("-password");
@@ -16,19 +17,8 @@ router.get("/api/user/email/:email", async (req, res) => {
 });
 
 // 2) by id
-router.get("/api/user/:id", async (req, res) => {
+router.get("/api/user/:id", verifyToken, async (req, res) => {
   try {
-    // Handle static admin ID
-    if (req.params.id === "admin-id") {
-      return res.json({
-        id: "admin-id",
-        name: "System Admin",
-        email: "admin@onecare.com",
-        role: "admin",
-        profileCompleted: true,
-      });
-    }
-
     const user = await User.findById(req.params.id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
@@ -38,8 +28,9 @@ router.get("/api/user/:id", async (req, res) => {
   }
 });
 
+
 // 3) update by id (unchanged)
-router.put("/api/user/:id", async (req, res) => {
+router.put("/api/user/:id", verifyToken, async (req, res) => {
   try {
     const {
       name,
@@ -87,7 +78,7 @@ router.put("/api/user/:id", async (req, res) => {
 });
 
 // MARK user.profileCompleted = true
-router.put("/users/:id/profile-completed", async (req, res) => {
+router.put("/users/:id/profile-completed", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
 

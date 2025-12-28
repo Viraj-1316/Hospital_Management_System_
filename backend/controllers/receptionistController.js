@@ -62,7 +62,7 @@ exports.addReceptionist = async (req, res) => {
       data: newRecp,
     });
   } catch (error) {
-    console.log("Add Receptionist Error:", error);
+    console.error("Add Receptionist Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -204,7 +204,7 @@ exports.resendCredentials = async (req, res) => {
 
     res.json({ message: "Credentials resent successfully" });
   } catch (error) {
-    console.log("Resend Credentials Error:", error);
+    console.error("Resend Credentials Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -248,7 +248,7 @@ exports.importReceptionists = async (req, res) => {
 
     res.json({ message: "Import completed successfully" });
   } catch (error) {
-    console.log("Import Error:", error);
+    console.error("Import Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

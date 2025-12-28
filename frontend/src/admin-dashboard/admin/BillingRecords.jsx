@@ -197,7 +197,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
   const [encountersList, setEncountersList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
@@ -215,8 +215,34 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
     clinic: "",
   }, []);
 
+  // --- FETCH BILLS AND ENCOUNTERS ON MOUNT ---
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [billsRes, encRes] = await Promise.all([
+          axios.get(`${API_BASE}/bills`),
+          axios.get(`${API_BASE}/encounters`)
+        ]);
+
+        // Handle both array and { data: [...] } response formats
+        const billsData = Array.isArray(billsRes.data) ? billsRes.data : billsRes.data.bills || billsRes.data.data || [];
+        const encData = Array.isArray(encRes.data) ? encRes.data : encRes.data.encounters || encRes.data.data || [];
+
+        setBills(billsData);
+        setEncountersList(encData);
+      } catch (err) {
+        console.error("Error fetching billing data:", err);
+        setError("Failed to load billing records");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   // --- DELETE HANDLERS ---
-  
+
   // 1. Open Modal (Does not delete yet)
   const openDeleteModal = (id) => {
     setBillToDelete(id);
@@ -226,7 +252,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
   // 2. Confirm Delete (Actually deletes)
   const confirmDelete = async () => {
     if (!billToDelete) return;
-    
+
     // Close modal first
     setShowDeleteModal(false);
 
@@ -260,7 +286,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
     return bills.filter((bill) => {
       const customEncId = lookupCustomId(bill);
       const combined = `${bill._id} ${customEncId} ${bill.doctorName} ${bill.clinicName} ${bill.patientName} ${bill.status}`.toLowerCase();
-      
+
       if (q && !combined.includes(q)) return false;
 
       // Column Filters
@@ -287,7 +313,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
 
       <div className="flex-grow-1 main-content" style={{ marginLeft: sidebarCollapsed ? 64 : 250 }}>
         <Navbar toggleSidebar={toggleSidebar} />
-        
+
         {/* Toast Container for Notifications */}
         <Toaster position="top-right" />
 
@@ -303,10 +329,10 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
           <div className="search-container">
             <div className="search-input-group">
               <FaSearch className="text-muted" />
-              <input 
-                type="text" 
-                className="search-input" 
-                placeholder="Search bills data..." 
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search bills data..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -319,32 +345,32 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
               <thead>
                 {/* Header Titles */}
                 <tr>
-                  <th style={{width: '50px'}}>ID</th>
+                  <th style={{ width: '50px' }}>ID</th>
                   <th>Encounter ID</th>
                   <th>Doctor Name</th>
                   <th>Clinic Name</th>
                   <th>Patient Name</th>
                   <th>Services</th>
-                  <th style={{textAlign: 'right'}}>Total</th>
-                  <th style={{textAlign: 'right'}}>Discount</th>
-                  <th style={{textAlign: 'right'}}>Amount due</th>
+                  <th style={{ textAlign: 'right' }}>Total</th>
+                  <th style={{ textAlign: 'right' }}>Discount</th>
+                  <th style={{ textAlign: 'right' }}>Amount due</th>
                   <th>Date</th>
                   <th>Status</th>
-                  <th style={{textAlign: 'right'}}>Action</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
                 {/* Header Filters */}
                 <tr className="filter-row">
-                  <td><input className="filter-input" placeholder="ID" style={{width: '40px'}} onChange={(e) => handleFilterChange("id", e.target.value)}/></td>
-                  <td><input className="filter-input" placeholder="Enc ID" onChange={(e) => handleFilterChange("encounterId", e.target.value)}/></td>
-                  <td><input className="filter-input" placeholder="Doctor" onChange={(e) => handleFilterChange("doctor", e.target.value)}/></td>
-                  <td><input className="filter-input" placeholder="Clinic" onChange={(e) => handleFilterChange("clinic", e.target.value)}/></td>
-                  <td><input className="filter-input" placeholder="Patient" onChange={(e) => handleFilterChange("patient", e.target.value)}/></td>
+                  <td><input className="filter-input" placeholder="ID" style={{ width: '40px' }} onChange={(e) => handleFilterChange("id", e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Enc ID" onChange={(e) => handleFilterChange("encounterId", e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Doctor" onChange={(e) => handleFilterChange("doctor", e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Clinic" onChange={(e) => handleFilterChange("clinic", e.target.value)} /></td>
+                  <td><input className="filter-input" placeholder="Patient" onChange={(e) => handleFilterChange("patient", e.target.value)} /></td>
                   <td></td>
                   <td></td>
                   <td></td>
-                  <td></td> 
+                  <td></td>
                   <td>
-                    <input type="date" className="filter-input" style={{width: '130px'}} onChange={(e) => handleFilterChange("date", e.target.value)}/>
+                    <input type="date" className="filter-input" style={{ width: '130px' }} onChange={(e) => handleFilterChange("date", e.target.value)} />
                   </td>
                   <td>
                     <select className="filter-input" onChange={(e) => handleFilterChange("status", e.target.value)}>
@@ -364,10 +390,10 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                 ) : (
                   pageItems.map((bill, i) => (
                     <tr key={bill._id || i}>
-                      <td style={{fontWeight: 'bold', color: '#6c757d'}}>
+                      <td style={{ fontWeight: 'bold', color: '#6c757d' }}>
                         {(page - 1) * rowsPerPage + i + 1}
                       </td>
-                      
+
                       <td>
                         <span className="enc-badge">{lookupCustomId(bill)}</span>
                       </td>
@@ -376,13 +402,13 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                       <td>{bill.clinicName}</td>
                       <td>{bill.patientName}</td>
                       <td>{Array.isArray(bill.services) ? bill.services[0] : (bill.services || "-")}</td>
-                      
-                      <td style={{textAlign: 'right'}}>{bill.totalAmount}</td>
-                      <td style={{textAlign: 'right'}}>{bill.discount}</td>
-                      <td style={{textAlign: 'right'}}>{bill.amountDue}</td>
-                      
+
+                      <td style={{ textAlign: 'right' }}>{bill.totalAmount}</td>
+                      <td style={{ textAlign: 'right' }}>{bill.discount}</td>
+                      <td style={{ textAlign: 'right' }}>{bill.amountDue}</td>
+
                       <td>{bill.date ? new Date(bill.date).toLocaleDateString() : "-"}</td>
-                      
+
                       <td>
                         <span className={bill.status === 'paid' ? "badge-status status-paid" : "badge-status status-unpaid"}>
                           {bill.status.toUpperCase()}
@@ -392,14 +418,14 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                       <td>
                         <div className="action-group">
                           <button className="btn-icon text-edit" onClick={() => navigate(`/EditBill/${bill._id}`)}>
-                            <FaEdit size={16}/>
+                            <FaEdit size={16} />
                           </button>
-                          
+
                           {/* UPDATED DELETE BUTTON */}
                           <button className="btn-icon text-delete" onClick={() => openDeleteModal(bill._id)}>
-                            <FaTrash size={14}/>
+                            <FaTrash size={14} />
                           </button>
-                          
+
                           <a href={`${API_BASE}/bills/${bill._id}/pdf`} target="_blank" rel="noopener noreferrer" className="pdf-link">
                             <FaFilePdf /> PDF
                           </a>
@@ -415,7 +441,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
           {/* Footer */}
           <div className="table-footer">
             <div className="d-flex align-items-center">
-              Rows per page: 
+              Rows per page:
               <select className="rows-selector" value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>
                 <option value={10}>10</option>
                 <option value={20}>20</option>

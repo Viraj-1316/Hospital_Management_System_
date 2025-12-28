@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { sendEmail } = require("../utils/emailService");
+const { verifyToken } = require("../middleware/auth");
 
 // POST /api/email/test-email
-router.post("/test-email", async (req, res) => {
+router.post("/test-email", verifyToken, async (req, res) => {
   const { to, message } = req.body;
 
   if (!to || !message) {
@@ -25,7 +26,7 @@ router.post("/test-email", async (req, res) => {
 });
 
 // POST /api/email/send-encounter-details
-router.post("/send-encounter-details", async (req, res) => {
+router.post("/send-encounter-details", verifyToken, async (req, res) => {
   const { to, encounterDetails } = req.body;
 
   if (!to || !encounterDetails) {

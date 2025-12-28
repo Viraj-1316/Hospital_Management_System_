@@ -5,6 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const csv = require("csv-parser");
+const { verifyToken } = require("../middleware/auth");
 
 // --- 1. CONFIGURATION FOR IMAGE/FILE UPLOAD ---
 const storage = multer.diskStorage({
@@ -40,7 +41,7 @@ const REQUIRED_HEADERS = [
 // --- 3. ROUTES ---
 
 // GET /services (Fetch with Filters)
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   try {
     const {
       page = 1,
@@ -90,7 +91,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST /services/import (CSV Import)
-router.post("/import", upload.single("file"), (req, res) => {
+router.post("/import", verifyToken, upload.single("file"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
@@ -107,7 +108,7 @@ router.post("/import", upload.single("file"), (req, res) => {
     .on("headers", (headers) => {
       // Clean headers (remove BOM which looks like ï»¿, trim whitespace, remove quotes)
       const fileHeaders = headers.map((h) => h.trim().replace(/^"|"$/g, "").replace(/^\uFEFF/, ''));
-      
+
       const missingHeaders = REQUIRED_HEADERS.filter(
         (reqHeader) => !fileHeaders.includes(reqHeader)
       );
@@ -122,12 +123,12 @@ router.post("/import", upload.single("file"), (req, res) => {
       if (headersValidated) {
         // Helper to check truthy strings loosely
         const isTrue = (val) => {
-             const s = String(val).trim().toLowerCase();
-             return s === "active" || s === "true" || s === "yes" || s === "1";
+          const s = String(val).trim().toLowerCase();
+          return s === "active" || s === "true" || s === "yes" || s === "1";
         };
 
         results.push({
-          serviceId: data.serviceId || `SVC-${Date.now()}-${Math.floor(Math.random()*1000)}`, // Auto-generate if missing
+          serviceId: data.serviceId || `SVC-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Auto-generate if missing
           name: data.name,
           category: data.category,
           clinicName: data.clinicName,
@@ -137,7 +138,7 @@ router.post("/import", upload.single("file"), (req, res) => {
           active: isTrue(data.active),
           isTelemed: isTrue(data.isTelemed),
           allowMulti: isTrue(data.allowMulti),
-          imageUrl: "" 
+          imageUrl: ""
         });
       }
     })
@@ -168,7 +169,7 @@ router.post("/import", upload.single("file"), (req, res) => {
 });
 
 // POST /services (Create Single)
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", verifyToken, upload.single("image"), async (req, res) => {
   try {
     const payload = {
       ...req.body,
@@ -180,7 +181,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     // Auto-generate ID if not provided
     if (!payload.serviceId) {
-        payload.serviceId = `SVC-${Date.now()}`;
+      payload.serviceId = `SVC-${Date.now()}`;
     }
 
     if (req.file) {
@@ -198,10 +199,10 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 // PUT /services/:id (Update)
-router.put("/:id", upload.single("image"), async (req, res) => {
+router.put("/:id", verifyToken, upload.single("image"), async (req, res) => {
   try {
     const payload = { ...req.body };
-    
+
     // Safe boolean conversion
     if (payload.active !== undefined) payload.active = payload.active === "true" || payload.active === true;
     if (payload.isTelemed !== undefined) payload.isTelemed = payload.isTelemed === "true" || payload.isTelemed === true;
@@ -222,7 +223,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 });
 
 // DELETE /services/:id
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const deleted = await Service.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: "Service not found" });

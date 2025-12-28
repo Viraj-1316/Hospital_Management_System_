@@ -36,33 +36,21 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
   const [activeTab, setActiveTab] = useState("weekly");
   // Add this near your other useState hooks
   const [filterType, setFilterType] = useState("today"); // Options: 'today', 'upcoming', 'past', 'all'
+  // Get auth config
+  const getAuthConfig = () => {
+    const token = localStorage.getItem("token");
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
   const fetchDashboardStats = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/dashboard-stats`);
+      const res = await axios.get(`${API_BASE}/dashboard-stats`, getAuthConfig());
       setStats(res.data || {});
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
     }
   };
 
-  // const fetchAppointments = async (type = "today") => {
-  //   setLoadingAppointments(true);
-
-  //   const url =
-  //     type === "all"
-  //       ? `${API_BASE}/appointments/all`
-  //       : `${API_BASE}/appointments/today`;
-
-  //   try {
-  //     const res = await axios.get(url);
-  //     setAppointments(Array.isArray(res.data) ? res.data : []);
-  //   } catch (err) {
-  //     console.error("Error loading appointments:", err);
-  //     setAppointments([]);
-  //   } finally {
-  //     setLoadingAppointments(false);
-  //   }
-  // };
   const fetchAppointments = async (type = "today") => {
     setLoadingAppointments(true);
     setFilterType(type); // Update the active button state
@@ -73,7 +61,7 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
         url = `${API_BASE}/appointments/today`;
       }
 
-      const res = await axios.get(url);
+      const res = await axios.get(url, getAuthConfig());
       let data = Array.isArray(res.data) ? res.data : [];
 
       // Client-side filtering for specific tabs
@@ -96,10 +84,11 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
       setLoadingAppointments(false);
     }
   };
+
   const fetchWeeklyStats = async (mode = "weekly") => {
     setActiveTab(mode);
     try {
-      const res = await axios.get(`${API_BASE}/appointments/${mode}`);
+      const res = await axios.get(`${API_BASE}/appointments/${mode}`, getAuthConfig());
       setWeeklyStats(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Error loading weekly stats:", err);
@@ -279,90 +268,90 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
                   </div>
                 </div>
 
-              {loadingAppointments ? (
-                <p className="text-center mb-0">Loading...</p>
-              ) : appointments.length === 0 ? (
-                <p className="text-center text-muted mb-0">
-                  No Appointments Found.
-                </p>
-              ) : (
-                <ul className="list-group">
-                  {appointments.map((appt, index) => (
-                    <li
-                      key={index}
-                      className="list-group-item d-flex justify-content-between align-items-center"
-                    >
-                      <div>
-                        <div className="fw-semibold">
-                          {appt.patientName || "Unknown Patient"}
+                {loadingAppointments ? (
+                  <p className="text-center mb-0">Loading...</p>
+                ) : appointments.length === 0 ? (
+                  <p className="text-center text-muted mb-0">
+                    No Appointments Found.
+                  </p>
+                ) : (
+                  <ul className="list-group">
+                    {appointments.map((appt, index) => (
+                      <li
+                        key={index}
+                        className="list-group-item d-flex justify-content-between align-items-center"
+                      >
+                        <div>
+                          <div className="fw-semibold">
+                            {appt.patientName || "Unknown Patient"}
+                          </div>
+                          <small className="text-muted">
+                            {appt.doctorName
+                              ? `Dr. ${appt.doctorName}`
+                              : "Doctor not set"}
+                          </small>
                         </div>
-                        <small className="text-muted">
-                          {appt.doctorName
-                            ? `Dr. ${appt.doctorName}`
-                            : "Doctor not set"}
-                        </small>
-                      </div>
-                      <span className="badge bg-primary rounded-pill">
-                        {appt.time || "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Weekly / monthly totals */}
-          <div className="col-md-4 mb-4">
-            <div className="card shadow-sm p-3 h-100">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="fw-bold mb-0">Weekly Total Appointments</h5>
-                <div className="btn-group btn-group-sm" role="group">
-                  <button
-                    type="button"
-                    className={`btn ${activeTab === "weekly"
-                        ? "btn-primary"
-                        : "btn-outline-primary"
-                      }`}
-                    onClick={() => fetchWeeklyStats("weekly")}
-                  >
-                    Weekly
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn ${activeTab === "monthly"
-                        ? "btn-primary"
-                        : "btn-outline-primary"
-                      }`}
-                    onClick={() => fetchWeeklyStats("monthly")}
-                  >
-                    Monthly
-                  </button>
-                </div>
+                        <span className="badge bg-primary rounded-pill">
+                          {appt.time || "—"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
+            </div>
 
-              {weeklyStats.length === 0 ? (
-                <p className="text-center text-muted mb-0">
-                  No Appointments Found
-                </p>
-              ) : (
-                <div>
-                  {weeklyStats.map((item, index) => (
-                    <div
-                      key={index}
-                      className="d-flex justify-content-between align-items-center mb-2"
+            {/* Right: Weekly / monthly totals */}
+            <div className="col-md-4 mb-4">
+              <div className="card shadow-sm p-3 h-100">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="fw-bold mb-0">Weekly Total Appointments</h5>
+                  <div className="btn-group btn-group-sm" role="group">
+                    <button
+                      type="button"
+                      className={`btn ${activeTab === "weekly"
+                        ? "btn-primary"
+                        : "btn-outline-primary"
+                        }`}
+                      onClick={() => fetchWeeklyStats("weekly")}
                     >
-                      <span>{item.label}</span>
-                      <span className="fw-semibold">{item.count}</span>
-                    </div>
-                  ))}
+                      Weekly
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${activeTab === "monthly"
+                        ? "btn-primary"
+                        : "btn-outline-primary"
+                        }`}
+                      onClick={() => fetchWeeklyStats("monthly")}
+                    >
+                      Monthly
+                    </button>
+                  </div>
                 </div>
-              )}
+
+                {weeklyStats.length === 0 ? (
+                  <p className="text-center text-muted mb-0">
+                    No Appointments Found
+                  </p>
+                ) : (
+                  <div>
+                    {weeklyStats.map((item, index) => (
+                      <div
+                        key={index}
+                        className="d-flex justify-content-between align-items-center mb-2"
+                      >
+                        <span>{item.label}</span>
+                        <span className="fw-semibold">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </div >
   );
 };

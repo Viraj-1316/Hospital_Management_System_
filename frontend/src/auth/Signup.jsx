@@ -1,49 +1,64 @@
-import { Link, useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
-import PhoneInput from "react-phone-input-2";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
 import API_BASE from "../config";
+import "./OneCareAuth.css";
 
 function Signup() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPanelActive, setIsPanelActive] = useState(true); // Start with signup form visible
+
+  // Form fields
   const [name, setName] = useState("");
-  const [clinicId, setClinicId] = useState("");
-  const [clinics, setClinics] = useState([]);
-  const [phone, setPhone] = useState(""); // value like "919876543210"
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("PATIENT");
+  const [hospitalId, setHospitalId] = useState("");
 
+  // Loading animation
   useEffect(() => {
-    const loadClinics = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/clinics`);
-        const data = await res.json();
-        if (data.success && Array.isArray(data.clinics)) {
-          setClinics(data.clinics);
-        } else {
-          setClinics([]);
-        }
-      } catch (err) {
-        console.error("Error fetching clinics:", err);
-        setClinics([]);
-        toast.error("Failed to load clinics");
-      }
-    };
-
-    loadClinics();
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
   }, []);
+
+  // Trigger animations on panel switch
+  const triggerAnimation = () => {
+    const animElements = document.querySelectorAll('.animate-enter');
+    animElements.forEach(el => {
+      el.style.animation = 'none';
+      el.offsetHeight; // Trigger Reflow
+      el.style.animation = null;
+    });
+  };
+
+  const togglePanel = (active) => {
+    setIsPanelActive(active);
+    triggerAnimation();
+  };
+
+  // Handle role change
+  const handleRoleChange = (newRole) => {
+    setRole(newRole);
+    if (newRole === "PATIENT") {
+      setHospitalId(""); // Clear hospital ID if patient
+    }
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
 
     if (!name || !email || !password || !phone) {
-      toast.error("All fields including mobile are required.");
+      toast.error("All fields are required.");
       return;
     }
 
-    if (!clinicId) {
-      toast.error("Please select a clinic.");
+    // Validate Hospital ID for non-patients
+    if ((role === "DOCTOR" || role === "RECEPTIONIST") && !hospitalId) {
+      toast.error("Hospital ID is required for staff.");
       return;
     }
 
@@ -63,29 +78,30 @@ function Signup() {
           email,
           password,
           phone: formattedPhone,
-          clinicId,
+          role: role.toLowerCase(), // Send as lowercase: patient, doctor, receptionist
+          hospitalId: hospitalId || undefined,
         }),
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        const msg = errData.message || "Signup failed";
-        toast.error(msg);
+        toast.error(errData.message || "Signup failed");
         return;
       }
 
       await res.json().catch(() => ({}));
 
       toast.success("Signup successful! You can now login.");
-      
+
       // Clear form
       setName("");
       setEmail("");
       setPassword("");
       setPhone("");
-      setClinicId("");
-      
-      // Optional: Navigate to login after short delay
+      setRole("PATIENT");
+      setHospitalId("");
+
+      // Navigate to login after short delay
       setTimeout(() => navigate("/"), 2000);
 
     } catch (err) {
@@ -95,123 +111,207 @@ function Signup() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f5f7fb",
-      }}
-    >
-      <div
-        style={{
-          width: "380px",
-          backgroundColor: "white",
-          borderRadius: "12px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-          padding: "24px 28px",
-        }}
-      >
-        <h3 style={{ textAlign: "center", marginBottom: "20px" }}>
-          Patient Signup
-        </h3>
-
-        <form onSubmit={handleSignup}>
-          <label>Name</label>
-          <input
-            type="text"
-            placeholder="Enter full name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={inputStyle}
-          />
-
-          <label>Clinic</label>
-          <select
-            value={clinicId}
-            onChange={(e) => setClinicId(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">Select clinic</option>
-            {clinics.map((clinic) => (
-              <option key={clinic._id} value={clinic._id}>
-                {clinic.name}
-              </option>
-            ))}
-          </select>
-
-          <label>Email</label>
-          <input
-            type="email"
-            placeholder="Enter email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
-          />
-
-          <label>Mobile Number</label>
-          <PhoneInput
-            country={"in"}
-            value={phone}
-            onChange={(value) => setPhone(value)}
-            inputStyle={{
-              width: "100%",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-            containerStyle={{ marginBottom: "10px" }}
-            enableSearch
-          />
-
-          <label>Password</label>
-          <input
-            type="password"
-            placeholder="Enter password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
-          />
-
-          <button type="submit" style={btnStyle}>
-            Signup
-          </button>
-
-          <div
-            style={{
-              textAlign: "center",
-              fontSize: "12px",
-              marginTop: "10px",
-            }}
-          >
-            <Link to="/" style={{ color: "blue" }}>
-              Already have an account? Login
-            </Link>
+    <div className="onecare-auth-page">
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="loading-overlay" id="loadingOverlay">
+          <div className="loader-box">
+            <div className="medical-cross"></div>
+            <h2 className="loading-text">OneCare</h2>
           </div>
-        </form>
+        </div>
+      )}
+
+      {/* Background Shapes */}
+      <div className="bg-shapes" aria-hidden="true">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
       </div>
+
+      <main className={`auth-wrapper ${isPanelActive ? 'panel-active' : ''}`} id="authWrapper">
+        {/* Register Form */}
+        <div className="auth-form-box register-form-box">
+          <form id="registerForm" onSubmit={handleSignup}>
+            <h1 className="animate-enter" style={{ '--i': 0 }}>Create Account</h1>
+
+            <div className="social-links animate-enter" style={{ '--i': 1 }}>
+              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
+              <a href="#" aria-label="Google"><i className="fab fa-google"></i></a>
+              <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
+            </div>
+            <span className="animate-enter" style={{ '--i': 2 }}>or use your email for registration</span>
+
+            <div className="input-group animate-enter" style={{ '--i': 3 }}>
+              <input
+                type="text"
+                placeholder="Full Name"
+                required
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <i className="fas fa-user input-icon"></i>
+            </div>
+
+            <div className="input-group animate-enter" style={{ '--i': 4 }}>
+              <input
+                type="email"
+                placeholder="Email Address"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <i className="fas fa-envelope input-icon"></i>
+            </div>
+
+            <div className="input-group animate-enter" style={{ '--i': 5 }}>
+              <input
+                type="tel"
+                placeholder="Phone Number (e.g. +919876543210)"
+                required
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              <i className="fas fa-phone input-icon"></i>
+            </div>
+
+            <div className="input-group animate-enter" style={{ '--i': 6 }}>
+              <input
+                type="password"
+                placeholder="Password"
+                required
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <i className="fas fa-lock input-icon"></i>
+            </div>
+
+            <div className="role-group animate-enter" style={{ '--i': 7 }}>
+              <span className="role-label">I am a:</span>
+              <div className="role-options">
+                <label className="role-radio-btn">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="PATIENT"
+                    checked={role === "PATIENT"}
+                    onChange={() => handleRoleChange("PATIENT")}
+                  />
+                  <div className="role-card">
+                    <i className="fas fa-user-injured"></i>
+                    <span className="role-text">Patient</span>
+                  </div>
+                </label>
+                <label className="role-radio-btn">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="DOCTOR"
+                    checked={role === "DOCTOR"}
+                    onChange={() => handleRoleChange("DOCTOR")}
+                  />
+                  <div className="role-card">
+                    <i className="fas fa-user-md"></i>
+                    <span className="role-text">Doctor</span>
+                  </div>
+                </label>
+                <label className="role-radio-btn">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="RECEPTIONIST"
+                    checked={role === "RECEPTIONIST"}
+                    onChange={() => handleRoleChange("RECEPTIONIST")}
+                  />
+                  <div className="role-card">
+                    <i className="fas fa-clinic-medical"></i>
+                    <span className="role-text">Staff</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Hospital ID field - shown for Doctor/Receptionist */}
+            <div
+              className={`role-extra ${(role === "DOCTOR" || role === "RECEPTIONIST") ? 'show' : ''}`}
+              id="professionalFields"
+            >
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder="Hospital ID"
+                  value={hospitalId}
+                  onChange={(e) => setHospitalId(e.target.value)}
+                />
+                <i className="fas fa-id-badge input-icon"></i>
+              </div>
+            </div>
+
+            <button type="submit" className="animate-enter" style={{ '--i': 8 }}>Sign Up</button>
+
+            <div className="mobile-switch">
+              <p>Already have an account?</p>
+              <button type="button" onClick={() => navigate("/")}>Sign In</button>
+            </div>
+          </form>
+        </div>
+
+        {/* Login Form (Placeholder - redirect to login page) */}
+        <div className="auth-form-box login-form-box">
+          <form>
+            <h1 className="animate-enter" style={{ '--i': 0 }}>Welcome Back</h1>
+            <div className="social-links animate-enter" style={{ '--i': 1 }}>
+              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
+              <a href="#" aria-label="Google"><i className="fab fa-google"></i></a>
+              <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
+            </div>
+            <span className="animate-enter" style={{ '--i': 2 }}>or use your account</span>
+
+            <div style={{ marginTop: '15px', textAlign: 'center' }}>
+              <Link
+                to="/"
+                style={{
+                  color: 'var(--primary)',
+                  textDecoration: 'underline',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Go to Login Page →
+              </Link>
+            </div>
+
+            <div className="mobile-switch">
+              <p>Don't have an account?</p>
+              <button type="button" onClick={() => togglePanel(true)}>Sign Up</button>
+            </div>
+          </form>
+        </div>
+
+        {/* Sliding Panel */}
+        <div className="slide-panel-wrapper">
+          <div className="slide-panel">
+            <div className="panel-content panel-content-left">
+              <h1>OneCare</h1>
+              <p>Access your medical records, appointments, and prescriptions in one secure place.</p>
+              <Link to="/">
+                <button className="transparent-btn" type="button">Sign In</button>
+              </Link>
+            </div>
+            <div className="panel-content panel-content-right">
+              <h1>Join Us</h1>
+              <p>Connect with the best healthcare professionals. Your journey to better health starts here.</p>
+              <button className="transparent-btn" type="button" onClick={() => togglePanel(true)}>Sign Up</button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
-
-const inputStyle = {
-  width: "100%",
-  padding: "8px",
-  marginBottom: "10px",
-  borderRadius: "4px",
-  border: "1px solid #ccc",
-  fontSize: "14px",
-};
-
-const btnStyle = {
-  width: "100%",
-  padding: "8px",
-  backgroundColor: "#198754",
-  color: "white",
-  border: "none",
-  borderRadius: "4px",
-  cursor: "pointer",
-  marginTop: "8px",
-};
 
 export default Signup;

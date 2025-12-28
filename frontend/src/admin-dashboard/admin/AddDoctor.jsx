@@ -83,7 +83,10 @@ const AddDoctor = () => {
         setClinicsLoading(true);
         setClinicsError("");
 
-        const res = await fetch(`${API_BASE}/api/clinics`);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_BASE}/api/clinics`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
 
         if (!res.ok) {
           throw new Error("Failed to fetch clinics");
@@ -98,7 +101,6 @@ const AddDoctor = () => {
         const list = Array.isArray(data.clinics) ? data.clinics : [];
         setClinics(list);
       } catch (err) {
-        console.error("Error loading clinics:", err);
         setClinicsError("Unable to load clinics");
         toast.error("Unable to load clinics. Please check server.");
       } finally {
@@ -159,14 +161,17 @@ const AddDoctor = () => {
 
       if (isEditMode && editDoctorId) {
         // Update existing doctor
+        const token = localStorage.getItem("token");
         const res = await fetch(`${API_BASE}/doctors/${editDoctorId}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify(doctorData),
         });
 
         const data = await res.json();
-        console.log("✅ Doctor updated:", data);
 
         if (res.ok) {
           toast.success("Doctor updated successfully!");
@@ -176,14 +181,17 @@ const AddDoctor = () => {
         }
       } else {
         // Create new doctor
+        const token = localStorage.getItem("token");
         const res = await fetch(`${API_BASE}/doctors`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify(doctorData),
         });
 
         const data = await res.json();
-        console.log("✅ Doctor added:", data);
 
         if (res.ok) {
           toast.success("Doctor added successfully!");
@@ -193,8 +201,7 @@ const AddDoctor = () => {
         }
       }
     } catch (err) {
-      console.error("❌ Error saving doctor:", err);
-      toast.error("Error saving doctor. Check console for details.");
+      toast.error("Error saving doctor.");
     } finally {
       setIsSubmitting(false);
     }
@@ -275,10 +282,10 @@ const AddDoctor = () => {
                   {clinicsLoading
                     ? "Loading clinics..."
                     : clinicsError
-                    ? "Error loading clinics"
-                    : clinics.length === 0
-                    ? "No clinics found"
-                    : "Select clinic"}
+                      ? "Error loading clinics"
+                      : clinics.length === 0
+                        ? "No clinics found"
+                        : "Select clinic"}
                 </option>
 
                 {clinics.map((clinic) => (
@@ -561,8 +568,8 @@ const AddDoctor = () => {
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="btn btn-primary d-flex align-items-center gap-2"
               disabled={isSubmitting}
             >

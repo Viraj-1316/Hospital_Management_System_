@@ -11,13 +11,14 @@ const bcrypt = require("bcryptjs");
 const generateRandomPassword = require("../utils/generatePassword");
 const { sendEmail } = require("../utils/emailService");
 const { credentialsTemplate } = require("../utils/emailTemplates");
+const { verifyToken } = require("../middleware/auth");
 
 // =================================================================
 // 1. SPECIFIC ROUTES (Must come BEFORE /:id generic routes)
 // =================================================================
 
 // Import patients from CSV
-router.post("/import", upload.single("file"), async (req, res) => {
+router.post("/import", verifyToken, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -46,9 +47,9 @@ router.post("/import", upload.single("file"), async (req, res) => {
         try {
           await PatientModel.insertMany(results);
           fs.unlinkSync(req.file.path); // Clean up uploaded file
-          res.json({ 
-            message: "Imported patients successfully", 
-            count: results.length 
+          res.json({
+            message: "Imported patients successfully",
+            count: results.length
           });
         } catch (err) {
           console.error("Database insertion error:", err);
@@ -73,16 +74,16 @@ router.post("/import", upload.single("file"), async (req, res) => {
 });
 
 // GET patient by userId (returns patient doc if exists)
-router.get("/by-user/:userId", async (req, res) => {
+router.get("/by-user/:userId", verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-       return res.status(400).json({ message: "Invalid User ID format" });
+      return res.status(400).json({ message: "Invalid User ID format" });
     }
 
     const patient = await PatientModel.findOne({ userId });
-    
+
     if (!patient) return res.status(404).json({ message: "Patient not found" });
     return res.json(patient);
   } catch (err) {
@@ -92,7 +93,7 @@ router.get("/by-user/:userId", async (req, res) => {
 });
 
 // CREATE or UPDATE a patient profile for a given userId
-router.put("/by-user/:userId", async (req, res) => {
+router.put("/by-user/:userId", verifyToken, async (req, res) => {
   try {
     let { userId } = req.params;
     const updateData = req.body;
@@ -116,11 +117,11 @@ router.put("/by-user/:userId", async (req, res) => {
     if (updateData.address) userUpdate.addressLine1 = updateData.address;
     if (updateData.city) userUpdate.city = updateData.city;
     if (updateData.postalCode) userUpdate.postalCode = updateData.postalCode;
-    
+
     if (updateData.firstName || updateData.lastName) {
-       if (updateData.firstName && updateData.lastName) {
-         userUpdate.name = `${updateData.firstName} ${updateData.lastName}`.trim();
-       }
+      if (updateData.firstName && updateData.lastName) {
+        userUpdate.name = `${updateData.firstName} ${updateData.lastName}`.trim();
+      }
     }
 
     if (Object.keys(userUpdate).length > 0) {
@@ -135,14 +136,14 @@ router.put("/by-user/:userId", async (req, res) => {
 });
 
 // Get all patients
-router.get("/", (req, res) => {
+router.get("/", verifyToken, (req, res) => {
   PatientModel.find()
     .then((patients) => res.json(patients))
     .catch((err) => res.status(500).json(err));
 });
 
 // Resend credentials
-router.post("/:id/resend-credentials", async (req, res) => {
+router.post("/:id/resend-credentials", verifyToken, async (req, res) => {
   try {
     const patient = await PatientModel.findById(req.params.id);
     if (!patient) {
@@ -167,10 +168,10 @@ router.post("/:id/resend-credentials", async (req, res) => {
         password: hashedPassword,
         role: "patient",
         name: `${patient.firstName} ${patient.lastName}`,
-        profileCompleted: true, 
+        profileCompleted: true,
       });
       await user.save();
-      
+
       if (!patient.userId) {
         patient.userId = user._id;
         await patient.save();
@@ -227,10 +228,10 @@ router.get("/:id/latest-appointment", async (req, res) => {
 });
 
 // Get patient by ID (GENERIC CATCH-ALL FOR :id)
-router.get("/:id", async (req, res) => {
+router.get("/:id", verifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        return res.status(400).json({ message: "Invalid Patient ID" });
+      return res.status(400).json({ message: "Invalid Patient ID" });
     }
     const patient = await PatientModel.findById(req.params.id);
     if (!patient) return res.status(404).json({ message: "Patient not found" });
@@ -241,7 +242,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Delete Patient
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     await PatientModel.findByIdAndDelete(req.params.id);
     res.json({ message: "Patient deleted successfully" });
@@ -251,7 +252,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Create patient (POST)
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
     const newPatient = await PatientModel.create(req.body);
     res.json({ message: "Patient added", data: newPatient });
@@ -262,7 +263,7 @@ router.post("/", async (req, res) => {
 });
 
 // Update patient (PUT for full update)
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updated = await PatientModel.findByIdAndUpdate(id, req.body, {
@@ -280,7 +281,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // Patch patient (for partial updates like status)
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const update = {};

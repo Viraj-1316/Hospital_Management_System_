@@ -1,100 +1,108 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from "react-hot-toast";
 import { setFavicon } from "./utils/setFavicon.js";
 import 'react-phone-input-2/lib/style.css';
 
+// Loading fallback for lazy-loaded components
+import LoadingFallback from "./components/LoadingFallback";
 
-/* Auth */
+/* Auth - Loaded eagerly since it's the entry point */
 import Login from "./auth/Login";
-import Signup from "./auth/Signup";
+import ForgotPassword from "./auth/ForgotPassword";
+import ResetPassword from "./auth/ResetPassword";
 
-/* Admin */
-import AdminDashboard from "./admin-dashboard/admin/AdminDashboard";
-import AddPatient from "./admin-dashboard/admin/AddPatient";
-import EditPatient from "./admin-dashboard/admin/EditPatient";
-import Patients from "./admin-dashboard/admin/Patients";
-import Doctors from "./admin-dashboard/admin/Doctors";
-import AddDoctor from "./admin-dashboard/admin/AddDoctor";
+/* Admin Dashboard Components */
+const AdminDashboard = lazy(() => import("./admin-dashboard/admin/AdminDashboard"));
+const AddPatient = lazy(() => import("./admin-dashboard/admin/AddPatient"));
+const EditPatient = lazy(() => import("./admin-dashboard/admin/EditPatient"));
+const Patients = lazy(() => import("./admin-dashboard/admin/Patients"));
+const Doctors = lazy(() => import("./admin-dashboard/admin/Doctors"));
+const AddDoctor = lazy(() => import("./admin-dashboard/admin/AddDoctor"));
+// Note: Appointment is eagerly loaded due to 429 error debugging - can be converted back to lazy() when stable
 import Appointment from "./admin-dashboard/admin/Appointments";
-import BillingRecords from "./admin-dashboard/admin/BillingRecords";
-import AddBill from "./admin-dashboard/admin/AddBill";
-import EditBill from "./admin-dashboard/admin/EditBill";
-import Services from "./admin-dashboard/admin/Services";
-import Taxes from "./admin-dashboard/admin/Taxes";
-import DoctorSession from "./admin-dashboard/admin/DoctorSession";
-import ClinicList from "./admin-dashboard/admin/ClinicList";
-import AddClinic from "./admin-dashboard/admin/AddClinic";
-import AdminProfile from "./admin-dashboard/admin/AdminProfile";
-import AdminChangePassword from "./admin-dashboard/admin/AdminChangePassword";
-import EncounterList from "./admin-dashboard/admin/EncounterList";
-import EncounterTemplateList from "./admin-dashboard/admin/EncounterTemplateList";
-import EncounterDetails from "./admin-dashboard/admin/EncounterDetails";
-import EncounterTemplateDetails from "./admin-dashboard/admin/EncounterTemplateDetails";
-import MedicalReportPage from "./admin-dashboard/admin/MedicalReportPage";
+const BillingRecords = lazy(() => import("./admin-dashboard/admin/BillingRecords"));
+const AddBill = lazy(() => import("./admin-dashboard/admin/AddBill"));
+const EditBill = lazy(() => import("./admin-dashboard/admin/EditBill"));
+const Services = lazy(() => import("./admin-dashboard/admin/Services"));
+const Taxes = lazy(() => import("./admin-dashboard/admin/Taxes"));
+const DoctorSession = lazy(() => import("./admin-dashboard/admin/DoctorSession"));
+const ClinicList = lazy(() => import("./admin-dashboard/admin/ClinicList"));
+const AddClinic = lazy(() => import("./admin-dashboard/admin/AddClinic"));
+const AdminProfile = lazy(() => import("./admin-dashboard/admin/AdminProfile"));
+const AdminChangePassword = lazy(() => import("./admin-dashboard/admin/AdminChangePassword"));
+const EncounterList = lazy(() => import("./admin-dashboard/admin/EncounterList"));
+const EncounterTemplateList = lazy(() => import("./admin-dashboard/admin/EncounterTemplateList"));
+const EncounterDetails = lazy(() => import("./admin-dashboard/admin/EncounterDetails"));
+const EncounterTemplateDetails = lazy(() => import("./admin-dashboard/admin/EncounterTemplateDetails"));
+const MedicalReportPage = lazy(() => import("./admin-dashboard/admin/MedicalReportPage"));
+const AddReceptionist = lazy(() => import("./admin-dashboard/admin/AddReceptionist"));
+const ReceptionistList = lazy(() => import("./admin-dashboard/admin/ReceptionistList"));
 
-/* Settings */
-import SettingsLayout from "./admin-dashboard/admin/settings/SettingsLayout";
-import HolidaySettings from "./admin-dashboard/admin/settings/pages/HolidaySettings";
-import EmailTemplates from "./admin-dashboard/admin/settings/pages/EmailTemplates";
-import SmsWhatsappTemplates from "./admin-dashboard/admin/settings/pages/SmsWhatsappTemplates";
-import GoogleMeetSettings from "./admin-dashboard/admin/settings/pages/GoogleMeetSettings";
-import ZoomTelemedSettings from "./admin-dashboard/admin/settings/pages/ZoomTelemedSettings";
-import ListingSettings from "./admin-dashboard/admin/settings/pages/ListingSettings";
-import ProSettings from "./admin-dashboard/admin/settings/pages/ProSettings";
-import PaymentSettings from "./admin-dashboard/admin/settings/pages/PaymentSettings";
-import AppointmentSettings from "./admin-dashboard/admin/settings/pages/AppointmentSettings";
+/* Admin Settings */
+const SettingsLayout = lazy(() => import("./admin-dashboard/admin/settings/SettingsLayout"));
+const HolidaySettings = lazy(() => import("./admin-dashboard/admin/settings/pages/HolidaySettings"));
+const EmailTemplates = lazy(() => import("./admin-dashboard/admin/settings/pages/EmailTemplates"));
+const SmsWhatsappTemplates = lazy(() => import("./admin-dashboard/admin/settings/pages/SmsWhatsappTemplates"));
+const GoogleMeetSettings = lazy(() => import("./admin-dashboard/admin/settings/pages/GoogleMeetSettings"));
+const ZoomTelemedSettings = lazy(() => import("./admin-dashboard/admin/settings/pages/ZoomTelemedSettings"));
+const ListingSettings = lazy(() => import("./admin-dashboard/admin/settings/pages/ListingSettings"));
+const ProSettings = lazy(() => import("./admin-dashboard/admin/settings/pages/ProSettings"));
+const PaymentSettings = lazy(() => import("./admin-dashboard/admin/settings/pages/PaymentSettings"));
+const AppointmentSettings = lazy(() => import("./admin-dashboard/admin/settings/pages/AppointmentSettings"));
 
-/* Patient */
-import PatientDashboard from "./patient-dashboard/Patient/PatientDashboard";
-import PatientAppointments from "./patient-dashboard/Patient/PatientAppointments";
-import PatientBookAppointment from "./patient-dashboard/Patient/PatientBookAppointment";
-import PatientProfileSetup from "./patient-dashboard/Patient/PatientProfileSetup";
-import PatientProfile from "./patient-dashboard/Patient/PatientProfile.jsx";
-import PatientChangePassword from "./patient-dashboard/Patient/PatientChangePassword";
-import Encounters from "./patient-dashboard/Patient/Encounters";
-import PatientBilling from "./patient-dashboard/Patient/PatientBills";
-import PatientReport from "./patient-dashboard/Patient/MedicalReport";
-import AppointmentDetails from "./patient-dashboard/Patient/PatientAppointmentDetails.jsx";
+/* Patient Dashboard Components */
+const PatientDashboard = lazy(() => import("./patient-dashboard/Patient/PatientDashboard"));
+const PatientAppointments = lazy(() => import("./patient-dashboard/Patient/PatientAppointments"));
+const PatientBookAppointment = lazy(() => import("./patient-dashboard/Patient/PatientBookAppointment"));
+const PatientProfileSetup = lazy(() => import("./patient-dashboard/Patient/PatientProfileSetup"));
+const PatientProfile = lazy(() => import("./patient-dashboard/Patient/PatientProfile"));
+const PatientChangePassword = lazy(() => import("./patient-dashboard/Patient/PatientChangePassword"));
+const Encounters = lazy(() => import("./patient-dashboard/Patient/Encounters"));
+const PatientBilling = lazy(() => import("./patient-dashboard/Patient/PatientBills"));
+const PatientReport = lazy(() => import("./patient-dashboard/Patient/MedicalReport"));
+const AppointmentDetails = lazy(() => import("./patient-dashboard/Patient/PatientAppointmentDetails"));
 
-/* Doctor */
-import DoctorDashboard from "./doctor-dashboard/doctor/DoctorDashboard";
-import DoctorPatients from "./doctor-dashboard/doctor/DoctorPatients";
-import DoctorAppointments from "./doctor-dashboard/doctor/DoctorAppointments";
-import DoctorServices from "./doctor-dashboard/doctor/DoctorServices";
-import DoctorAppointmentDetails from "./doctor-dashboard/doctor/DoctorAppointmentDetails";
-import DoctorProfile from "./doctor-dashboard/doctor/DoctorProfile.jsx";
-import DoctorChangePassword from "./doctor-dashboard/doctor/DoctorChangePassword";
-import DoctorFirstLoginChangePassword from "./doctor-dashboard/doctor/DoctorFirstLoginChangePassword";
-import DoctorEncounterList from "./doctor-dashboard/doctor/DoctorEncounterList";
-import DoctorEncounterDetails from "./doctor-dashboard/doctor/DoctorEncounterDetails";
-import DoctorEncounterTemplateList from "./doctor-dashboard/doctor/DoctorEncounterTemplateList";
-import DoctorEncounterTemplateDetails from "./doctor-dashboard/doctor/DoctorEncounterTemplateDetails";
-import DoctorMedicalReportPage from "./doctor-dashboard/doctor/DoctorMedicalReportPage";
-import DoctorBillingRecords from "./doctor-dashboard/doctor/DoctorBillingRecords.jsx";
-import DoctorEditBill from "./doctor-dashboard/doctor/DoctorEditBill.jsx";
-import DoctorAddBill from "./doctor-dashboard/doctor/DoctorAddBill.jsx";
-import DoctorAddPatient from "./doctor-dashboard/doctor/DoctorAddPatient.jsx";
-import DoctorEditPatient from "./doctor-dashboard/doctor/DoctorEditPatient.jsx";
+/* Doctor Dashboard Components */
+const DoctorDashboard = lazy(() => import("./doctor-dashboard/doctor/DoctorDashboard"));
+const DoctorPatients = lazy(() => import("./doctor-dashboard/doctor/DoctorPatients"));
+const DoctorAppointments = lazy(() => import("./doctor-dashboard/doctor/DoctorAppointments"));
+const DoctorServices = lazy(() => import("./doctor-dashboard/doctor/DoctorServices"));
+const DoctorAppointmentDetails = lazy(() => import("./doctor-dashboard/doctor/DoctorAppointmentDetails"));
+const DoctorProfile = lazy(() => import("./doctor-dashboard/doctor/DoctorProfile"));
+const DoctorChangePassword = lazy(() => import("./doctor-dashboard/doctor/DoctorChangePassword"));
+const DoctorFirstLoginChangePassword = lazy(() => import("./doctor-dashboard/doctor/DoctorFirstLoginChangePassword"));
+const DoctorEncounterList = lazy(() => import("./doctor-dashboard/doctor/DoctorEncounterList"));
+const DoctorEncounterDetails = lazy(() => import("./doctor-dashboard/doctor/DoctorEncounterDetails"));
+const DoctorEncounterTemplateList = lazy(() => import("./doctor-dashboard/doctor/DoctorEncounterTemplateList"));
+const DoctorEncounterTemplateDetails = lazy(() => import("./doctor-dashboard/doctor/DoctorEncounterTemplateDetails"));
+const DoctorMedicalReportPage = lazy(() => import("./doctor-dashboard/doctor/DoctorMedicalReportPage"));
+const DoctorBillingRecords = lazy(() => import("./doctor-dashboard/doctor/DoctorBillingRecords"));
+const DoctorEditBill = lazy(() => import("./doctor-dashboard/doctor/DoctorEditBill"));
+const DoctorAddBill = lazy(() => import("./doctor-dashboard/doctor/DoctorAddBill"));
+const DoctorAddPatient = lazy(() => import("./doctor-dashboard/doctor/DoctorAddPatient"));
+const DoctorEditPatient = lazy(() => import("./doctor-dashboard/doctor/DoctorEditPatient"));
 
-/* --- NEW SETTINGS IMPORTS --- */
-import SettingLayout from "./doctor-dashboard/doctor/Settings/SettingLayout";
-import Holidays from "./doctor-dashboard/doctor/Settings/Holidays";
-import DoctorSessions from "./doctor-dashboard/doctor/Settings/DoctorSessions";
-import Listings from "./doctor-dashboard/doctor/Settings/Listings";
-import GoogleMeetIntegration from "./doctor-dashboard/doctor/Settings/GoogleMeetIntegration";
+/* Doctor Settings */
+const SettingLayout = lazy(() => import("./doctor-dashboard/doctor/Settings/SettingLayout"));
+const Holidays = lazy(() => import("./doctor-dashboard/doctor/Settings/Holidays"));
+const DoctorSessions = lazy(() => import("./doctor-dashboard/doctor/Settings/DoctorSessions"));
+const Listings = lazy(() => import("./doctor-dashboard/doctor/Settings/Listings"));
+const GoogleMeetIntegration = lazy(() => import("./doctor-dashboard/doctor/Settings/GoogleMeetIntegration"));
 
-// Receptionist
-import AddReceptionist from "./admin-dashboard/admin/AddReceptionist.jsx";
-import ReceptionistList from "./admin-dashboard/admin/ReceptionistList.jsx";
-import ReceptionistChangePassword from "./reptionist/ReceptionistChangePassword.jsx";
-import ReceptionistChangePasswordPage from "./reptionist/ReceptionistChangePasswordPage.jsx";
-import ReceptionistProfile from "./reptionist/ReceptionistProfile.jsx";
-import ReptionistDashboard from "./reptionist/ReptionistDashboard";
+/* Receptionist Components */
+const ReceptionistChangePassword = lazy(() => import("./receptionist/ReceptionistChangePassword"));
+const ReceptionistChangePasswordPage = lazy(() => import("./receptionist/ReceptionistChangePasswordPage"));
+const ReceptionistProfile = lazy(() => import("./receptionist/ReceptionistProfile"));
+const ReptionistDashboard = lazy(() => import("./receptionist/ReptionistDashboard"));
 
 /* PDF Editor */
-import PdfEditor from "./pdf-editor/PdfEditor";
+const PdfEditor = lazy(() => import("./pdf-editor/PdfEditor"));
+
+// ============================================
+// APP COMPONENT
+// ============================================
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -109,16 +117,16 @@ function App() {
     let title = "OneCare";
     let icon = "/favicon.ico"; // default
 
-    if (path.startsWith("/admin-dashboard")) {
+    if (path.startsWith("/admin-dashboard") || path.startsWith("/admin") || path.startsWith("/patients") || path.startsWith("/doctors") || path.startsWith("/settings")) {
       title = "OneCare Admin Panel";
       icon = "/admin.ico";
-    } else if (path.startsWith("/doctor-dashboard")) {
+    } else if (path.startsWith("/doctor-dashboard") || path.startsWith("/doctor")) {
       title = "OneCare Doctor Portal";
       icon = "/doctor.ico";
-    } else if (path.startsWith("/patient-dashboard")) {
+    } else if (path.startsWith("/patient-dashboard") || path.startsWith("/patient")) {
       title = "OneCare Patient Portal";
       icon = "/patient.ico";
-    } else if (path.startsWith("/reception-dashboard")) {
+    } else if (path.startsWith("/reception-dashboard") || path.startsWith("/receptionist")) {
       title = "OneCare Receptionist Portal";
       icon = "/receptionist.ico";
     }
@@ -129,6 +137,7 @@ function App() {
 
   return (
     <>
+      {/* SocketProvider removed, moved to main.jsx */}
       {/* Toast Theme */}
       <Toaster
         position="top-right"
@@ -163,208 +172,196 @@ function App() {
         }}
       />
 
-      <Routes>
-        {/* Admin Section */}
-        <Route path="/admin-dashboard" element={
-          <AdminDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/admin/profile" element={
-          <AdminProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/admin/change-password" element={
-          <AdminChangePassword sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/patients" element={
-          <Patients sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/AddPatient" element={
-          <AddPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/EditPatient/:id" element={
-          <EditPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctors" element={
-          <Doctors sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/AddDoctor" element={
-          <AddDoctor sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/Appointments" element={
-          <Appointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/admin/appointments" element={
-          <Appointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/BillingRecords" element={
-          <BillingRecords sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/AddBill" element={
-          <AddBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/EditBill/:id" element={
-          <EditBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/services" element={
-          <Services sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/taxes" element={
-          <Taxes sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/DoctorSession" element={
-          <DoctorSession sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/clinic-list" element={
-          <ClinicList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/add-clinic" element={
-          <AddClinic sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/encounter-list" element={
-          <EncounterList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/encounter-templates" element={
-          <EncounterTemplateList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/encounter-details/:id" element={
-          <EncounterDetails sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/encounter-template-details/:id" element={
-          <EncounterTemplateDetails sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/admin/encounters" element={
-          <EncounterList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/admin/reports" element={
-          <MedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/encounters/:id/reports" element={
-          <MedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
+      {/* Suspense wrapper for lazy-loaded components */}
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          {/* ==================== ADMIN SECTION ==================== */}
+          <Route path="/admin-dashboard" element={
+            <AdminDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/admin/profile" element={
+            <AdminProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/admin/change-password" element={
+            <AdminChangePassword sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/patients" element={
+            <Patients sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/AddPatient" element={
+            <AddPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/EditPatient/:id" element={
+            <EditPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctors" element={
+            <Doctors sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/AddDoctor" element={
+            <AddDoctor sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/Appointments" element={
+            <Appointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/admin/appointments" element={
+            <Appointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/BillingRecords" element={
+            <BillingRecords sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/AddBill" element={
+            <AddBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/EditBill/:id" element={
+            <EditBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/services" element={
+            <Services sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/taxes" element={
+            <Taxes sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/DoctorSession" element={
+            <DoctorSession sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/clinic-list" element={
+            <ClinicList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/add-clinic" element={
+            <AddClinic sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/encounter-list" element={
+            <EncounterList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/encounter-templates" element={
+            <EncounterTemplateList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/encounter-details/:id" element={
+            <EncounterDetails sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/encounter-template-details/:id" element={
+            <EncounterTemplateDetails sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/admin/encounters" element={
+            <EncounterList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/admin/reports" element={
+            <MedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/encounters/:id/reports" element={
+            <MedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/receptionists" element={
+            <ReceptionistList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/add-receptionist" element={
+            <AddReceptionist sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
 
-        {/* Settings Section */}
-        <Route path="/settings" element={<SettingsLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}>
-          <Route index element={<HolidaySettings />} />
-          <Route path="holidays" element={<HolidaySettings />} />
-          <Route path="email-templates" element={<EmailTemplates />} />
-          <Route path="sms-whatsapp-templates" element={<SmsWhatsappTemplates />} />
-          <Route path="google-meet" element={<GoogleMeetSettings />} />
-          <Route path="zoom-telemed" element={<ZoomTelemedSettings />} />
-          <Route path="listings" element={<ListingSettings />} />
-          <Route path="pro-settings" element={<ProSettings />} />
-          <Route path="payments" element={<PaymentSettings />} />
-          <Route path="appointment-settings" element={<AppointmentSettings />} />
-        </Route>
+          {/* Admin Settings Section */}
+          <Route path="/settings" element={<SettingsLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}>
+            <Route index element={<HolidaySettings />} />
+            <Route path="holidays" element={<HolidaySettings />} />
+            <Route path="email-templates" element={<EmailTemplates />} />
+            <Route path="sms-whatsapp-templates" element={<SmsWhatsappTemplates />} />
+            <Route path="google-meet" element={<GoogleMeetSettings />} />
+            <Route path="zoom-telemed" element={<ZoomTelemedSettings />} />
+            <Route path="listings" element={<ListingSettings />} />
+            <Route path="pro-settings" element={<ProSettings />} />
+            <Route path="payments" element={<PaymentSettings />} />
+            <Route path="appointment-settings" element={<AppointmentSettings />} />
+          </Route>
 
-        {/* Doctor Section */}
+          {/* ==================== DOCTOR SECTION ==================== */}
+          <Route path="/doctor-dashboard" element={
+            <DoctorDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/patients" element={
+            <DoctorPatients sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/appointments" element={
+            <DoctorAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/services" element={
+            <DoctorServices sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/appointments/:id" element={<DoctorAppointmentDetails />} />
+          <Route path="/doctor/profile" element={
+            <DoctorProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/change-password" element={<DoctorChangePassword />} />
+          <Route path="/doctor/change-password-first" element={<DoctorFirstLoginChangePassword />} />
+          <Route path="/doctor/encounters" element={<DoctorEncounterList />} />
+          <Route path="/doctor/encounters/:id" element={<DoctorEncounterDetails />} />
+          <Route path="/doctor/encounter-templates" element={<DoctorEncounterTemplateList />} />
+          <Route path="/doctor/encounter-template-details/:id" element={<DoctorEncounterTemplateDetails />} />
+          <Route path="/doctor/encounters/:id/reports" element={<DoctorMedicalReportPage />} />
+          <Route path="/doctor/patients/view/:patientId" element={<DoctorEncounterList />} />
+          <Route path="/doctor/billing" element={
+            <DoctorBillingRecords sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/add-bill" element={
+            <DoctorAddBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/edit-bill/:id" element={
+            <DoctorEditBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/AddPatient" element={
+            <DoctorAddPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/doctor/EditPatient/:id" element={
+            <DoctorEditPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
 
-        <Route path="/doctor-dashboard" element={
-          <DoctorDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/patients" element={
-          <DoctorPatients sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/appointments" element={
-          <DoctorAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/services" element={
-          <DoctorServices sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/appointments/:id" element={<DoctorAppointmentDetails />} />
-        <Route path="/doctor/profile" element={
-          <DoctorProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/change-password" element={<DoctorChangePassword />} />
-        <Route path="/doctor/change-password-first" element={<DoctorFirstLoginChangePassword />} />
-        <Route path="/doctor/encounters" element={<DoctorEncounterList />} />
-        <Route path="/doctor/encounters/:id" element={<DoctorEncounterDetails />} />
-        <Route path="/doctor/encounter-templates" element={<DoctorEncounterTemplateList />} />
-        <Route path="/doctor/encounter-template-details/:id" element={<DoctorEncounterTemplateDetails />} />
-        <Route path="/doctor/encounters/:id/reports" element={<DoctorMedicalReportPage />} />
-        <Route
-          path="/doctor/patients/view/:patientId"
-          element={<DoctorEncounterList />}  // Re-use Encounter List to show history
-        />
-        <Route path="/doctor/billing" element={
-          <DoctorBillingRecords sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
+          {/* Doctor Settings */}
+          <Route path="/doctor/settings" element={<SettingLayout />}>
+            <Route index element={<Holidays />} />
+            <Route path="holidays" element={<Holidays />} />
+            <Route path="sessions" element={<DoctorSessions />} />
+            <Route path="listings" element={<Listings />} />
+            <Route path="integration" element={<GoogleMeetIntegration />} />
+          </Route>
 
-        <Route path="/doctor/add-bill" element={
-          <DoctorAddBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/edit-bill/:id" element={
-          <DoctorEditBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/AddPatient" element={
-          <DoctorAddPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/doctor/EditPatient/:id" element={
-          <DoctorEditPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
+          {/* ==================== PATIENT SECTION ==================== */}
+          <Route path="/patient" element={
+            <PatientDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/patient-dashboard" element={
+            <PatientDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/patient/appointments" element={
+            <PatientAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/patient/book" element={
+            <PatientBookAppointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/patient/profile-setup" element={<PatientProfileSetup />} />
+          <Route path="/patient/profile" element={<PatientProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+          <Route path="/patient/change-password" element={<PatientChangePassword sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+          <Route path="/patient/encounters" element={<Encounters sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+          <Route path="/patient/billing" element={<PatientBilling sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+          <Route path="/patient/reports" element={<PatientReport sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
+          <Route path="/patient/appointments/:id" element={<AppointmentDetails />} />
 
-        {/* NEW: Settings Routes (Nested) */}
-        <Route path="/doctor/settings" element={<SettingLayout />}>
-          <Route index element={<Holidays />} /> {/* Default to Holidays */}
-          <Route path="holidays" element={<Holidays />} />
-          <Route path="sessions" element={<DoctorSessions />} />
-          <Route path="listings" element={<Listings />} />
-          <Route path="integration" element={<GoogleMeetIntegration />} />
-        </Route>
+          {/* ==================== RECEPTIONIST SECTION ==================== */}
+          <Route path="/reception-dashboard" element={<ReptionistDashboard />} />
+          <Route path="/receptionist/change-password" element={<ReceptionistChangePassword />} />
+          <Route path="/reception/change-password" element={<ReceptionistChangePasswordPage />} />
+          <Route path="/receptionist/profile" element={
+            <ReceptionistProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
 
-        {/* Patient Section */}
+          {/* ==================== OTHER ==================== */}
+          <Route path="/pdf-editor" element={<PdfEditor />} />
 
-        <Route path="/patient" element={
-          <PatientDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/patient-dashboard" element={
-          <PatientDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/patient/appointments" element={
-          <PatientAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/patient/book" element={
-          <PatientBookAppointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/patient/profile-setup" element={<PatientProfileSetup />} />
-        <Route path="/patient/profile" element={<PatientProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-        <Route path="/patient/change-password" element={<PatientChangePassword sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />} />
-        <Route
-          path="/patient/encounters"
-          element={<Encounters sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
-        />
-        <Route
-          path="/patient/billing"
-          element={<PatientBilling sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
-        />
-        <Route
-          path="/patient/reports"
-          element={<PatientReport sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}
-        />
-        <Route path="/patient/appointments/:id" element={<AppointmentDetails />} />
-
-        {/* Others */}
-
-        <Route path="/reception-dashboard" element={<ReptionistDashboard />} />
-        <Route path="/pdf-editor" element={<PdfEditor />} />
-
-        {/* Receptionist Section */}
-
-        <Route path="/receptionists" element={
-          <ReceptionistList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/add-receptionist" element={
-          <AddReceptionist sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-        <Route path="/receptionist/change-password" element={<ReceptionistChangePassword />} />
-        <Route path="/reception/change-password" element={<ReceptionistChangePasswordPage />} />
-        <Route path="/receptionist/profile" element={
-          <ReceptionistProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-        } />
-
-        {/* Auth */}
-
-        <Route path="/" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-      </Routes>
+          {/* ==================== AUTH ==================== */}
+          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

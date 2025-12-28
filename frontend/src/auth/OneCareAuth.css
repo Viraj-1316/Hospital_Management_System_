@@ -1,0 +1,677 @@
+/* ==============================================
+   OneCare Auth - Modern Login/Signup Styles
+   ============================================== */
+
+/* --- CSS VARIABLES --- */
+:root {
+    --primary: #4e54c8;
+    --secondary: #8f94fb;
+    --accent: #00d2ff;
+    --text-dark: #333;
+    --text-light: #fff;
+    --bg-gradient: linear-gradient(135deg, #4e54c8, #8f94fb);
+    --input-bg: #f4f8f7;
+    --error-color: #e74c3c;
+    --transition-speed: 0.3s;
+}
+
+/* --- SCOPED RESET --- */
+.onecare-auth-page * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- PAGE CONTAINER --- */
+.onecare-auth-page {
+    background: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+    overflow-x: hidden;
+}
+
+/* --- ANIMATED BACKGROUND SHAPES --- */
+.bg-shapes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.shape {
+    position: absolute;
+    filter: blur(50px);
+    opacity: 0.6;
+    animation: floatShape 20s infinite alternate;
+    will-change: transform;
+}
+
+.shape-1 {
+    top: -10%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: #8f94fb;
+    border-radius: 50%;
+}
+
+.shape-2 {
+    bottom: -10%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: #00d2ff;
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    animation-delay: -5s;
+}
+
+.shape-3 {
+    top: 40%;
+    left: 40%;
+    width: 300px;
+    height: 300px;
+    background: #4e54c8;
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+    animation-delay: -10s;
+}
+
+@keyframes floatShape {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(50px, 50px) rotate(20deg);
+    }
+}
+
+/* --- LOADING OVERLAY --- */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+}
+
+.loader-box {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.medical-cross {
+    width: 50px;
+    height: 50px;
+    background: var(--primary);
+    clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%,
+            65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%);
+    animation: rotatePulse 1.5s infinite ease-in-out;
+}
+
+@keyframes rotatePulse {
+    0% {
+        transform: rotate(0deg) scale(0.8);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: rotate(90deg) scale(1.1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: rotate(180deg) scale(0.8);
+        opacity: 0.8;
+    }
+}
+
+.loading-text {
+    color: var(--primary);
+    margin-top: 15px;
+    font-size: 20px;
+    letter-spacing: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* --- AUTH WRAPPER (Main Container) --- */
+.auth-wrapper {
+    background-color: #fff;
+    border-radius: 30px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    width: 900px;
+    max-width: 100%;
+    min-height: 650px;
+    display: flex;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* --- FORM BOXES --- */
+.auth-form-box {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.6s ease-in-out;
+    padding: 0 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-form-box {
+    left: 0;
+    width: 50%;
+    z-index: 2;
+}
+
+.register-form-box {
+    left: 0;
+    width: 50%;
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Panel Active States */
+.auth-wrapper.panel-active .login-form-box {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.auth-wrapper.panel-active .register-form-box {
+    transform: translateX(100%);
+    opacity: 1;
+    z-index: 5;
+    pointer-events: all;
+    animation: fadeIn 0.6s;
+}
+
+@keyframes fadeIn {
+
+    0%,
+    49.99% {
+        opacity: 0;
+        z-index: 1;
+    }
+
+    50%,
+    100% {
+        opacity: 1;
+        z-index: 5;
+    }
+}
+
+/* --- FORM STYLES --- */
+.onecare-auth-page form {
+    background-color: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+}
+
+.onecare-auth-page h1 {
+    font-weight: 700;
+    margin: 0;
+    color: var(--primary);
+    font-size: 26px;
+}
+
+.onecare-auth-page form>span {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 6px;
+}
+
+/* --- SOCIAL LINKS --- */
+.social-links {
+    margin: 8px 0;
+}
+
+.social-links a {
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 4px;
+    height: 35px;
+    width: 35px;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: var(--transition-speed);
+    font-size: 14px;
+}
+
+.social-links a:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(78, 84, 200, 0.3);
+}
+
+/* --- INPUT GROUPS --- */
+.input-group {
+    position: relative;
+    width: 100%;
+    margin: 5px 0;
+}
+
+.input-group input {
+    background-color: var(--input-bg);
+    border: 2px solid transparent;
+    padding: 10px 15px 10px 40px;
+    width: 100%;
+    border-radius: 8px;
+    outline: none;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    height: 40px;
+}
+
+/* Icon uses fixed top position so it doesn't move with error text */
+.input-icon {
+    position: absolute;
+    left: 14px;
+    top: 20px;
+    /* Fixed: half of 40px input height */
+    transform: translateY(-50%);
+    color: #aaa;
+    transition: var(--transition-speed);
+    font-size: 14px;
+}
+
+.input-group input:focus {
+    background-color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 10px rgba(78, 84, 200, 0.1);
+}
+
+.input-group input:focus+.input-icon {
+    color: var(--primary);
+}
+
+/* Error States */
+.input-group.has-error input {
+    border-color: var(--error-color);
+    background-color: #fef5f5;
+}
+
+.input-group.has-error .input-icon {
+    color: var(--error-color);
+}
+
+.error-text {
+    display: block;
+    color: var(--error-color);
+    font-size: 10px;
+    text-align: left;
+    margin-top: 2px;
+    padding-left: 5px;
+    line-height: 1.2;
+}
+
+/* --- FORGOT PASSWORD --- */
+.forgot-pass-box {
+    width: 100%;
+    text-align: right;
+    margin-bottom: 15px;
+    margin-top: 5px;
+}
+
+.forgot-pass-link {
+    color: #777;
+    font-size: 12px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.forgot-pass-link:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* --- ROLE SELECTOR --- */
+.role-group {
+    width: 100%;
+    margin: 6px 0;
+}
+
+.role-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.role-options {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.role-radio-btn {
+    cursor: pointer;
+}
+
+.role-radio-btn input {
+    display: none;
+}
+
+.role-card {
+    padding: 8px 12px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 70px;
+    transition: var(--transition-speed);
+    background: #fafafa;
+}
+
+.role-card i {
+    font-size: 16px;
+    margin-bottom: 3px;
+    color: #aaa;
+}
+
+.role-card .role-text {
+    font-size: 11px;
+    font-weight: 500;
+    color: #777;
+}
+
+.role-radio-btn input:checked+.role-card {
+    border-color: var(--primary);
+    background: rgba(78, 84, 200, 0.05);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05);
+}
+
+.role-radio-btn input:checked+.role-card i,
+.role-radio-btn input:checked+.role-card .role-text {
+    color: var(--primary);
+}
+
+/* Role Extra Fields (Hospital ID) */
+.role-extra {
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.role-extra.show {
+    max-height: 100px;
+    opacity: 1;
+}
+
+/* --- SLIDING PANEL --- */
+.slide-panel-wrapper {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    transition: transform 0.6s ease-in-out;
+    z-index: 100;
+}
+
+.auth-wrapper.panel-active .slide-panel-wrapper {
+    transform: translateX(-100%);
+}
+
+.slide-panel {
+    background: var(--bg-gradient);
+    background-size: 200% 200%;
+    animation: gradientMove 6s ease infinite;
+    color: #fff;
+    position: relative;
+    left: -100%;
+    height: 100%;
+    width: 200%;
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out;
+}
+
+@keyframes gradientMove {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.auth-wrapper.panel-active .slide-panel {
+    transform: translateX(50%);
+}
+
+.panel-content {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    text-align: center;
+    top: 0;
+    height: 100%;
+    width: 50%;
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out;
+}
+
+.panel-content h1 {
+    color: #fff;
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.panel-content p {
+    font-size: 14px;
+    margin-bottom: 30px;
+    line-height: 1.5;
+}
+
+.panel-content-left {
+    transform: translateX(-20%);
+}
+
+.auth-wrapper.panel-active .panel-content-left {
+    transform: translateX(0);
+}
+
+.panel-content-right {
+    right: 0;
+    transform: translateX(0);
+}
+
+.auth-wrapper.panel-active .panel-content-right {
+    transform: translateX(20%);
+}
+
+/* --- BUTTONS --- */
+.onecare-auth-page button {
+    border-radius: 50px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 12px 45px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.onecare-auth-page button:hover:not(:disabled) {
+    background: var(--secondary);
+    transform: scale(1.05);
+}
+
+.onecare-auth-page button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.onecare-auth-page button.transparent-btn {
+    background: transparent;
+    border: 2px solid #fff;
+    box-shadow: none;
+}
+
+.onecare-auth-page button.transparent-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Spinner icon animation */
+.onecare-auth-page button .fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- ENTRANCE ANIMATIONS --- */
+.animate-enter {
+    animation: slideUpFade 0.5s ease forwards;
+    animation-delay: calc(0.1s * var(--i));
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- MOBILE RESPONSIVE --- */
+.mobile-switch {
+    display: none;
+    margin-top: 20px;
+}
+
+.mobile-switch p {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.mobile-switch button {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 8px 25px;
+    box-shadow: none;
+}
+
+.mobile-switch button:hover {
+    background: rgba(78, 84, 200, 0.1);
+    transform: none;
+}
+
+@media (max-width: 768px) {
+    .auth-wrapper {
+        width: 100%;
+        min-height: auto;
+        border-radius: 15px;
+    }
+
+    .slide-panel-wrapper {
+        display: none;
+    }
+
+    .auth-form-box {
+        width: 100%;
+        position: relative;
+        padding: 30px 20px;
+    }
+
+    .login-form-box,
+    .register-form-box {
+        left: 0;
+        width: 100%;
+    }
+
+    .register-form-box {
+        display: none;
+        opacity: 1;
+    }
+
+    .auth-wrapper.panel-active .register-form-box {
+        display: flex;
+        animation: fadeIn 0.5s;
+        pointer-events: all;
+    }
+
+    .auth-wrapper.panel-active .login-form-box {
+        display: none;
+    }
+
+    .mobile-switch {
+        display: block;
+    }
+
+    .role-options {
+        flex-wrap: wrap;
+    }
+
+    .role-card {
+        min-width: 70px;
+        padding: 8px 12px;
+    }
+}

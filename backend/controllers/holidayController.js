@@ -3,7 +3,7 @@ const Doctor = require("../models/Doctor");
 
 exports.createHoliday = async (req, res) => {
   try {
-    console.log("➡️ Incoming holiday data:", req.body);
+
 
     const { doctorId, fromDate, toDate } = req.body;
     if (!doctorId || !fromDate || !toDate) {
@@ -25,11 +25,11 @@ exports.createHoliday = async (req, res) => {
     });
 
     await holiday.save();
-    console.log("✅ Holiday created successfully:", holiday);
+
     res.status(201).json(holiday);
 
   } catch (err) {
-    console.error("🔥 Error creating holiday:", err);
+    console.error("Error creating holiday:", err);
     res.status(500).json({ message: "Internal Server Error", error: err.message });
   }
 };
@@ -37,7 +37,7 @@ exports.createHoliday = async (req, res) => {
 exports.getHolidays = async (req, res) => {
   try {
     const holidays = await Holiday.find()
-      .populate("doctorId", "firstName lastName") 
+      .populate("doctorId", "firstName lastName")
       .sort({ autoId: 1 });
 
     res.status(200).json(holidays);

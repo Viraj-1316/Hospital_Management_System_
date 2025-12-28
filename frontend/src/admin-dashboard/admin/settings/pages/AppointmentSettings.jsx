@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 import { FaQuestionCircle, FaSave } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import API_BASE from "../../../../config";
 
 const AppointmentSettings = () => {
   // State for Restrict Advance Appointment Booking
@@ -13,16 +15,65 @@ const AppointmentSettings = () => {
   const [smsReminder, setSmsReminder] = useState(false);
   const [whatsappReminder, setWhatsappReminder] = useState(false);
 
-  const handleSaveBookingSettings = () => {
-    // Logic to save booking settings
-    console.log({ bookingOpenBefore, bookingCloseBefore, allowSameDay });
-    toast.success("Booking settings saved successfully!");
+  // Initial Fetch
+  React.useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(`${API_BASE}/api/settings/appointment`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data) {
+        setBookingOpenBefore(data.bookingOpenBefore ?? 365);
+        setBookingCloseBefore(data.bookingCloseBefore ?? 0);
+        setAllowSameDay(data.allowSameDay ?? false);
+        setEmailReminder(data.emailReminder ?? false);
+        setSmsReminder(data.smsReminder ?? false);
+        setWhatsappReminder(data.whatsappReminder ?? false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch settings", err);
+      // toast.error("Failed to load settings");
+    }
   };
 
-  const handleSaveReminderSettings = () => {
-    // Logic to save reminder settings
-    console.log({ emailReminder, smsReminder, whatsappReminder });
-    toast.success("Reminder settings saved successfully!");
+  const handleSaveBookingSettings = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const payload = {
+        bookingOpenBefore,
+        bookingCloseBefore,
+        allowSameDay,
+      };
+      await axios.put(`${API_BASE}/api/settings/appointment`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Booking settings saved successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save booking settings");
+    }
+  };
+
+  const handleSaveReminderSettings = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const payload = {
+        emailReminder,
+        smsReminder,
+        whatsappReminder,
+      };
+      await axios.put(`${API_BASE}/api/settings/appointment`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Reminder settings saved successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save reminder settings");
+    }
   };
 
   return (
@@ -56,25 +107,25 @@ const AppointmentSettings = () => {
               />
             </div>
           </div>
-          
+
           <p className="text-muted small mb-4">
             For example, Booking Open Before: 60 days, Booking Close Before: 7 days, As consideration for the current date, The appointment booking opens 60 days ago and closed 7 days ago.
           </p>
 
           <div className="d-flex align-items-center gap-3 mb-4">
-             <div className="form-check form-switch">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="allowSameDay"
-                  checked={allowSameDay}
-                  onChange={(e) => setAllowSameDay(e.target.checked)}
-                  style={{ width: "3em", height: "1.5em" }}
-                />
-             </div>
-             <label className="fw-bold text-secondary small mb-0" htmlFor="allowSameDay">
-                Allow Same Day Booking Only
-             </label>
+            <div className="form-check form-switch">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="allowSameDay"
+                checked={allowSameDay}
+                onChange={(e) => setAllowSameDay(e.target.checked)}
+                style={{ width: "3em", height: "1.5em" }}
+              />
+            </div>
+            <label className="fw-bold text-secondary small mb-0" htmlFor="allowSameDay">
+              Allow Same Day Booking Only
+            </label>
           </div>
 
           <div className="d-flex justify-content-end">
@@ -107,7 +158,7 @@ const AppointmentSettings = () => {
                 <label className="fw-bold text-secondary small mb-0" htmlFor="emailReminder">Email Reminder</label>
               </div>
             </div>
-            
+
             <div className="col-md-4">
               <div className="d-flex align-items-center gap-3">
                 <div className="form-check form-switch">

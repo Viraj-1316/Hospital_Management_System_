@@ -24,7 +24,10 @@ export default function DoctorNavbar({ onToggle }) {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE}/doctors/profile/${userId}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/doctors/profile/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         const data = await res.json();
         setProfileData({

@@ -1,495 +1,3 @@
-// const express = require("express");
-// const router = express.Router();
-// const fs = require("fs");
-// const path = require("path");
-// const csv = require("csv-parser");
-// const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
-// const mongoose = require("mongoose");
-
-// const AppointmentModel = require("../models/Appointment");
-// const PatientModel = require("../models/Patient");
-// const DoctorModel = require("../models/Doctor");
-// const HolidayModel = require("../models/Holiday"); 
-// const { sendEmail } = require("../utils/emailService");
-// const { appointmentBookedTemplate } = require("../utils/emailTemplates");
-// const { sendWhatsAppMessage } = require("../utils/whatsappService");
-// const upload = require("../middleware/upload");
-
-// // --- HELPER: Generate Time Slots ---
-// const generateTimeSlots = (startStr, endStr, intervalMins) => {
-//   const slots = [];
-//   let current = new Date(`2000-01-01T${startStr}`);
-//   const end = new Date(`2000-01-01T${endStr}`);
-
-//   while (current < end) {
-//     const timeString = current.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-//     slots.push(timeString);
-//     current.setMinutes(current.getMinutes() + intervalMins);
-//   }
-//   return slots;
-// };
-
-// // ==========================================
-// // 1. SPECIFIC ROUTES (MUST BE AT THE TOP)
-// // ==========================================
-
-// // GET /appointments/slots
-// router.get("/slots", async (req, res) => {
-//   try {
-//     const { doctorId, date } = req.query;
-//     if (!doctorId || !date) return res.status(400).json({ message: "Doctor ID and Date are required" });
-
-//     const requestDate = new Date(date); 
-//     const holiday = await HolidayModel.findOne({
-//       doctorId: doctorId,
-//       fromDate: { $lte: requestDate },
-//       toDate: { $gte: requestDate }
-//     });
-
-//     if (holiday) return res.json({ message: "Doctor is on holiday", slots: [], isHoliday: true });
-
-//     const allSlots = generateTimeSlots("09:00:00", "17:00:00", 30);
-//     const bookedAppointments = await AppointmentModel.find({
-//       doctorId: doctorId, date: date, status: { $ne: "cancelled" }
-//     }).select("time");
-
-//     const bookedTimes = bookedAppointments.map(a => a.time);
-//     const availableSlots = allSlots.filter(time => !bookedTimes.includes(time));
-
-//     res.json({ slots: availableSlots, isHoliday: false });
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error checking slots" });
-//   }
-// });
-
-// // GET /appointments/today
-// router.get("/today", async (req, res) => {
-//   try {
-//     // 1. Calculate Start and End of Today
-//     const startOfDay = new Date();
-//     startOfDay.setHours(0, 0, 0, 0);
-//     const endOfDay = new Date();
-//     endOfDay.setHours(23, 59, 59, 999);
-
-//     // 2. Query for Date Range
-//     const query = {
-//       date: { $gte: startOfDay, $lte: endOfDay }
-//     };
-
-//     const list = await AppointmentModel.find(query)
-//       .sort({ createdAt: -1 })
-//       .populate("patientId", "firstName lastName email phone")
-//       .populate("doctorId", "name clinic firstName lastName")
-//       .lean();
-
-//     const normalized = list.map(a => {
-//       const copy = { ...a };
-//       if (copy.doctorId && typeof copy.doctorId === "object") {
-//          copy.doctorName = copy.doctorName || copy.doctorId.name || "";
-//          copy.clinic = copy.clinic || copy.doctorId.clinic || "";
-//       }
-//       return copy;
-//     });
-
-//     res.json(normalized);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // GET /appointments/weekly
-// router.get("/weekly", async (req, res) => {
-//   try {
-//     const stats = [];
-//     const today = new Date();
-//     for (let i = 6; i >= 0; i--) {
-//       const d = new Date(today);
-//       d.setDate(today.getDate() - i);
-
-//       // Create start and end for that specific day
-//       const startOfDay = new Date(d); startOfDay.setHours(0,0,0,0);
-//       const endOfDay = new Date(d); endOfDay.setHours(23,59,59,999);
-
-//       const count = await AppointmentModel.countDocuments({ 
-//           date: { $gte: startOfDay, $lte: endOfDay } 
-//       });
-
-//       const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-//       stats.push({ label: dayName, count });
-//     }
-//     res.json(stats);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // GET /appointments/monthly
-// router.get("/monthly", async (req, res) => {
-//   try {
-//     const stats = [];
-//     const today = new Date();
-//     for (let i = 3; i >= 0; i--) {
-//         const start = new Date(today);
-//         start.setDate(today.getDate() - (i * 7) - 6);
-//         start.setHours(0,0,0,0); // Start of range
-
-//         const end = new Date(start);
-//         end.setDate(start.getDate() + 7); // End of range (7 days later)
-
-//         const count = await AppointmentModel.countDocuments({ 
-//             date: { $gte: start, $lt: end }
-//         });
-
-//         stats.push({ label: `Week ${4-i}`, count });
-//     }
-//     res.json(stats);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // GET /appointments/all
-// router.get("/all", async (req, res) => {
-//   try {
-//     const list = await AppointmentModel.find()
-//       .sort({ createdAt: -1 })
-//       .populate("patientId", "firstName lastName email phone")
-//       .populate("doctorId", "name clinic firstName lastName")
-//       .lean();
-//     res.json(list);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // POST /appointments/import
-// router.post("/import", upload.single("file"), async (req, res) => {
-//   try {
-//     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-//     const results = [];
-//     fs.createReadStream(req.file.path)
-//       .pipe(csv())
-//       .on("data", (row) => {
-//         results.push({
-//           date: row.date,
-//           clinic: row["Clinic name"],
-//           services: row.Service,
-//           doctorName: row["Doctor name"],
-//           patientName: row["Patient name"],
-//           status: row.Status || "booked",
-//         });
-//       })
-//       .on("end", async () => {
-//         await AppointmentModel.insertMany(results);
-//         fs.unlinkSync(req.file.path);
-//         res.json({ message: "Imported appointments", count: results.length });
-//       })
-//       .on("error", (err) => {
-//         res.status(500).json({ message: "CSV parse error" });
-//       });
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // ==========================================
-// // 2. GENERAL ROUTES (Search, List, Create)
-// // ==========================================
-
-// // LIST APPOINTMENTS (Search / Filter)
-// router.get("/", async (req, res) => {
-//   try {
-//     const q = {};
-//     if (req.query.date) q.date = req.query.date;
-//     if (req.query.clinic) q.clinic = { $regex: req.query.clinic, $options: "i" };
-//     if (req.query.patient) q.patientName = { $regex: req.query.patient, $options: "i" };
-//     if (req.query.doctor) q.doctorName = { $regex: req.query.doctor, $options: "i" };
-//     if (req.query.status) q.status = req.query.status;
-
-//     if (req.query.patientId && mongoose.Types.ObjectId.isValid(req.query.patientId)) {
-//         q.patientId = req.query.patientId;
-//     }
-//     if (req.query.doctorId && mongoose.Types.ObjectId.isValid(req.query.doctorId)) {
-//         q.doctorId = req.query.doctorId;
-//     }
-
-//     const list = await AppointmentModel.find(q)
-//       .sort({ createdAt: -1 })
-//       .limit(1000)
-//       .populate("patientId", "firstName lastName email phone")
-//       .populate("doctorId", "name clinic firstName lastName")
-//       .lean();
-
-//     const normalized = list.map(a => {
-//       const copy = { ...a };
-//       if (copy.doctorId && typeof copy.doctorId === "object") {
-//          copy.doctorName = copy.doctorName || copy.doctorId.name || "";
-//          copy.clinic = copy.clinic || copy.doctorId.clinic || "";
-//       }
-//       return copy;
-//     });
-
-//     res.json(normalized);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // CREATE APPOINTMENT
-// router.post("/", async (req, res) => {
-//   try {
-//     // Holiday Check
-//     if (req.body.doctorId && req.body.date) {
-//         const apptDate = new Date(req.body.date);
-//         const onHoliday = await HolidayModel.findOne({
-//             doctorId: req.body.doctorId,
-//             fromDate: { $lte: apptDate },
-//             toDate: { $gte: apptDate }
-//         });
-//         if (onHoliday) return res.status(400).json({ message: `Doctor is on holiday.` });
-//     }
-
-//     const payload = {
-//       patientId: (req.body.patientId && req.body.patientId !== "") ? req.body.patientId : null,
-//       patientName: req.body.patientName || "Patient",
-//       patientEmail: req.body.patientEmail || "",
-//       patientPhone: req.body.patientPhone || "",
-//       doctorId: (req.body.doctorId && req.body.doctorId !== "") ? req.body.doctorId : null,
-//       doctorName: req.body.doctorName || "",
-//       clinic: req.body.clinic || "",
-//       date: req.body.date || "",
-//       time: req.body.time || "",
-//       services: req.body.services || req.body.servicesDetail || "",
-//       charges: req.body.charges || 0,
-//       paymentMode: req.body.paymentMode || "",
-//       status: req.body.status || "upcoming",
-//       createdAt: new Date(),
-//     };
-
-//     const created = await AppointmentModel.create(payload);
-
-//     // Notifications (Safe check)
-//     try {
-//         if (payload.patientEmail) {
-//             sendEmail({
-//                 to: payload.patientEmail,
-//                 subject: "Confirmed | OneCare",
-//                 html: appointmentBookedTemplate(payload),
-//             });
-//         }
-//     } catch (e) { console.log("Email error:", e.message); }
-
-//     return res.status(201).json(created);
-//   } catch (err) {
-//     console.error("Create Appointment Error:", err);
-//     return res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // ==========================================
-// // 3. DYNAMIC ID ROUTES (MUST BE AT THE BOTTOM)
-// // ==========================================
-
-// // PDF Generation
-// router.get("/:id/pdf", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({message: "Invalid ID"});
-
-//     const appt = await AppointmentModel.findById(id);
-//     if (!appt) return res.status(404).json({ message: "Appointment not found" });
-
-//     // --- Prepare Data ---
-//     let doctor = null;
-//     if (appt.doctorName) {
-//       const parts = appt.doctorName.split(" ");
-//       doctor = await DoctorModel.findOne({ firstName: parts[0] });
-//     }
-
-//     const clinicName = appt.clinic || doctor?.clinic || "OneCare Medical Center";
-//     const clinicEmail = doctor?.email || "support@onecare.com";
-//     const clinicPhone = doctor?.phone || "+91 12345 67890";
-
-//     const todayFormatted = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-//     const apptDateFormatted = appt.date ? new Date(appt.date).toLocaleDateString("en-US", { weekday: 'short', year: "numeric", month: "long", day: "numeric" }) : "N/A";
-//     const apptId = String(appt._id).substring(0, 8).toUpperCase(); 
-
-//     // Calculate Services
-//     let serviceLines = [];
-//     const rawService = appt.services || appt.serviceName || "General Consultation";
-//     if (typeof rawService === 'string') {
-//         serviceLines = rawService.split(',').map(s => s.trim()).filter(Boolean);
-//     } else if (Array.isArray(rawService)) {
-//         serviceLines = rawService;
-//     } else {
-//         serviceLines = ["General Consultation"];
-//     }
-
-//     const totalCharges = Number(appt.charges) || 0;
-//     const serviceCount = serviceLines.length || 1;
-//     const perItemCost = (totalCharges / serviceCount).toFixed(0); 
-//     const totalBillText = `Rs. ${totalCharges}/-`;
-
-//     // --- PDF Setup ---
-//     const pdfDoc = await PDFDocument.create();
-//     const page = pdfDoc.addPage([595, 842]);
-//     const { width, height } = page.getSize();
-//     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-//     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-//     const primaryColor = rgb(0, 0.53, 0.71);
-//     const black = rgb(0, 0, 0);
-//     const gray = rgb(0.4, 0.4, 0.4);
-//     const lightGray = rgb(0.92, 0.92, 0.92);
-
-//     let cursorY = height - 50;
-//     const margin = 50;
-
-//     // Header
-//     page.drawText(clinicName.toUpperCase(), { x: margin, y: cursorY, size: 18, font: fontBold, color: primaryColor });
-//     page.drawText(`Date: ${todayFormatted}`, { x: width - margin - 130, y: cursorY, size: 10, font: fontRegular, color: black });
-//     page.drawText(`Booking ID: #${apptId}`, { x: width - margin - 130, y: cursorY - 15, size: 10, font: fontBold, color: black });
-
-//     let detailsY = cursorY - 18;
-//     page.drawText(`Phone: ${clinicPhone}`, { x: margin, y: detailsY, size: 10, font: fontRegular, color: gray });
-//     detailsY -= 12;
-//     page.drawText(`Email: ${clinicEmail}`, { x: margin, y: detailsY, size: 10, font: fontRegular, color: gray });
-
-//     cursorY -= 80;
-//     page.drawRectangle({ x: 0, y: cursorY - 10 , width: width, height: 30, color: primaryColor });
-//     page.drawText("APPOINTMENT CONFIRMATION", { x: (width - 200) / 2, y: cursorY, size: 14, font: fontBold, color: rgb(1,1,1) });
-
-//     cursorY -= 50;
-//     const col2 = 320;
-//     page.drawText("PATIENT DETAILS", { x: margin, y: cursorY+15, size: 10, font: fontBold, color: gray });
-//     page.drawText(appt.patientName || "N/A", { x: margin, y: cursorY, size: 14, font: fontBold, color: black });
-
-//     page.drawText("DOCTOR DETAILS", { x: col2, y: cursorY+15, size: 10, font: fontBold, color: gray });
-//     page.drawText(`Dr. ${appt.doctorName || "Unknown"}`, { x: col2, y: cursorY, size: 14, font: fontBold, color: black });
-
-//     cursorY -= 40;
-//     page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
-//     cursorY -= 30;
-
-//     page.drawText("APPOINTMENT DETAILS", { x: margin, y: cursorY, size: 12, font: fontBold, color: primaryColor });
-//     cursorY -= 20;
-
-//     const drawDetailRow = (label, value, xPos, yPos) => {
-//        page.drawText(label, { x: xPos, y: yPos, size: 9, font: fontRegular, color: gray });
-//        page.drawText(value, { x: xPos, y: yPos - 12, size: 11, font: fontBold, color: black });
-//     };
-
-//     drawDetailRow("Date", apptDateFormatted, margin, cursorY);
-//     drawDetailRow("Time", appt.time || "N/A", margin + 180, cursorY);
-
-//     let statusColor = black;
-//     if((appt.status || "").toUpperCase() === 'BOOKED') statusColor = rgb(0, 0.6, 0);
-//     page.drawText("Status", { x: width - margin - 80, y: cursorY, size: 9, font: fontRegular, color: gray });
-//     page.drawText((appt.status || "Booked").toUpperCase(), { x: width - margin - 80, y: cursorY - 12, size: 11, font: fontBold, color: statusColor });
-
-//     cursorY -= 50;
-
-//     // Service Table
-//     page.drawRectangle({ x: margin, y: cursorY, width: width - (margin*2), height: 25, color: lightGray });
-//     page.drawText("Service / Description", { x: margin + 10, y: cursorY + 7, size: 10, font: fontBold, color: black });
-//     page.drawText("Amount", { x: width - margin - 70, y: cursorY + 7, size: 10, font: fontBold, color: black });
-
-//     cursorY -= 20; 
-
-//     serviceLines.forEach((service, index) => {
-//         const lineText = `${index + 1}. ${service}`;
-//         const amountText = `Rs. ${perItemCost}/-`;
-//         page.drawText(lineText, { x: margin + 10, y: cursorY, size: 10, font: fontRegular, color: black });
-//         page.drawText(amountText, { x: width - margin - 70, y: cursorY, size: 10, font: fontRegular, color: black });
-//         cursorY -= 20; 
-//     });
-
-//     cursorY += 5; 
-//     page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
-
-//     cursorY -= 30;
-//     page.drawText("Total Amount:", { x: width - margin - 150, y: cursorY, size: 12, font: fontBold, color: black });
-//     page.drawText(totalBillText, { x: width - margin - 70, y: cursorY, size: 12, font: fontBold, color: primaryColor });
-
-//     cursorY -= 15;
-//     page.drawText(`Payment Mode: ${appt.paymentMode || "Manual"}`, { x: width - margin - 150, y: cursorY, size: 9, font: fontRegular, color: gray });
-
-//     const footerY = 50;
-//     page.drawLine({ start: { x: margin, y: footerY + 15 }, end: { x: width - margin, y: footerY + 15 }, thickness: 1, color: lightGray });
-//     const generatedDate = new Date().toLocaleString("en-US");
-//     page.drawText(`Generated on: ${generatedDate}`, { x: margin, y: footerY, size: 8, font: fontRegular, color: gray });
-
-//     const pdfBytes = await pdfDoc.save();
-//     res.setHeader("Content-Type", "application/pdf");
-//     res.setHeader("Content-Disposition", `inline; filename=Appointment_${apptId}.pdf`);
-//     res.send(Buffer.from(pdfBytes));
-
-//   } catch (err) {
-//     console.log(err);
-//     res.status(500).json({ message: "PDF generation failed" });
-//   }
-// });
-
-// // GET Single Appointment by ID (This captures IDs, so keep it low)
-// router.get("/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid ID" });
-
-//     const appt = await AppointmentModel.findById(id)
-//       .populate("patientId", "firstName lastName email phone")
-//       .populate("doctorId", "name clinic firstName lastName")
-//       .lean();
-
-//     if (!appt) return res.status(404).json({ message: "Appointment not found" });
-//     return res.json(appt);
-//   } catch (err) {
-//     return res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // Cancel appointment
-// router.put("/:id/cancel", async (req, res) => {
-//   try {
-//     const appt = await AppointmentModel.findByIdAndUpdate(
-//       req.params.id,
-//       { status: "cancelled" },
-//       { new: true }
-//     );
-//     if (!appt) return res.status(404).json({ message: "Appointment not found" });
-//     res.json({ message: "Appointment cancelled", data: appt });
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // UPDATE appointment
-// router.put("/:id", async (req, res) => {
-//   try {
-//     const updated = await AppointmentModel.findByIdAndUpdate(
-//       req.params.id,
-//       req.body,
-//       { new: true }
-//     );
-//     if (!updated) return res.status(404).json({ message: "Appointment not found" });
-//     res.json({ message: "Appointment updated", data: updated });
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// // Delete appointment
-// router.delete("/:id", async (req, res) => {
-//   try {
-//     const deleted = await AppointmentModel.findByIdAndDelete(req.params.id);
-//     if (!deleted) return res.status(404).json({ message: "Appointment not found" });
-//     res.json({ message: "Appointment deleted successfully" });
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// module.exports = router;
-
 const express = require("express");
 const router = express.Router();
 const fs = require("fs");
@@ -506,6 +14,14 @@ const { sendEmail } = require("../utils/emailService");
 const { appointmentBookedTemplate } = require("../utils/emailTemplates");
 const { sendWhatsAppMessage } = require("../utils/whatsappService");
 const upload = require("../middleware/upload");
+const logger = require("../utils/logger");
+const { emitToRole, emitToUser, emitToAdmin } = require("../utils/socketServer");
+const {
+  patientPopulate,
+  doctorPopulate,
+  normalizeDocuments
+} = require("../utils/populateHelper");
+const { verifyToken } = require("../middleware/auth");
 
 // --- HELPER: Generate Time Slots ---
 const generateTimeSlots = (startStr, endStr, intervalMins) => {
@@ -522,9 +38,9 @@ const generateTimeSlots = (startStr, endStr, intervalMins) => {
 };
 
 // ==========================================
-// 1. GET AVAILABLE SLOTS (Logic for Frontend)
+// GET AVAILABLE SLOTS
 // ==========================================
-router.get("/slots", async (req, res) => {
+router.get("/slots", verifyToken, async (req, res) => {
   try {
     const { doctorId, date } = req.query;
 
@@ -532,11 +48,7 @@ router.get("/slots", async (req, res) => {
       return res.status(400).json({ message: "Doctor ID and Date are required" });
     }
 
-    // 1. CHECK IF DOCTOR IS ON HOLIDAY
-    // We convert the requested date to a Date object
     const requestDate = new Date(date);
-
-    // Check if the requested date falls within any holiday range for this doctor
     const holiday = await HolidayModel.findOne({
       doctorId: doctorId,
       fromDate: { $lte: requestDate },
@@ -544,7 +56,6 @@ router.get("/slots", async (req, res) => {
     });
 
     if (holiday) {
-      // If on holiday, return empty array immediately
       return res.json({
         message: "Doctor is on holiday",
         slots: [],
@@ -552,44 +63,31 @@ router.get("/slots", async (req, res) => {
       });
     }
 
-    // 2. IF NOT ON HOLIDAY, GENERATE SLOTS
-    // (Assuming standard 9 AM - 5 PM for now, customize based on DoctorModel if needed)
     const allSlots = generateTimeSlots("09:00:00", "17:00:00", 30);
-
-    // 3. REMOVE BOOKED SLOTS
-    // Find existing appointments for this doctor on this date
-    // Note: Assuming 'date' in AppointmentModel is stored as YYYY-MM-DD string or Date object. 
-    // Adjust query matches your DB format.
     const bookedAppointments = await AppointmentModel.find({
       doctorId: doctorId,
-      date: date, // Ensuring string match "YYYY-MM-DD"
+      date: date,
       status: { $ne: "cancelled" }
     }).select("time");
 
     const bookedTimes = bookedAppointments.map(a => a.time);
-
-    // Filter out booked times
     const availableSlots = allSlots.filter(time => !bookedTimes.includes(time));
 
     res.json({ slots: availableSlots, isHoliday: false });
-
   } catch (err) {
-    console.error("Error fetching slots:", err);
+    console.error("Error fetching slots:", err.message);
     res.status(500).json({ message: "Server error checking slots" });
   }
 });
 
-
 // ==========================================
-// 2. CREATE APPOINTMENT (With Holiday Block)
+// CREATE APPOINTMENT
 // ==========================================
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
-    // --- STEP 1: HOLIDAY VALIDATION ---
+    // Holiday validation
     if (req.body.doctorId && req.body.date) {
       const apptDate = new Date(req.body.date);
-
-      // Check if date falls in a holiday range
       const onHoliday = await HolidayModel.findOne({
         doctorId: req.body.doctorId,
         fromDate: { $lte: apptDate },
@@ -602,17 +100,14 @@ router.post("/", async (req, res) => {
         });
       }
     }
-    // ----------------------------------
 
     const payload = {
       patientId: req.body.patientId || null,
       patientName: req.body.patientName || req.body.patient || "Patient",
       patientEmail: req.body.patientEmail || req.body.email || "",
       patientPhone: req.body.patientPhone || req.body.phone || "",
-
       doctorId: req.body.doctorId || null,
       doctorName: req.body.doctorName || req.body.doctor || "",
-
       clinic: req.body.clinic || "",
       date: req.body.date || "",
       time: req.body.time || "",
@@ -626,7 +121,7 @@ router.post("/", async (req, res) => {
 
     const created = await AppointmentModel.create(payload);
 
-    // Logic to fetch email/phone if missing
+    // Fetch email/phone if missing
     let targetEmail = payload.patientEmail;
     let targetPhone = payload.patientPhone;
 
@@ -638,15 +133,17 @@ router.post("/", async (req, res) => {
           if (!targetPhone) targetPhone = patientDoc.phone || patientDoc.mobile;
         }
       } catch (e) {
-        console.log("Warning: Could not fetch patient details for notification");
+        logger.debug("Could not fetch patient contact info for notification", { patientId: payload.patientId, error: e.message });
       }
     }
 
-    // Notifications
+    // Send notifications
     let formattedDate = payload.date;
     try {
       if (payload.date) formattedDate = new Date(payload.date).toLocaleDateString("en-GB");
-    } catch (e) { }
+    } catch (e) {
+      logger.debug("Could not format appointment date", { date: payload.date, error: e.message });
+    }
 
     if (targetEmail) {
       sendEmail({
@@ -668,144 +165,142 @@ router.post("/", async (req, res) => {
       sendWhatsAppMessage(targetPhone, whatsappBody);
     }
 
+    // Real-time Notification
+    try {
+      emitToAdmin("appointment:created", created);
+      if (payload.doctorId) {
+        emitToUser(payload.doctorId, "appointment:created", created);
+      }
+    } catch (err) {
+      logger.error("Socket emit error:", err);
+    }
+
     return res.status(201).json(created);
   } catch (err) {
-    console.error("Error creating appointment:", err);
+    logger.error("Error creating appointment", { error: err.message });
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
-// List appointments with optional filters
-router.get("/", async (req, res) => {
+// ==========================================
+// LIST APPOINTMENTS
+// ==========================================
+// ==========================================
+// LIST APPOINTMENTS (Cursor-based Pagination)
+// ==========================================
+router.get("/", verifyToken, async (req, res) => {
   try {
-    const q = {};
-    if (req.query.date) q.date = req.query.date;
-    if (req.query.clinic) q.clinic = { $regex: req.query.clinic, $options: "i" };
-    if (req.query.patient) q.patientName = { $regex: req.query.patient, $options: "i" };
-    if (req.query.doctor) q.doctorName = { $regex: req.query.doctor, $options: "i" };
-    if (req.query.status) q.status = req.query.status;
+    const {
+      doctorId,
+      patientId,
+      date,
+      status,
+      limit = 20,
+      cursor,
+      search
+    } = req.query;
 
-    // Filter by patientId
-    if (req.query.patientId) {
-      if (mongoose.Types.ObjectId.isValid(req.query.patientId)) {
-        const p = await PatientModel.findOne({
-          $or: [{ _id: req.query.patientId }, { userId: req.query.patientId }],
-        });
-        if (p) q.patientId = p._id;
-        else q.patientId = req.query.patientId;
-      } else {
-        q.patientId = req.query.patientId;
-      }
+    let query = {};
+
+    // Standard filters
+    if (doctorId && mongoose.Types.ObjectId.isValid(doctorId)) query.doctorId = doctorId;
+    if (patientId && mongoose.Types.ObjectId.isValid(patientId)) query.patientId = patientId;
+    if (status) query.status = status;
+
+    // Date filter
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      query.date = { $gte: startOfDay, $lte: endOfDay };
     }
 
-    // Filter by doctorId
-    if (req.query.doctorId && mongoose.Types.ObjectId.isValid(req.query.doctorId)) {
-      q.doctorId = req.query.doctorId;
+    // Text search (simple regex on fields if search term provided)
+    if (search) {
+      const searchRegex = { $regex: search, $options: "i" };
+      query.$or = [
+        { patientName: searchRegex },
+        { doctorName: searchRegex },
+        { clinic: searchRegex }
+      ];
     }
 
-    const list = await AppointmentModel.find(q)
-      .sort({ createdAt: -1 })
-      .limit(1000)
-      .populate({
-        path: "patientId",
-        select: "firstName lastName email phone",
-        model: "Patient"
-      })
-      .populate({
-        path: "doctorId",
-        select: "name clinic firstName lastName",
-        model: "Doctor"
-      })
+    // Cursor-based pagination logic
+    if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+      query._id = { $lt: cursor };
+    }
+
+    const pageSize = parseInt(limit) || 20;
+
+    const appointments = await AppointmentModel.find(query)
+      .sort({ _id: -1 })
+      .limit(pageSize)
+      .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
+      .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
       .lean();
 
-    // Normalize data for frontend
-    const normalized = list.map(a => {
+    // Determine next cursor
+    const nextCursor = appointments.length === pageSize
+      ? appointments[appointments.length - 1]._id
+      : null;
+
+    // Normalize functionality (inline to avoid dependency issues if helper changes)
+    const normalized = appointments.map(a => {
       const copy = { ...a };
       if (copy.patientId && typeof copy.patientId === "object") {
         const p = copy.patientId;
-        copy.patientName = copy.patientName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || copy.patientName;
+        copy.patientName = copy.patientName || `${p.firstName || ""} ${p.lastName || ""}`.trim();
         copy.patientEmail = copy.patientEmail || p.email || "";
         copy.patientPhone = copy.patientPhone || p.phone || "";
       }
       if (copy.doctorId && typeof copy.doctorId === "object") {
         const d = copy.doctorId;
         const docName = d.name || `${d.firstName || ""} ${d.lastName || ""}`.trim();
-        copy.doctorName = copy.doctorName || docName || "";
-        copy.clinic = copy.clinic || d.clinic || copy.clinic;
+        copy.doctorName = copy.doctorName || docName;
+        copy.clinic = copy.clinic || d.clinic || "";
       }
       return copy;
     });
 
-    res.json(normalized);
+    res.json({
+      data: normalized,
+      pagination: {
+        nextCursor,
+        hasMore: !!nextCursor,
+        limit: pageSize
+      }
+    });
   } catch (err) {
-    console.error("appointments list error:", err);
+    console.error("Appointments list error:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 // GET /appointments/all
-router.get("/all", async (req, res) => {
+router.get("/all", verifyToken, async (req, res) => {
   try {
     const list = await AppointmentModel.find()
       .sort({ createdAt: -1 })
-      .populate({
-        path: "patientId",
-        select: "firstName lastName email phone",
-        model: "Patient",
-      })
-      .populate({
-        path: "doctorId",
-        select: "name clinic firstName lastName",
-        model: "Doctor",
-      })
+      .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
+      .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
       .lean();
     res.json(list);
   } catch (err) {
-    console.error("Error fetching all appointments:", err);
+    console.error("Error fetching all appointments:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 // GET /appointments/today
-// router.get("/today", async (req, res) => {
-//   try {
-//     const today = new Date();
-//     const yyyy = today.getFullYear();
-//     const mm = String(today.getMonth() + 1).padStart(2, "0");
-//     const dd = String(today.getDate()).padStart(2, "0");
-//     const todayStr = `${yyyy}-${mm}-${dd}`;
-
-//     const list = await AppointmentModel.find({ date: todayStr })
-//       .sort({ createdAt: -1 })
-//       .populate({
-//         path: "patientId",
-//         select: "firstName lastName email phone",
-//         model: "Patient",
-//       })
-//       .populate({
-//         path: "doctorId",
-//         select: "name clinic firstName lastName",
-//         model: "Doctor", 
-//       })
-//       .lean();
-//     res.json(list);
-//   } catch (err) {
-//     console.error("Error fetching today's appointments:", err);
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// GET /appointments/today
-router.get("/today", async (req, res) => {
+router.get("/today", verifyToken, async (req, res) => {
   try {
-    // Create Start and End of today
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Use $gte (Greater Than or Equal) and $lte (Less Than or Equal)
     const list = await AppointmentModel.find({
       date: { $gte: startOfDay, $lte: endOfDay }
     })
@@ -816,64 +311,26 @@ router.get("/today", async (req, res) => {
 
     res.json(list);
   } catch (err) {
-    console.error("Error fetching today's appointments:", err);
+    console.error("Error fetching today's appointments:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 // GET /appointments/weekly
-// router.get("/weekly", async (req, res) => {
-//   try {
-//     const stats = [];
-//     const today = new Date();
-//     // for (let i = 6; i >= 0; i--) {
-//     //   const d = new Date(today);
-//     //   d.setDate(today.getDate() - i);
-//     //   const yyyy = d.getFullYear();
-//     //   const mm = String(d.getMonth() + 1).padStart(2, "0");
-//     //   const dd = String(d.getDate()).padStart(2, "0");
-//     //   const dateStr = `${yyyy}-${mm}-${dd}`;
-//     //   const count = await AppointmentModel.countDocuments({ date: dateStr });
-//     //   const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-//     //   stats.push({ label: dayName, count });
-//     // }
-//     // ... inside the for loop ...
-//     for (let i = 6; i >= 0; i--) {
-//       const d = new Date(today);
-//       d.setDate(today.getDate() - i);
-
-//       const startOfDay = new Date(d.setHours(0, 0, 0, 0));
-//       const endOfDay = new Date(d.setHours(23, 59, 59, 999));
-
-//       const count = await AppointmentModel.countDocuments({
-//         date: { $gte: startOfDay, $lte: endOfDay }
-//       });
-
-//       const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-//       stats.push({ label: dayName, count });
-//     }
-//     res.json(stats);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// GET /appointments/weekly
-router.get("/weekly", async (req, res) => {
+router.get("/weekly", verifyToken, async (req, res) => {
   try {
     const stats = [];
     const today = new Date();
-    
-    // Loop from 6 days ago up to today (i=0)
+
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
 
-      // Define Start and End of that specific day
-      const startOfDay = new Date(d); startOfDay.setHours(0,0,0,0);
-      const endOfDay = new Date(d); endOfDay.setHours(23,59,59,999);
+      const startOfDay = new Date(d);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(d);
+      endOfDay.setHours(23, 59, 59, 999);
 
-      // Query using $expr to match BOTH Strings and Date Objects
       const count = await AppointmentModel.countDocuments({
         $expr: {
           $and: [
@@ -893,82 +350,47 @@ router.get("/weekly", async (req, res) => {
 });
 
 // GET /appointments/monthly
-// router.get("/monthly", async (req, res) => {
-//   try {
-//     const stats = [];
-//     const today = new Date();
-//     for (let i = 3; i >= 0; i--) {
-//       const start = new Date(today);
-//       start.setDate(today.getDate() - (i * 7) - 6);
-//       let count = 0;
-//       for (let j = 0; j < 7; j++) {
-//         const d = new Date(start);
-//         d.setDate(start.getDate() + j);
-//         const yyyy = d.getFullYear();
-//         const mm = String(d.getMonth() + 1).padStart(2, "0");
-//         const dd = String(d.getDate()).padStart(2, "0");
-//         const dateStr = `${yyyy}-${mm}-${dd}`;
-//         count += await AppointmentModel.countDocuments({ date: dateStr });
-//       }
-//       stats.push({ label: `Week ${4 - i}`, count });
-//     }
-//     res.json(stats);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
-
-// GET /appointments/monthly
-router.get("/monthly", async (req, res) => {
+router.get("/monthly", verifyToken, async (req, res) => {
   try {
     const stats = [];
     const today = new Date();
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth(); // 0 = Jan, 11 = Dec
-    
-    // We want 4 buckets: Week 1, Week 2, Week 3, Week 4
+    const currentMonth = today.getMonth();
+
     for (let i = 0; i < 4; i++) {
-        
-        // Calculate Start Date of the week
-        // i=0 -> Day 1, i=1 -> Day 8, etc.
-        const start = new Date(currentYear, currentMonth, (i * 7) + 1);
-        start.setHours(0, 0, 0, 0);
+      const start = new Date(currentYear, currentMonth, (i * 7) + 1);
+      start.setHours(0, 0, 0, 0);
 
-        // Calculate End Date of the week
-        let end;
-        if (i === 3) {
-            // If it is "Week 4", extend it to the very last day of the month
-            // (This covers days 22 to 30/31)
-            end = new Date(currentYear, currentMonth + 1, 0); 
-            end.setHours(23, 59, 59, 999);
-        } else {
-            // Otherwise, just add 6 days (to make a 7-day week)
-            end = new Date(currentYear, currentMonth, (i * 7) + 7);
-            end.setHours(23, 59, 59, 999);
+      let end;
+      if (i === 3) {
+        end = new Date(currentYear, currentMonth + 1, 0);
+        end.setHours(23, 59, 59, 999);
+      } else {
+        end = new Date(currentYear, currentMonth, (i * 7) + 7);
+        end.setHours(23, 59, 59, 999);
+      }
+
+      const count = await AppointmentModel.countDocuments({
+        $expr: {
+          $and: [
+            { $gte: [{ $toDate: "$date" }, start] },
+            { $lte: [{ $toDate: "$date" }, end] }
+          ]
         }
+      });
 
-        // Count appointments using the robust $expr check (handles Strings & Dates)
-        const count = await AppointmentModel.countDocuments({ 
-            $expr: {
-              $and: [
-                { $gte: [{ $toDate: "$date" }, start] },
-                { $lte: [{ $toDate: "$date" }, end] }
-              ]
-            }
-        });
-        
-        stats.push({ label: `Week ${i + 1}`, count });
+      stats.push({ label: `Week ${i + 1}`, count });
     }
-    
+
     res.json(stats);
   } catch (err) {
-    console.error("Monthly stats error:", err);
+    console.error("Monthly stats error:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
-// Csv File Import data 
-router.post("/import", upload.single("file"), async (req, res) => {
+// CSV File Import
+router.post("/import", verifyToken, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -992,17 +414,17 @@ router.post("/import", upload.single("file"), async (req, res) => {
         res.json({ message: "Imported appointments", count: results.length });
       })
       .on("error", (err) => {
-        console.error("CSV parse error:", err);
+        console.error("CSV parse error:", err.message);
         res.status(500).json({ message: "CSV parse error" });
       });
   } catch (err) {
-    console.error("Import error:", err);
+    console.error("Import error:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 // PDF Generation
-router.get("/:id/pdf", async (req, res) => {
+router.get("/:id/pdf", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const appt = await AppointmentModel.findById(id);
@@ -1023,7 +445,6 @@ router.get("/:id/pdf", async (req, res) => {
     const addressLines = String(rawAddress).split(/\r?\n/).slice(0, 2);
     const patientName = appt.patientName || "N/A";
 
-    // Dates
     const todayFormatted = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     const apptDateObj = appt.date ? new Date(appt.date) : null;
     const apptDateFormatted = apptDateObj ? apptDateObj.toLocaleDateString("en-US", { weekday: 'short', year: "numeric", month: "long", day: "numeric" }) : "N/A";
@@ -1036,7 +457,6 @@ router.get("/:id/pdf", async (req, res) => {
     const serviceText = appt.services || "General Consultation";
     const totalBill = appt.charges ? `Rs. ${appt.charges}/-` : "Rs. 0/-";
 
-    // PDF Creation
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595, 842]);
     const { width, height } = page.getSize();
@@ -1060,7 +480,9 @@ router.get("/:id/pdf", async (req, res) => {
         const logoDims = logoImg.scale(0.25);
         page.drawImage(logoImg, { x: margin, y: cursorY - logoDims.height + 10, width: logoDims.width, height: logoDims.height });
       }
-    } catch (e) { }
+    } catch (e) {
+      logger.debug("Could not embed logo in PDF", { error: e.message });
+    }
 
     const textStartX = 180;
     page.drawText(clinicName.toUpperCase(), { x: textStartX, y: cursorY, size: 18, font: fontBold, color: primaryColor });
@@ -1088,8 +510,6 @@ router.get("/:id/pdf", async (req, res) => {
     page.drawText("PATIENT DETAILS", { x: col1, y: cursorY + 15, size: 10, font: fontBold, color: gray });
     cursorY -= 15;
     page.drawText(patientName, { x: col1, y: cursorY + 15, size: 14, font: fontBold, color: black });
-    // cursorY -= 15;
-    // page.drawText("Patient ID: --", { x: col1, y: cursorY, size: 10, font: fontRegular, color: black });
 
     const sectionTopY = cursorY + 30;
     page.drawText("DOCTOR DETAILS", { x: col2, y: sectionTopY, size: 10, font: fontBold, color: gray });
@@ -1146,28 +566,19 @@ router.get("/:id/pdf", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=Appointment_${apptId}.pdf`);
     res.send(Buffer.from(pdfBytes));
-
   } catch (err) {
-    console.error("Appointment PDF error:", err);
+    console.error("Appointment PDF error:", err.message);
     res.status(500).json({ message: "PDF generation failed" });
   }
 });
 
 // Get appointment by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const appt = await AppointmentModel.findById(id)
-      .populate({
-        path: "patientId",
-        select: "firstName lastName email phone",
-        model: "Patient", // FIX
-      })
-      .populate({
-        path: "doctorId",
-        select: "name clinic firstName lastName",
-        model: "Doctor", // FIX
-      })
+      .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
+      .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
       .lean();
 
     if (!appt) return res.status(404).json({ message: "Appointment not found" });
@@ -1200,13 +611,13 @@ router.get("/:id", async (req, res) => {
 
     return res.json(appt);
   } catch (err) {
-    console.error("Error fetching appointment by id:", err);
+    console.error("Error fetching appointment by id:", err.message);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 // Cancel appointment
-router.put("/:id/cancel", async (req, res) => {
+router.put("/:id/cancel", verifyToken, async (req, res) => {
   try {
     const appt = await AppointmentModel.findByIdAndUpdate(
       req.params.id,
@@ -1221,7 +632,7 @@ router.put("/:id/cancel", async (req, res) => {
 });
 
 // UPDATE appointment
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   try {
     const updated = await AppointmentModel.findByIdAndUpdate(
       req.params.id,
@@ -1236,7 +647,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // Delete appointment
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const deleted = await AppointmentModel.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: "Appointment not found" });

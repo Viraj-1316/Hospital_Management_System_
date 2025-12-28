@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import "../styles/admin-shared.css"; 
+import "../styles/admin-shared.css";
 import "../styles/ClinicList.css";
 
 import {
@@ -57,6 +57,12 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
     status: "",
   });
 
+  // Get auth config for API calls
+  const getAuthConfig = () => {
+    const token = localStorage.getItem("token");
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
@@ -66,7 +72,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
     setLoading(true);
     setErr(null);
     try {
-      const res = await axios.get(`${API_BASE}/api/clinics`);
+      const res = await axios.get(`${API_BASE}/api/clinics`, getAuthConfig());
       const raw = Array.isArray(res.data)
         ? res.data
         : res.data.clinics ?? [];
@@ -107,11 +113,12 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
       formData.append("file", importFile);
       formData.append("type", importType);
 
-      // ✅ POST to the correct Clinic Import Endpoint
+      const token = localStorage.getItem("token");
+      // ✅ POST to the correct Clinic Import Endpoint with auth
       const res = await axios.post(
-        `${API_BASE}/api/clinics/import`, 
+        `${API_BASE}/api/clinics/import`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` } }
       );
 
       toast.success(res.data?.message || `Imported ${res.data?.count || 0} clinics`);
@@ -202,7 +209,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
     setShowDeleteModal(false);
 
     const promise = axios
-      .delete(`${API_BASE}/api/clinics/${clinicToDelete}`)
+      .delete(`${API_BASE}/api/clinics/${clinicToDelete}`, getAuthConfig())
       .then(() => {
         setClinics((list) => list.filter((c) => c._id !== clinicToDelete));
         setClinicToDelete(null);
@@ -217,7 +224,9 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
 
   const handleResend = async (row) => {
     const promise = axios.post(
-      `${API_BASE}/api/clinics/${row._id}/resend-credentials`
+      `${API_BASE}/api/clinics/${row._id}/resend-credentials`,
+      {},
+      getAuthConfig()
     );
 
     await toast.promise(promise, {
@@ -403,20 +412,20 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
                         <input type="file" className="form-control" accept=".csv" onChange={handleImportFileChange} required />
                       </div>
                     </div>
-                    
+
                     {/* Instructions for Clinic CSV Fields */}
                     <p className="fw-semibold mb-2">CSV Required Fields:</p>
                     <div className="alert alert-info small">
-                        <ul className="mb-0">
-                            <li><strong>name</strong> (Clinic Name)</li>
-                            <li><strong>email</strong> (Clinic Email)</li>
-                            <li><strong>contact</strong> (Phone)</li>
-                            <li><strong>specialization</strong> (e.g. Cardiology)</li>
-                            <li><strong>adminFirstName</strong>, <strong>adminLastName</strong></li>
-                            <li><strong>adminEmail</strong>, <strong>adminContact</strong></li>
-                            <li><strong>city</strong>, <strong>country</strong>, <strong>postalCode</strong></li>
-                            <li>dob (YYYY-MM-DD), gender (Male/Female)</li>
-                        </ul>
+                      <ul className="mb-0">
+                        <li><strong>name</strong> (Clinic Name)</li>
+                        <li><strong>email</strong> (Clinic Email)</li>
+                        <li><strong>contact</strong> (Phone)</li>
+                        <li><strong>specialization</strong> (e.g. Cardiology)</li>
+                        <li><strong>adminFirstName</strong>, <strong>adminLastName</strong></li>
+                        <li><strong>adminEmail</strong>, <strong>adminContact</strong></li>
+                        <li><strong>city</strong>, <strong>country</strong>, <strong>postalCode</strong></li>
+                        <li>dob (YYYY-MM-DD), gender (Male/Female)</li>
+                      </ul>
                     </div>
                   </div>
                   <div className="modal-footer">

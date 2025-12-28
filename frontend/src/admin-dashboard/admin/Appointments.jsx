@@ -76,15 +76,30 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
   });
 
   // ------------------ FETCH DATA ------------------
+  const isMounted = React.useRef(false);
+
   useEffect(() => {
-    fetchAppointments();
+    if (!isMounted.current) {
+      fetchAppointments();
+      isMounted.current = true;
+    }
+
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const fetchAppointments = async (query = {}) => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE}/appointments`, { params: query });
-      setAppointments(Array.isArray(res.data) ? res.data : []);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_BASE}/appointments`, {
+        params: query,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Handle both paginated response format and direct array format
+      const data = res.data?.data || res.data;
+      setAppointments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching appointments:", err);
       setAppointments([]);
@@ -96,17 +111,21 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
+        const token = localStorage.getItem("token");
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+
+        // ... rest of fetch logic ...
         const [docRes, servRes, patRes, clinicRes, taxRes] =
           await Promise.all([
-            axios.get(`${API_BASE}/doctors`),
-            axios.get(`${API_BASE}/services`),
-            axios.get(`${API_BASE}/patients`),
-            axios.get(`${API_BASE}/api/clinics`),
-            axios.get(`${API_BASE}/taxes`),
+            axios.get(`${API_BASE}/doctors`, config),
+            axios.get(`${API_BASE}/services`, config),
+            axios.get(`${API_BASE}/patients`, config),
+            axios.get(`${API_BASE}/api/clinics`, config),
+            axios.get(`${API_BASE}/taxes`, config),
           ]);
 
         setDoctors(Array.isArray(docRes.data) ? docRes.data : docRes.data.data || []);
-        
+
         const servicesData = servRes.data.rows || servRes.data || [];
         setServicesList(Array.isArray(servicesData) ? servicesData : []);
 
@@ -137,10 +156,12 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
         setLoadingSlots(true);
         setDynamicSlots([]);
         try {
+          const token = localStorage.getItem("token");
           const res = await axios.get(`${API_BASE}/appointments/slots`, {
-            params: { doctorId: form.doctorId, date: form.date }
+            params: { doctorId: form.doctorId, date: form.date },
+            headers: { Authorization: `Bearer ${token}` }
           });
-          
+
           if (res.data && res.data.slots) {
             setDynamicSlots(res.data.slots);
           } else if (Array.isArray(res.data)) {
@@ -162,9 +183,9 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
 
   useEffect(() => {
     if (form.doctor && form.service) {
-      const rule = taxes.find(t => 
-        t.active && 
-        (t.doctor === form.doctor) && 
+      const rule = taxes.find(t =>
+        t.active &&
+        (t.doctor === form.doctor) &&
         (t.serviceName === form.service)
       );
 
@@ -349,12 +370,12 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
 
       if (editId) {
         await toast.promise(
-          axios.put(`${API_BASE}/appointments/${editId}`, payload),
+          axios.put(`${API_BASE}/appointments/${editId}`, payload, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
           { loading: "Updating...", success: "Updated!", error: "Failed." }
         );
       } else {
         await toast.promise(
-          axios.post(`${API_BASE}/appointments`, payload), 
+          axios.post(`${API_BASE}/appointments`, payload, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
           { loading: "Saving...", success: "Booked!", error: "Failed." }
         );
       }
@@ -380,7 +401,8 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
 
   const executeDelete = async (id) => {
     try {
-      await axios.delete(`${API_BASE}/appointments/${id}`);
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_BASE}/appointments/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       setAppointments((prev) => prev.filter((a) => a._id !== id));
       toast.success("Appointment deleted");
     } catch (err) {
@@ -401,39 +423,43 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
   // ------------------ IMPORT LOGIC ------------------
   const openImportModal = () => { setImportOpen(true); setImportFile(null); };
   const closeImportModal = () => { setImportOpen(false); setImportFile(null); };
-  
+
   // ✅ Fixed: Attached this to Input below
   const handleFileChange = (e) => {
-      setImportFile(e.target.files[0] || null);
+    setImportFile(e.target.files[0] || null);
   };
 
   const handleImportSubmit = async (e) => {
     e.preventDefault();
     if (!importFile) return toast.error("Choose CSV file first.");
-    
+
     try {
-        setImporting(true);
-        const formData = new FormData();
-        formData.append("file", importFile);
-        formData.append("type", "csv"); // Hardcoded to CSV based on prompt
-        
-        const res = await axios.post(`${API_BASE}/appointments/import`, formData, { 
-            headers: { "Content-Type": "multipart/form-data" } 
-        });
-        
-        if(res.data && res.data.message) {
-            toast.success(res.data.message);
-        } else {
-            toast.success(`Imported successfully`);
+      setImporting(true);
+      const formData = new FormData();
+      formData.append("file", importFile);
+      formData.append("type", "csv"); // Hardcoded to CSV based on prompt
+
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API_BASE}/appointments/import`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`
         }
-        
-        closeImportModal();
-        fetchAppointments();
-    } catch (err) { 
-        console.error(err);
-        toast.error("Import failed. Check CSV format."); 
-    } finally { 
-        setImporting(false); 
+      });
+
+      if (res.data && res.data.message) {
+        toast.success(res.data.message);
+      } else {
+        toast.success(`Imported successfully`);
+      }
+
+      closeImportModal();
+      fetchAppointments();
+    } catch (err) {
+      console.error(err);
+      toast.error("Import failed. Check CSV format.");
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -464,44 +490,44 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
           <div className="d-flex justify-content-between align-items-center mb-3 appointments-header">
             <div className="btn-group btn-sm appointments-tabs">
               {['all', 'upcoming', 'past'].map(t => (
-                  <button key={t} type="button" className={`btn btn-outline-primary ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
-                    {t.toUpperCase()}
-                  </button>
+                <button key={t} type="button" className={`btn btn-outline-primary ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
+                  {t.toUpperCase()}
+                </button>
               ))}
             </div>
           </div>
 
           {/* Filter Panel */}
           <div className={`filter-panel ${filtersOpen ? "open" : ""}`}>
-             <div className="p-3">
-                <div className="row g-3">
-                   <div className="col-md-3">
-                      <label className="form-label">Date</label>
-                      <input type="date" className="form-control" value={filters.date} onChange={e => setFilters({...filters, date: e.target.value})} />
-                   </div>
-                   <div className="col-md-3">
-                      <label className="form-label">Clinic</label>
-                      <input type="text" className="form-control" placeholder="Clinic Name" value={filters.clinic} onChange={e => setFilters({...filters, clinic: e.target.value})} />
-                   </div>
-                   <div className="col-md-3">
-                      <label className="form-label">Doctor</label>
-                      <input type="text" className="form-control" placeholder="Doctor Name" value={filters.doctor} onChange={e => setFilters({...filters, doctor: e.target.value})} />
-                   </div>
-                   <div className="col-md-3">
-                      <label className="form-label">Status</label>
-                      <select className="form-select" value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
-                          <option value="">All</option>
-                          <option value="booked">Booked</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                      </select>
-                   </div>
+            <div className="p-3">
+              <div className="row g-3">
+                <div className="col-md-3">
+                  <label className="form-label">Date</label>
+                  <input type="date" className="form-control" value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })} />
                 </div>
-                <div className="mt-3 d-flex justify-content-end gap-2">
-                   <button className="btn btn-outline-secondary" onClick={clearFilters}>Reset</button>
-                   <button className="btn btn-primary" onClick={applyFilters}>Apply Filters</button>
+                <div className="col-md-3">
+                  <label className="form-label">Clinic</label>
+                  <input type="text" className="form-control" placeholder="Clinic Name" value={filters.clinic} onChange={e => setFilters({ ...filters, clinic: e.target.value })} />
                 </div>
-             </div>
+                <div className="col-md-3">
+                  <label className="form-label">Doctor</label>
+                  <input type="text" className="form-control" placeholder="Doctor Name" value={filters.doctor} onChange={e => setFilters({ ...filters, doctor: e.target.value })} />
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label">Status</label>
+                  <select className="form-select" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
+                    <option value="">All</option>
+                    <option value="booked">Booked</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-3 d-flex justify-content-end gap-2">
+                <button className="btn btn-outline-secondary" onClick={clearFilters}>Reset</button>
+                <button className="btn btn-primary" onClick={applyFilters}>Apply Filters</button>
+              </div>
+            </div>
           </div>
 
           {/* ADD / EDIT PANEL */}
@@ -528,18 +554,18 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                       <div className="col-md-12">
                         <label className="form-label">Doctor *</label>
                         <select name="doctor" className="form-select" value={form.doctorId} onChange={handleFormChange} required>
-                            <option value="">Select Doctor</option>
-                            {doctors.map((d) => (
-                              <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>
-                            ))}
+                          <option value="">Select Doctor</option>
+                          {doctors.map((d) => (
+                            <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>
+                          ))}
                         </select>
                       </div>
 
                       <div className="col-md-12">
                         <label className="form-label">Service *</label>
                         <select name="service" className="form-select" value={form.service} onChange={handleFormChange} required>
-                            <option value="">Service</option>
-                            {servicesList.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
+                          <option value="">Service</option>
+                          {servicesList.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
                         </select>
                       </div>
 
@@ -551,10 +577,10 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                       <div className="col-md-12">
                         <label className="form-label">Patient *</label>
                         <select name="patient" className="form-select" value={form.patient} onChange={handleFormChange} required>
-                            <option value="">Select Patient</option>
-                            {patients.map((p) => (
-                              <option key={p._id} value={p._id}>{p.firstName} {p.lastName}</option>
-                            ))}
+                          <option value="">Select Patient</option>
+                          {patients.map((p) => (
+                            <option key={p._id} value={p._id}>{p.firstName} {p.lastName}</option>
+                          ))}
                         </select>
                       </div>
 
@@ -573,27 +599,27 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
                   {/* RIGHT COLUMN - SLOTS */}
                   <div className="col-lg-6">
                     <label className="form-label">Available Slot *</label>
-                    <div className="available-slot-box border rounded p-3 mb-3 bg-white" style={{minHeight:'150px'}}>
-                      
+                    <div className="available-slot-box border rounded p-3 mb-3 bg-white" style={{ minHeight: '150px' }}>
+
                       {!form.doctorId || !form.date ? (
-                         <div className="text-center text-muted small mt-4">Select Doctor & Date to see slots</div>
+                        <div className="text-center text-muted small mt-4">Select Doctor & Date to see slots</div>
                       ) : loadingSlots ? (
-                         <div className="text-center text-primary mt-4">Loading available times...</div>
+                        <div className="text-center text-primary mt-4">Loading available times...</div>
                       ) : dynamicSlots.length === 0 ? (
-                         <div className="text-center text-danger mt-4">No slots available for this date.</div>
+                        <div className="text-center text-danger mt-4">No slots available for this date.</div>
                       ) : (
-                         <div className="d-flex flex-wrap gap-2">
-                            {dynamicSlots.map((slot) => (
-                                <button
-                                  key={slot}
-                                  type="button"
-                                  className={`btn btn-sm ${form.slot === slot ? "btn-primary" : "btn-outline-primary"}`}
-                                  onClick={() => setForm(p => ({ ...p, slot }))}
-                                >
-                                  {slot}
-                                </button>
-                            ))}
-                         </div>
+                        <div className="d-flex flex-wrap gap-2">
+                          {dynamicSlots.map((slot) => (
+                            <button
+                              key={slot}
+                              type="button"
+                              className={`btn btn-sm ${form.slot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                              onClick={() => setForm(p => ({ ...p, slot }))}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
 
@@ -615,92 +641,92 @@ const Appointments = ({ sidebarCollapsed = false, toggleSidebar }) => {
 
           {/* MAIN TABLE */}
           <div className="card shadow-sm p-3 mt-3">
-              <div className="d-flex justify-content-between mb-3">
-                 <input type="text" className="form-control w-50" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-              </div>
-              <div className="table-responsive">
-                  <table className="table table-hover align-middle">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Patient Name</th>
-                        <th>Services</th>
-                        <th>Doctor</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Action</th>
+            <div className="d-flex justify-content-between mb-3">
+              <input type="text" className="form-control w-50" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            </div>
+            <div className="table-responsive">
+              <table className="table table-hover align-middle">
+                <thead className="table-light">
+                  <tr>
+                    <th>Patient Name</th>
+                    <th>Services</th>
+                    <th>Doctor</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan="6" className="text-center">Loading...</td></tr>
+                  ) : filteredAppointments.length === 0 ? (
+                    <tr><td colSpan="6" className="text-center">No Appointments Found</td></tr>
+                  ) : (
+                    filteredAppointments.map((a) => (
+                      <tr key={a._id}>
+                        <td>{a.patientName}</td>
+                        <td>{a.services}</td>
+                        <td>{a.doctorName}</td>
+                        <td>{a.date ? new Date(a.date).toLocaleDateString("en-GB") : "N/A"}</td>
+                        <td><span className={`badge ${a.status === 'booked' ? 'bg-primary' : a.status === 'completed' ? 'bg-success' : 'bg-secondary'}`}>{a.status}</span></td>
+                        <td>
+                          <div className="d-flex gap-2">
+                            <button className="btn btn-sm btn-outline-primary" onClick={() => openEditForm(a)}>Edit</button>
+                            <button className="btn btn-sm btn-outline-dark" onClick={() => handlePdf(a._id)}>PDF</button>
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(a._id)}>Delete</button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {loading ? (
-                          <tr><td colSpan="6" className="text-center">Loading...</td></tr>
-                      ) : filteredAppointments.length === 0 ? (
-                          <tr><td colSpan="6" className="text-center">No Appointments Found</td></tr>
-                      ) : (
-                          filteredAppointments.map((a) => (
-                              <tr key={a._id}>
-                                <td>{a.patientName}</td>
-                                <td>{a.services}</td>
-                                <td>{a.doctorName}</td>
-                                <td>{a.date ? new Date(a.date).toLocaleDateString("en-GB") : "N/A"}</td>
-                                <td><span className={`badge ${a.status === 'booked' ? 'bg-primary' : a.status === 'completed' ? 'bg-success' : 'bg-secondary'}`}>{a.status}</span></td>
-                                <td>
-                                  <div className="d-flex gap-2">
-                                    <button className="btn btn-sm btn-outline-primary" onClick={() => openEditForm(a)}>Edit</button>
-                                    <button className="btn btn-sm btn-outline-dark" onClick={() => handlePdf(a._id)}>PDF</button>
-                                    <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(a._id)}>Delete</button>
-                                  </div>
-                                </td>
-                              </tr>
-                          ))
-                      )}
-                    </tbody>
-                  </table>
-              </div>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         {/* ✅ FIXED IMPORT MODAL */}
         {importOpen && (
-            <>
-              <div className="modal-backdrop fade show"></div>
-              <div className="modal fade show d-block">
-                <div className="modal-dialog modal-dialog-centered">
-                  <div className="modal-content">
-                    <div className="modal-header">
-                      <h5 className="modal-title">Import Appointments (CSV)</h5>
-                      <button type="button" className="btn-close" onClick={closeImportModal}></button>
-                    </div>
-                    <form onSubmit={handleImportSubmit}>
-                      <div className="modal-body">
-                         {/* CSV Template Instructions based on Screenshot */}
-                         <div className="alert alert-info small">
-                            <strong>Required CSV Headers:</strong>
-                            <ul className="mb-0 ps-3">
-                                <li><code>clinic</code> (Matches 'Select Clinic')</li>
-                                <li><code>doctor</code> (Doctor Name or Email)</li>
-                                <li><code>patient</code> (Patient Name or Email)</li>
-                                <li><code>service</code> (Service Name)</li>
-                                <li><code>date</code> (Format: YYYY-MM-DD)</li>
-                                <li><code>time</code> (e.g. 10:00 AM)</li>
-                                <li><code>status</code> (e.g. booked)</li>
-                            </ul>
-                         </div>
-                         <div className="mb-3">
-                             <label className="form-label">Upload CSV File</label>
-                             <input type="file" className="form-control" accept=".csv" onChange={handleFileChange} required />
-                         </div>
-                      </div>
-                      <div className="modal-footer">
-                        <button type="button" className="btn btn-secondary" onClick={closeImportModal}>Cancel</button>
-                        <button type="submit" className="btn btn-primary" disabled={importing}>
-                            {importing ? "Importing..." : "Upload & Import"}
-                        </button>
-                      </div>
-                    </form>
+          <>
+            <div className="modal-backdrop fade show"></div>
+            <div className="modal fade show d-block">
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title">Import Appointments (CSV)</h5>
+                    <button type="button" className="btn-close" onClick={closeImportModal}></button>
                   </div>
+                  <form onSubmit={handleImportSubmit}>
+                    <div className="modal-body">
+                      {/* CSV Template Instructions based on Screenshot */}
+                      <div className="alert alert-info small">
+                        <strong>Required CSV Headers:</strong>
+                        <ul className="mb-0 ps-3">
+                          <li><code>clinic</code> (Matches 'Select Clinic')</li>
+                          <li><code>doctor</code> (Doctor Name or Email)</li>
+                          <li><code>patient</code> (Patient Name or Email)</li>
+                          <li><code>service</code> (Service Name)</li>
+                          <li><code>date</code> (Format: YYYY-MM-DD)</li>
+                          <li><code>time</code> (e.g. 10:00 AM)</li>
+                          <li><code>status</code> (e.g. booked)</li>
+                        </ul>
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Upload CSV File</label>
+                        <input type="file" className="form-control" accept=".csv" onChange={handleFileChange} required />
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button type="button" className="btn btn-secondary" onClick={closeImportModal}>Cancel</button>
+                      <button type="submit" className="btn btn-primary" disabled={importing}>
+                        {importing ? "Importing..." : "Upload & Import"}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
-            </>
+            </div>
+          </>
         )}
 
         <ConfirmationModal

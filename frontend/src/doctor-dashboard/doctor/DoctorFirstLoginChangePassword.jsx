@@ -65,7 +65,6 @@ function DoctorFirstLoginChangePassword() {
 
       // Call the doctor change password endpoint
       const url = `${API_BASE}/doctors/change-password/${authUser.id}`;
-      console.log("Calling change password API:", url);
 
       const res = await fetch(url, {
         method: "PUT",
