@@ -29,9 +29,13 @@ const DoctorSchema = new mongoose.Schema({
   ],
   createdAt: { type: Date, default: Date.now },
   password: { type: String },
-  passwordPlain: { type: String }, 
   mustChangePassword: { type: Boolean, default: true },
 });
+
+// Database Indexes for improved query performance
+DoctorSchema.index({ email: 1 });
+DoctorSchema.index({ clinic: 1 });
+DoctorSchema.index({ status: 1 });
 
 const DoctorModel = mongoose.model("Doctor", DoctorSchema);
 module.exports = DoctorModel;

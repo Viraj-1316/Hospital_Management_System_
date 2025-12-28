@@ -39,7 +39,10 @@ function DoctorProfile() {
 
   const loadProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE}/doctors/profile/${userId}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/doctors/profile/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) {
         toast.error("Failed to load profile");
         setLoading(false);
@@ -102,9 +105,13 @@ function DoctorProfile() {
     setSaving(true);
 
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(`${API_BASE}/doctors/profile/${userId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(form),
       });
 

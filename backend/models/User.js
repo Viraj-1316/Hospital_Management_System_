@@ -21,7 +21,15 @@ const userSchema = new mongoose.Schema({
   experienceYears: { type: String },
 
   bloodGroup: { type: String },
+
+  // Password Reset Fields
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
 });
+
+// Database Indexes
+userSchema.index({ role: 1 });
+userSchema.index({ resetPasswordToken: 1 });
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;

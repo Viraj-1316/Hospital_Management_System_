@@ -3,6 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const { verifyToken } = require("../middleware/auth");
 
 const {
   addReceptionist,
@@ -20,34 +21,34 @@ const {
 const upload = multer({ dest: "uploads/" });
 
 // ----------------------------------------------------
-// ROUTES
+// ROUTES (All require authentication)
 // ----------------------------------------------------
 
 // List all receptionists
-router.get("/", getReceptionists);
+router.get("/", verifyToken, getReceptionists);
 
 // Get single receptionist
-router.get("/:id", getReceptionistById);
+router.get("/:id", verifyToken, getReceptionistById);
 
 // Add receptionist
-router.post("/", addReceptionist);
+router.post("/", verifyToken, addReceptionist);
 
 // Update receptionist
-router.put("/:id", updateReceptionist);
+router.put("/:id", verifyToken, updateReceptionist);
 
 // Delete receptionist
-router.delete("/:id", deleteReceptionist);
+router.delete("/:id", verifyToken, deleteReceptionist);
 
 // Toggle status
-router.patch("/:id/status", toggleReceptionistStatus);
+router.patch("/:id/status", verifyToken, toggleReceptionistStatus);
 
 // Resend login credentials
-router.post("/:id/resend-credentials", resendCredentials);
+router.post("/:id/resend-credentials", verifyToken, resendCredentials);
 
 // Change password
-router.put("/change-password/:id", changePassword);
+router.put("/change-password/:id", verifyToken, changePassword);
 
 // Import CSV
-router.post("/import", upload.single("file"), importReceptionists);
+router.post("/import", verifyToken, upload.single("file"), importReceptionists);
 
 module.exports = router;

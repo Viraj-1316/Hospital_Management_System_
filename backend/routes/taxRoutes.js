@@ -4,11 +4,12 @@ const TaxModel = require("../models/Tax");
 const multer = require("multer");
 const csv = require("csvtojson");
 const fs = require("fs");
+const { verifyToken } = require("../middleware/auth");
 
 const upload = multer({ dest: "uploads/" });
 
 // Get all taxes
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   try {
     const list = await TaxModel.find().sort({ createdAt: -1 });
     res.json(list);
@@ -19,7 +20,7 @@ router.get("/", async (req, res) => {
 });
 
 // Create new tax
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
     const payload = req.body;
 
@@ -37,14 +38,14 @@ router.post("/", async (req, res) => {
 });
 
 // Import taxes from CSV
-router.post("/import", upload.single("file"), async (req, res) => {
+router.post("/import", verifyToken, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
     const jsonArray = await csv().fromFile(req.file.path);
-    
+
     // Clean up the uploaded file
     fs.unlinkSync(req.file.path);
 
@@ -71,7 +72,7 @@ router.post("/import", upload.single("file"), async (req, res) => {
 });
 
 // Update tax (edit or toggle)
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const payload = req.body;
@@ -96,7 +97,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // Delete tax
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await TaxModel.findByIdAndDelete(id);

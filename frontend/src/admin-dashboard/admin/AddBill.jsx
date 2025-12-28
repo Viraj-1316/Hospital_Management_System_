@@ -31,10 +31,10 @@ const AddBill = () => {
   // --- Data States ---
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
-  const [clinics, setClinics] = useState([]); 
+  const [clinics, setClinics] = useState([]);
   const [encounters, setEncounters] = useState([]);
   const [saving, setSaving] = useState(false);
-        
+
   // --- 2. Fetch Initial Dropdown Data ---
   useEffect(() => {
     const fetchData = async () => {
@@ -48,13 +48,12 @@ const AddBill = () => {
         // Normalize Data
         setDoctors(Array.isArray(docRes.data) ? docRes.data : docRes.data.data || []);
         setPatients(Array.isArray(patRes.data) ? patRes.data : patRes.data.data || []);
-        
+
         // Handle Clinic Response
-        const cData = Array.isArray(clinicRes.data) 
-            ? clinicRes.data 
-            : clinicRes.data.clinics || [];
-        
-        console.log("Clinics Loaded:", cData); 
+        const cData = Array.isArray(clinicRes.data)
+          ? clinicRes.data
+          : clinicRes.data.clinics || [];
+
         setClinics(cData);
 
       } catch (err) {
@@ -70,16 +69,16 @@ const AddBill = () => {
     if (form.patientId) {
       axios.get(`${API_BASE}/encounters?patientId=${form.patientId}`)
         .then((res) => {
-           const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
-           setEncounters(data);
+          const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
+          setEncounters(data);
         })
         .catch(err => {
-            console.error("Error fetching encounters:", err);
-            setEncounters([]);
+          console.error("Error fetching encounters:", err);
+          setEncounters([]);
         });
     } else {
-        setEncounters([]);
-        setForm(prev => ({ ...prev, encounterId: "" }));
+      setEncounters([]);
+      setForm(prev => ({ ...prev, encounterId: "" }));
     }
   }, [form.patientId]);
 
@@ -102,7 +101,7 @@ const AddBill = () => {
       ...prev,
       patientId: selectedId,
       patientName: selectedObj ? `${selectedObj.firstName} ${selectedObj.lastName}` : "",
-      encounterId: "" 
+      encounterId: ""
     }));
   };
 
@@ -110,16 +109,16 @@ const AddBill = () => {
   const handleClinicChange = (e) => {
     const selectedId = e.target.value;
     const selectedObj = clinics.find(c => c._id === selectedId);
-    
+
     if (selectedObj) {
-        // Auto-fill the clinic name based on selection
-        setForm(prev => ({
-            ...prev,
-            clinicId: selectedId,
-            clinicName: selectedObj.name || selectedObj.clinicName || "" 
-        }));
+      // Auto-fill the clinic name based on selection
+      setForm(prev => ({
+        ...prev,
+        clinicId: selectedId,
+        clinicName: selectedObj.name || selectedObj.clinicName || ""
+      }));
     } else {
-        setForm(prev => ({ ...prev, clinicId: "", clinicName: "" }));
+      setForm(prev => ({ ...prev, clinicId: "", clinicName: "" }));
     }
   };
 
@@ -150,8 +149,8 @@ const AddBill = () => {
 
       const payload = {
         ...form,
-        services: form.services.split(",").map(s => s.trim()), 
-        clinicId: form.clinicId || null 
+        services: form.services.split(",").map(s => s.trim()),
+        clinicId: form.clinicId || null
       };
 
       await axios.post(`${API_BASE}/bills`, payload);
@@ -173,7 +172,7 @@ const AddBill = () => {
         <div className="card shadow-sm p-4">
           <form onSubmit={handleSubmit}>
             <div className="row">
-              
+
               {/* Doctor */}
               <div className="col-md-6 mb-3">
                 <label className="form-label">Doctor Name <span className="text-danger">*</span></label>
@@ -215,22 +214,22 @@ const AddBill = () => {
               {/* ✅ FIXED: Clinic Name is NOW ALWAYS A DROPDOWN */}
               <div className="col-md-6 mb-3">
                 <label className="form-label">Clinic Name <span className="text-danger">*</span></label>
-                <select 
-                    name="clinicId"
-                    className="form-select" 
-                    value={form.clinicId} 
-                    onChange={handleClinicChange} 
-                    required
+                <select
+                  name="clinicId"
+                  className="form-select"
+                  value={form.clinicId}
+                  onChange={handleClinicChange}
+                  required
                 >
-                    <option value="">-- Select Clinic --</option>
-                    {clinics.map((c) => (
-                        <option key={c._id} value={c._id}>
-                            {c.name || c.clinicName || "Unnamed Clinic"}
-                        </option>
-                    ))}
+                  <option value="">-- Select Clinic --</option>
+                  {clinics.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name || c.clinicName || "Unnamed Clinic"}
+                    </option>
+                  ))}
                 </select>
                 {clinics.length === 0 && (
-                    <small className="text-danger">No clinics found. Please add a clinic first.</small>
+                  <small className="text-danger">No clinics found. Please add a clinic first.</small>
                 )}
               </div>
 

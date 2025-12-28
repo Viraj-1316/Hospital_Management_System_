@@ -16,6 +16,19 @@ import API_BASE from "../../config";
 
 /* ---------- Local axios instance ---------- */
 const api = axios.create({ baseURL: API_BASE });
+
+// Add auth token to all requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 const SERVICES_BASE = "/services";
 
 /* ---------- EMBEDDED CSS STYLES (SCOPED) ---------- */
@@ -93,7 +106,7 @@ function DurationPicker({ value, onChange }) {
   const containerRef = useRef(null);
   const [hh, mm] = (value || "00:00").split(":");
   const hours = Array.from({ length: 13 }, (_, i) => i.toString().padStart(2, "0"));
-  const minutes = ["00","05","10","15","20","25","30","35","40","45","50","55"];
+  const minutes = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -153,17 +166,17 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
 
   const [form, setForm] = useState(
     initial || {
-      serviceId: "", 
-      name: "", 
+      serviceId: "",
+      name: "",
       category: availableCategories.length > 0 ? availableCategories[0] : "",
-      charges: "", 
-      isTelemed: "No", 
-      clinicName: defaultClinic, 
+      charges: "",
+      isTelemed: "No",
+      clinicName: defaultClinic,
       doctor: defaultDoctor,
-      duration: isDoctor ? "00:30" : "00:00", 
-      active: true, 
-      allowMulti: "Yes", 
-      imageFile: null, 
+      duration: isDoctor ? "00:30" : "00:00",
+      active: true,
+      allowMulti: "Yes",
+      imageFile: null,
       imagePreview: ""
     }
   );
@@ -177,17 +190,17 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
       // Only fetch options if NOT doctor (or if we want to show all clinics to admin)
       if (!isDoctor) {
         try {
-            setLoadingOptions(true);
-            const clinicRes = await api.get("/api/clinics");
-            const clinicData = Array.isArray(clinicRes.data) ? clinicRes.data : (clinicRes.data?.data || clinicRes.data?.clinics || []);
-            const doctorRes = await api.get("/doctors");
-            const doctorData = Array.isArray(doctorRes.data) ? doctorRes.data : (doctorRes.data?.data || doctorRes.data?.doctors || []);
-            setClinics(clinicData); setDoctors(doctorData);
+          setLoadingOptions(true);
+          const clinicRes = await api.get("/api/clinics");
+          const clinicData = Array.isArray(clinicRes.data) ? clinicRes.data : (clinicRes.data?.data || clinicRes.data?.clinics || []);
+          const doctorRes = await api.get("/doctors");
+          const doctorData = Array.isArray(doctorRes.data) ? doctorRes.data : (doctorRes.data?.data || doctorRes.data?.doctors || []);
+          setClinics(clinicData); setDoctors(doctorData);
         } catch (err) {
-            if (err.code === "ERR_NETWORK") toast.error("Cannot connect to server.");
+          if (err.code === "ERR_NETWORK") toast.error("Cannot connect to server.");
         } finally { setLoadingOptions(false); }
       } else {
-          setLoadingOptions(false);
+        setLoadingOptions(false);
       }
     };
     fetchOptions();
@@ -225,11 +238,11 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
       else if (k === "isTelemed" || k === "allowMulti") fd.append(k, form[k] === "Yes");
       else fd.append(k, form[k]);
     });
-    
+
     // Force doctor/clinic if isDoctor
     if (isDoctor) {
-        fd.set("doctor", defaultDoctor);
-        fd.set("clinicName", defaultClinic);
+      fd.set("doctor", defaultDoctor);
+      fd.set("clinicName", defaultClinic);
     }
 
     if (form.imageFile) fd.append("image", form.imageFile);
@@ -250,7 +263,7 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
             <div className="row g-3">
               <div className="col-lg-9">
                 <div className="row g-3">
-                  
+
                   {/* --- Dynamic Category Dropdown --- */}
                   <div className="col-md-6">
                     <label className="form-label">Category*</label>
@@ -264,41 +277,41 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
                   <div className="col-md-6"><label className="form-label">Name*</label><input className="form-control" value={form.name} onChange={change("name")} required /></div>
                   <div className="col-md-6"><label className="form-label">Charges*</label><input className="form-control" type={isDoctor ? "number" : "text"} value={form.charges} onChange={change("charges")} required /></div>
                   <div className="col-md-6"><label className="form-label">Telemed?*</label><select className="form-select" value={form.isTelemed} onChange={change("isTelemed")}><option>No</option><option>Yes</option></select></div>
-                  
+
                   {isDoctor ? (
-                      <>
-                        <div className="col-md-6">
-                            <label className="form-label">Clinic (Locked)</label>
-                            <input className="form-control bg-light" value={form.clinicName} readOnly />
-                        </div>
-                        <div className="col-md-6">
-                            <label className="form-label">Doctor (Locked)</label>
-                            <input className="form-control bg-light" value={form.doctor} readOnly />
-                        </div>
-                      </>
+                    <>
+                      <div className="col-md-6">
+                        <label className="form-label">Clinic (Locked)</label>
+                        <input className="form-control bg-light" value={form.clinicName} readOnly />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Doctor (Locked)</label>
+                        <input className="form-control bg-light" value={form.doctor} readOnly />
+                      </div>
+                    </>
                   ) : (
-                      <>
-                        <div className="col-md-6">
-                            <label className="form-label">Clinic*</label>
-                            <select className="form-select" value={form.clinicName} onChange={change("clinicName")} required>
-                            <option value="">Select Clinic</option>
-                            {loadingOptions ? <option disabled>Loading...</option> : clinics.map((c, i) => {
-                                const cName = c.name || c.clinicName || c.title || `Clinic ${i+1}`;
-                                return <option key={c._id || i} value={cName}>{cName}</option>;
-                            })}
-                            </select>
-                        </div>
-                        <div className="col-md-6">
-                            <label className="form-label">Doctor*</label>
-                            <select className="form-select" value={form.doctor} onChange={change("doctor")} required disabled={!form.clinicName}>
-                            <option value="">{form.clinicName ? "Select Doctor" : "Select Clinic First"}</option>
-                            {filteredDoctors.map(d => {
-                                const dName = d.firstName ? `${d.firstName} ${d.lastName} ${d.specialization ? `(${d.specialization})` : ""}` : d.name;
-                                return <option key={d._id} value={dName}>{dName}</option>;
-                            })}
-                            </select>
-                        </div>
-                      </>
+                    <>
+                      <div className="col-md-6">
+                        <label className="form-label">Clinic*</label>
+                        <select className="form-select" value={form.clinicName} onChange={change("clinicName")} required>
+                          <option value="">Select Clinic</option>
+                          {loadingOptions ? <option disabled>Loading...</option> : clinics.map((c, i) => {
+                            const cName = c.name || c.clinicName || c.title || `Clinic ${i + 1}`;
+                            return <option key={c._id || i} value={cName}>{cName}</option>;
+                          })}
+                        </select>
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Doctor*</label>
+                        <select className="form-select" value={form.doctor} onChange={change("doctor")} required disabled={!form.clinicName}>
+                          <option value="">{form.clinicName ? "Select Doctor" : "Select Clinic First"}</option>
+                          {filteredDoctors.map(d => {
+                            const dName = d.firstName ? `${d.firstName} ${d.lastName} ${d.specialization ? `(${d.specialization})` : ""}` : d.name;
+                            return <option key={d._id} value={dName}>{dName}</option>;
+                          })}
+                        </select>
+                      </div>
+                    </>
                   )}
 
                   <div className="col-md-6"><label className="form-label">Duration</label><DurationPicker value={form.duration} onChange={changeDuration} /></div>
@@ -307,12 +320,12 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
                 </div>
               </div>
               <div className="col-lg-3 d-flex flex-column align-items-center">
-                 <div className="image-upload-wrapper">
-                   <div className="image-preview-circle">
-                     {form.imagePreview ? <img src={form.imagePreview} className="image-preview-img" alt=""/> : <span className="image-placeholder-icon">🖼️</span>}
-                   </div>
-                   <label className="image-edit-btn"><input type="file" accept="image/*" hidden onChange={onPickImage} /><FiEdit2 size={14}/></label>
-                 </div>
+                <div className="image-upload-wrapper">
+                  <div className="image-preview-circle">
+                    {form.imagePreview ? <img src={form.imagePreview} className="image-preview-img" alt="" /> : <span className="image-placeholder-icon">🖼️</span>}
+                  </div>
+                  <label className="image-edit-btn"><input type="file" accept="image/*" hidden onChange={onPickImage} /><FiEdit2 size={14} /></label>
+                </div>
               </div>
             </div>
           </div>
@@ -444,13 +457,13 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
   // --- Fetch Categories on Mount ---
   useEffect(() => {
     const fetchCategories = async () => {
-        try {
-            const res = await api.get("/listings?type=Service type&status=Active");
-            const catNames = res.data.map(item => item.name);
-            setCategories(catNames);
-        } catch (err) {
-            console.error("Error fetching categories:", err);
-        }
+      try {
+        const res = await api.get("/listings?type=Service type&status=Active");
+        const catNames = res.data.map(item => item.name);
+        setCategories(catNames);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
     };
     fetchCategories();
   }, []);
@@ -461,11 +474,11 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
     setLoading(true);
     try {
       const params = { page, limit, q: search, ...filters };
-      
+
       // If doctor, force doctor filter
       if (isDoctor && doctorInfo) {
-          const doctorName = `${doctorInfo.firstName} ${doctorInfo.lastName}`.trim();
-          params.doctor = doctorName;
+        const doctorName = `${doctorInfo.firstName} ${doctorInfo.lastName}`.trim();
+        params.doctor = doctorName;
       }
 
       const { data } = await api.get(SERVICES_BASE, { params });
@@ -475,19 +488,19 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
     setLoading(false);
   };
 
-  useEffect(() => { 
-      // Only load if not doctor OR (is doctor AND doctorInfo is available)
-      if (!isDoctor || (isDoctor && doctorInfo?.firstName)) {
-        load(); 
-      }
-  }, [page, limit, isDoctor, doctorInfo]); 
-  
-  useEffect(() => { 
-      const t = setTimeout(() => { 
-          setPage(1); 
-          if (!isDoctor || (isDoctor && doctorInfo?.firstName)) load(); 
-      }, 400); 
-      return () => clearTimeout(t); 
+  useEffect(() => {
+    // Only load if not doctor OR (is doctor AND doctorInfo is available)
+    if (!isDoctor || (isDoctor && doctorInfo?.firstName)) {
+      load();
+    }
+  }, [page, limit, isDoctor, doctorInfo]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      if (!isDoctor || (isDoctor && doctorInfo?.firstName)) load();
+    }, 400);
+    return () => clearTimeout(t);
   }, [search, filters, isDoctor, doctorInfo]);
 
   const onAdd = () => { setEditing(null); setModalOpen(true); };
@@ -538,7 +551,7 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
   };
 
   return (
-    <div className="services-scope" onKeyDown={(e)=>{ if (e.key === "Enter" && (e.target.tagName !== "TEXTAREA")) e.stopPropagation(); }}>
+    <div className="services-scope" onKeyDown={(e) => { if (e.key === "Enter" && (e.target.tagName !== "TEXTAREA")) e.stopPropagation(); }}>
       <style>{servicesStyles}</style>
 
       <Toaster position="top-right" reverseOrder={false} containerStyle={{ zIndex: 2147483647 }} />
@@ -548,13 +561,13 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
           <h5 className="mb-0 fw-bold text-primary">{isDoctor ? "My Services" : "Service List"}</h5>
           <div className="d-flex gap-2">
             {!isDoctor && (
-                <>
-                    <button type="button" className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImportClick(); }}>
-                        <FiUpload className="me-1" /> Import data
-                    </button>
-                </>
+              <>
+                <button type="button" className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleImportClick(); }}>
+                  <FiUpload className="me-1" /> Import data
+                </button>
+              </>
             )}
-            <button type="button" className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); onAdd(); }}>
+            <button type="button" className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd(); }}>
               <FiPlus className="me-1" /> {isDoctor ? "Add Service" : "Add Service"}
             </button>
           </div>
@@ -563,7 +576,7 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
         <div className="bg-white p-3 rounded shadow-sm border mb-3">
           <div className="d-flex gap-3 align-items-center">
             <div className="input-group">
-              <span className="input-group-text bg-white border-end-0 text-muted"><FiSearch/></span>
+              <span className="input-group-text bg-white border-end-0 text-muted"><FiSearch /></span>
               <input className="form-control border-start-0 ps-0 search-input" placeholder={isDoctor ? "Search my services..." : "Search..."} value={search} onChange={e => setSearch(e.target.value)} />
             </div>
           </div>
@@ -574,43 +587,43 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
             <table className="table table-hover align-middle mb-0 custom-table">
               <thead className="bg-light text-secondary">
                 <tr>
-                  <th className="py-3 ps-3" style={{width: '40px'}}><input type="checkbox" className="form-check-input"/></th>
-                  <th className="py-3" style={{width: '60px'}}>ID <FaSort className="ms-1 small text-muted"/></th>
-                  {!isDoctor && <th className="py-3" style={{width: '100px'}}>Service ID <FaSort className="ms-1 small text-muted"/></th>}
-                  <th className="py-3">Name <FaSort className="ms-1 small text-muted"/></th>
-                  {!isDoctor && <th className="py-3">Clinic Name <FaSort className="ms-1 small text-muted"/></th>}
-                  {!isDoctor && <th className="py-3">Doctor <FaSort className="ms-1 small text-muted"/></th>}
-                  <th className="py-3">Charges <FaSort className="ms-1 small text-muted"/></th>
-                  <th className="py-3">Duration <FaSort className="ms-1 small text-muted"/></th>
-                  <th className="py-3">Category <FaSort className="ms-1 small text-muted"/></th>
-                  <th className="py-3">Status <FaSort className="ms-1 small text-muted"/></th>
-                  <th className="text-end pe-3" style={{width: '80px'}}>Action <FaSort className="ms-1 small text-muted"/></th>
+                  <th className="py-3 ps-3" style={{ width: '40px' }}><input type="checkbox" className="form-check-input" /></th>
+                  <th className="py-3" style={{ width: '60px' }}>ID <FaSort className="ms-1 small text-muted" /></th>
+                  {!isDoctor && <th className="py-3" style={{ width: '100px' }}>Service ID <FaSort className="ms-1 small text-muted" /></th>}
+                  <th className="py-3">Name <FaSort className="ms-1 small text-muted" /></th>
+                  {!isDoctor && <th className="py-3">Clinic Name <FaSort className="ms-1 small text-muted" /></th>}
+                  {!isDoctor && <th className="py-3">Doctor <FaSort className="ms-1 small text-muted" /></th>}
+                  <th className="py-3">Charges <FaSort className="ms-1 small text-muted" /></th>
+                  <th className="py-3">Duration <FaSort className="ms-1 small text-muted" /></th>
+                  <th className="py-3">Category <FaSort className="ms-1 small text-muted" /></th>
+                  <th className="py-3">Status <FaSort className="ms-1 small text-muted" /></th>
+                  <th className="text-end pe-3" style={{ width: '80px' }}>Action <FaSort className="ms-1 small text-muted" /></th>
                 </tr>
                 <tr className="bg-white align-middle">
-                    <td className="ps-3 border-bottom"></td>
-                    <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" disabled /></td>
-                    {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Service ID" value={filters.serviceId} onChange={(e) => handleFilterChange("serviceId", e.target.value)}/></td>}
-                    <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Name" value={filters.name} onChange={(e) => handleFilterChange("name", e.target.value)}/></td>
-                    {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Clinic" value={filters.clinicName} onChange={(e) => handleFilterChange("clinicName", e.target.value)}/></td>}
-                    {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter doctor" value={filters.doctor} onChange={(e) => handleFilterChange("doctor", e.target.value)}/></td>}
-                    <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Charge" value={filters.charges} onChange={(e) => handleFilterChange("charges", e.target.value)}/></td>
-                    <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="HH:mm" value={filters.duration} onChange={(e) => handleFilterChange("duration", e.target.value)}/></td>
-                    <td className="border-bottom p-1">
-                      <select className="form-select form-select-sm table-filter-input" value={filters.category} onChange={(e) => handleFilterChange("category", e.target.value)}>
-                         <option value="">Filter Category</option>
-                         {categories.map(c => (
-                             <option key={c} value={c}>{c}</option>
-                         ))}
-                      </select>
-                    </td>
-                    <td className="border-bottom p-1">
-                      <select className="form-select form-select-sm table-filter-input" value={filters.status} onChange={(e) => handleFilterChange("status", e.target.value)}>
-                         <option value="">Filter status</option>
-                         <option value="active">Active</option>
-                         <option value="inactive">Inactive</option>
-                      </select>
-                    </td>
-                    <td className="border-bottom p-1"></td>
+                  <td className="ps-3 border-bottom"></td>
+                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" disabled /></td>
+                  {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Service ID" value={filters.serviceId} onChange={(e) => handleFilterChange("serviceId", e.target.value)} /></td>}
+                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Name" value={filters.name} onChange={(e) => handleFilterChange("name", e.target.value)} /></td>
+                  {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Clinic" value={filters.clinicName} onChange={(e) => handleFilterChange("clinicName", e.target.value)} /></td>}
+                  {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter doctor" value={filters.doctor} onChange={(e) => handleFilterChange("doctor", e.target.value)} /></td>}
+                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Charge" value={filters.charges} onChange={(e) => handleFilterChange("charges", e.target.value)} /></td>
+                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="HH:mm" value={filters.duration} onChange={(e) => handleFilterChange("duration", e.target.value)} /></td>
+                  <td className="border-bottom p-1">
+                    <select className="form-select form-select-sm table-filter-input" value={filters.category} onChange={(e) => handleFilterChange("category", e.target.value)}>
+                      <option value="">Filter Category</option>
+                      {categories.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="border-bottom p-1">
+                    <select className="form-select form-select-sm table-filter-input" value={filters.status} onChange={(e) => handleFilterChange("status", e.target.value)}>
+                      <option value="">Filter status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </td>
+                  <td className="border-bottom p-1"></td>
                 </tr>
               </thead>
               <tbody>
@@ -624,15 +637,15 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
                     const displayInitial = displayName.charAt(0);
                     return (
                       <tr key={r._id}>
-                        <td className="ps-3"><input type="checkbox" className="form-check-input"/></td>
-                        <td className="fw-bold text-secondary">{total - ((page-1)*limit) - i}</td>
-                        {!isDoctor && <td className="text-muted">{r.serviceId || (i+1)}</td>}
+                        <td className="ps-3"><input type="checkbox" className="form-check-input" /></td>
+                        <td className="fw-bold text-secondary">{total - ((page - 1) * limit) - i}</td>
+                        {!isDoctor && <td className="text-muted">{r.serviceId || (i + 1)}</td>}
                         <td>
                           <div className="d-flex align-items-center gap-2">
-                             <div className="service-avatar-circle">
-                               {r.imageUrl ? <img src={r.imageUrl} alt="" className="service-avatar-img"/> : displayInitial}
-                             </div>
-                             <span className="fw-semibold text-dark">{displayName}</span>
+                            <div className="service-avatar-circle">
+                              {r.imageUrl ? <img src={r.imageUrl} alt="" className="service-avatar-img" /> : displayInitial}
+                            </div>
+                            <span className="fw-semibold text-dark">{displayName}</span>
                           </div>
                         </td>
                         {!isDoctor && <td>{r.clinicName}</td>}
@@ -643,14 +656,14 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
                         <td><StatusToggle active={r.active} onClick={(val) => toggleActive(r, val)} /></td>
                         <td className="text-end pe-3">
                           <div className="d-flex justify-content-end gap-1">
-                             <button type="button" className="btn btn-outline-primary btn-sm rounded-1 action-btn"
-                               onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); onEdit(r); }}>
-                               <FiEdit2 size={12}/>
-                             </button>
-                             <button type="button" className="btn btn-outline-danger btn-sm rounded-1 action-btn"
-                               onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); askDelete(r._id); }}>
-                               <FiTrash2 size={12}/>
-                             </button>
+                            <button type="button" className="btn btn-outline-primary btn-sm rounded-1 action-btn"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(r); }}>
+                              <FiEdit2 size={12} />
+                            </button>
+                            <button type="button" className="btn btn-outline-danger btn-sm rounded-1 action-btn"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); askDelete(r._id); }}>
+                              <FiTrash2 size={12} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -662,26 +675,26 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
           </div>
 
           <div className="d-flex justify-content-between align-items-center p-3 border-top bg-light text-secondary">
-             <div className="d-flex align-items-center gap-2 small">
-               <span>Rows per page:</span>
-               <select className="form-select form-select-sm pagination-select" value={limit} onChange={e=>setLimit(Number(e.target.value))}>
-                 <option value={5}>5</option><option value={10}>10</option><option value={20}>20</option>
-               </select>
-             </div>
-             <div className="d-flex align-items-center gap-2 small">
-               <span>Page</span>
-               <div className="border bg-white px-2 py-1 rounded">{page}</div>
-               <span>of {Math.ceil(total/limit) || 1}</span>
-               <div className="btn-group">
-                   <button type="button" className="btn btn-sm btn-link text-decoration-none text-secondary" disabled={page <= 1} onClick={()=>setPage(p=>p-1)}><FiChevronLeft/> Prev</button>
-                   <button type="button" className="btn btn-sm btn-link text-decoration-none text-secondary" disabled={page * limit >= total} onClick={()=>setPage(p=>p+1)}>Next <FiChevronRight/></button>
-               </div>
-             </div>
+            <div className="d-flex align-items-center gap-2 small">
+              <span>Rows per page:</span>
+              <select className="form-select form-select-sm pagination-select" value={limit} onChange={e => setLimit(Number(e.target.value))}>
+                <option value={5}>5</option><option value={10}>10</option><option value={20}>20</option>
+              </select>
+            </div>
+            <div className="d-flex align-items-center gap-2 small">
+              <span>Page</span>
+              <div className="border bg-white px-2 py-1 rounded">{page}</div>
+              <span>of {Math.ceil(total / limit) || 1}</span>
+              <div className="btn-group">
+                <button type="button" className="btn btn-sm btn-link text-decoration-none text-secondary" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><FiChevronLeft /> Prev</button>
+                <button type="button" className="btn btn-sm btn-link text-decoration-none text-secondary" disabled={page * limit >= total} onClick={() => setPage(p => p + 1)}>Next <FiChevronRight /></button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="mt-3 text-secondary small">© OneCare</div>
-        
+
         {modalOpen && <ServiceForm initial={editing} onClose={() => setModalOpen(false)} onSave={save} availableCategories={categories} isDoctor={isDoctor} doctorInfo={doctorInfo} />}
 
         <ImportModal

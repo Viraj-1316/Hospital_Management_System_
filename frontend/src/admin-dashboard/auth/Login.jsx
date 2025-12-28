@@ -22,23 +22,20 @@ const Login = () => {
     axios
       .post(`${API_BASE}/Login`, { email, password })
       .then((res) => {
-        console.log("server msg:", res.data);
+        if (res.data.status === "Success") {
+          const user = res.data.user;
 
-        
-         if (res.data.status === "Success") {
-      const user = res.data.user;
-      
-   
-       localStorage.setItem("user", JSON.stringify(user));
 
-    //   role logic using if else 
-      if (user.role === "admin") {
-        navigate("/admin-dashboard");
-      } else if (user.role === "doctor") {
-        navigate("/doctor-dashboard");
-      } else {
-        navigate("/user-dashboard");
-      }
+          localStorage.setItem("user", JSON.stringify(user));
+
+          //   role logic using if else 
+          if (user.role === "admin") {
+            navigate("/admin-dashboard");
+          } else if (user.role === "doctor") {
+            navigate("/doctor-dashboard");
+          } else {
+            navigate("/user-dashboard");
+          }
         } else if (res.data === "Wrong Passwordd") {
           setMessage("Incorrect password");
         } else if (res.data === "No record exist") {
@@ -59,7 +56,7 @@ const Login = () => {
         <h3 className="text-center mb-3">Welcome Back</h3>
         {message && <div className="alert alert-info">{message}</div>}
         <form onSubmit={handleSubmit}>
-     {/* email code */}
+          {/* email code */}
           <div className="mb-3">
             <label className="form-label">Email address</label>
             <input
@@ -71,7 +68,7 @@ const Login = () => {
             />
           </div>
 
-         {/* password code */}
+          {/* password code */}
           <div className="mb-3">
             <label className="form-label">Password</label>
             <input

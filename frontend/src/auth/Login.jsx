@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   loginUser,
@@ -138,12 +138,13 @@ function Login() {
     // Fetch and save role-specific data
     clearRoleData();
 
-    if (authUser.role === 'patient' && authUser.id && authUser.id !== 'admin-id') {
+    if (authUser.role === 'patient' && authUser.id) {
       const patientDoc = await fetchPatientData(authUser.id);
       if (patientDoc) {
         savePatientData(patientDoc, authUser.id);
       }
     }
+
 
     if (authUser.role === 'doctor') {
       const doctorDoc = await fetchDoctorData(authUser.email);
@@ -404,7 +405,7 @@ function Login() {
             </div>
 
             <div className="forgot-pass-box animate-enter" style={{ '--i': 5 }}>
-              <a href="#" className="forgot-pass-link">Forgot your password?</a>
+              <Link to="/forgot-password" className="forgot-pass-link">Forgot your password?</Link>
             </div>
 
             <button

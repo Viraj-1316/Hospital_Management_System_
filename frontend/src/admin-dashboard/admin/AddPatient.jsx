@@ -18,7 +18,7 @@ const AddPatient = () => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    clinic: "", 
+    clinic: "",
     email: "",
     phone: "",
     dob: "",
@@ -37,8 +37,6 @@ const AddPatient = () => {
         setIsLoadingClinics(true);
         // Note: Ensure this endpoint matches your backend route exactly
         const res = await axios.get(`${API_BASE}/api/clinics`);
-        
-        console.log("Clinics API Response:", res.data); // Check your browser console to see the real structure
 
         // Handle different response structures
         if (Array.isArray(res.data)) {
@@ -48,8 +46,8 @@ const AddPatient = () => {
           // Case 2: API returns { clinics: [ {name: 'One Care'}, ... ] }
           setClinics(res.data.clinics);
         } else if (res.data.data && Array.isArray(res.data.data)) {
-           // Case 3: API returns { data: [ {name: 'One Care'}, ... ] }
-           setClinics(res.data.data);
+          // Case 3: API returns { data: [ {name: 'One Care'}, ... ] }
+          setClinics(res.data.data);
         } else {
           console.warn("Unexpected API response structure", res.data);
           toast.error("Loaded data is not a list of clinics.");
@@ -89,7 +87,7 @@ const AddPatient = () => {
       });
 
       navigate("/patients");
-      
+
     } catch (error) {
       console.error("Error adding patient:", error);
     }
@@ -98,7 +96,7 @@ const AddPatient = () => {
   return (
     <AdminLayout>
       <Toaster position="top-right" />
-      
+
       <div className="container bg-white p-4 rounded shadow-sm">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
@@ -152,7 +150,7 @@ const AddPatient = () => {
                 required
               >
                 <option value="">Select clinic</option>
-                
+
                 {/* Render options if clinics exist */}
                 {clinics.length > 0 ? (
                   clinics.map((clinic, index) => (

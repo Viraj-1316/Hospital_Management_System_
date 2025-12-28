@@ -35,11 +35,6 @@ const receptionistSchema = new mongoose.Schema(
       required: true,
     },
 
-    passwordPlain: {
-      type: String,
-      default: "",
-    },
-
     status: {
       type: Boolean,
       default: true,

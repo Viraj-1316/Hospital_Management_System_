@@ -36,7 +36,7 @@ export default function DoctorDashboard() {
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // -----------------------------
   // 1) MAP ONE APPOINTMENT → EVENT
   // -----------------------------
@@ -83,58 +83,58 @@ export default function DoctorDashboard() {
     };
   };
 
-    const handleEventClick = (clickInfo) => {
+  const handleEventClick = (clickInfo) => {
     const ev = clickInfo.event;
     navigate(`/doctor/appointments/${ev.id}`);
   };
-  
+
   // -----------------------------
   // 2) FETCH STATS FROM BACKEND
   // -----------------------------
   useEffect(() => {
-  let mounted = true;
+    let mounted = true;
 
-  const fetchStats = async () => {
-    setLoadingStats(true);
-    try {
-      const res = await axios.get(`${API_BASE}/dashboard-stats`);
+    const fetchStats = async () => {
+      setLoadingStats(true);
+      try {
+        const res = await axios.get(`${API_BASE}/dashboard-stats`);
 
-      // ✅ now we read all 3 values from backend
-      const {
-        totalPatients,
-        totalAppointments,
-        todayAppointments,
-        totalServices,
-      } = res.data || {};
+        // ✅ now we read all 3 values from backend
+        const {
+          totalPatients,
+          totalAppointments,
+          todayAppointments,
+          totalServices,
+        } = res.data || {};
 
-      if (mounted) {
-        setStats({
-          totalPatients: totalPatients || 0,
-          totalAppointments: totalAppointments || 0,
-          todayAppointments: todayAppointments || 0,
-          totalServices: totalServices || 0,
-        });
+        if (mounted) {
+          setStats({
+            totalPatients: totalPatients || 0,
+            totalAppointments: totalAppointments || 0,
+            todayAppointments: todayAppointments || 0,
+            totalServices: totalServices || 0,
+          });
+        }
+      } catch (err) {
+        console.error("DoctorDashboard: failed to fetch stats", err);
+        if (mounted) {
+          setStats({
+            totalPatients: 0,
+            totalAppointments: 0,
+            todayAppointments: 0,
+            totalServices: 0,
+          });
+        }
+      } finally {
+        if (mounted) setLoadingStats(false);
       }
-    } catch (err) {
-      console.error("DoctorDashboard: failed to fetch stats", err);
-      if (mounted) {
-        setStats({
-          totalPatients: 0,
-          totalAppointments: 0,
-          todayAppointments: 0,
-          totalServices: 0,
-        });
-      }
-    } finally {
-      if (mounted) setLoadingStats(false);
-    }
-  };
+    };
 
-  fetchStats();
-  return () => {
-    mounted = false;
-  };
-}, []);
+    fetchStats();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
 
   // -----------------------------
@@ -167,8 +167,6 @@ export default function DoctorDashboard() {
         const appointments = Array.isArray(res.data)
           ? res.data
           : res.data.data ?? [];
-
-        console.log("DoctorDashboard /appointments :", appointments);
 
         const mapped = appointments
           .map(mapAppointmentToEvent)
@@ -310,8 +308,8 @@ export default function DoctorDashboard() {
                     {loadingEvents
                       ? "Loading events…"
                       : events.length === 0
-                      ? "No appointments found"
-                      : `${events.length} events`}
+                        ? "No appointments found"
+                        : `${events.length} events`}
                   </span>
                 </div>
               </div>

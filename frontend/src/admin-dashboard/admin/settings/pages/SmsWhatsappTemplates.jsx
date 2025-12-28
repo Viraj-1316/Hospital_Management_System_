@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Accordion, Button, Form, Modal } from "react-bootstrap";
 import toast from "react-hot-toast";
 import { FaSms, FaWhatsapp, FaSave, FaPaperPlane, FaCheckSquare } from "react-icons/fa";
+import axios from "axios";
+import API_BASE from "../../../../config";
 
 const SmsWhatsappTemplates = () => {
-  // Mock data for categories and templates
+  // Mock data for categories and templates (Used for Structure & Initial Seeding)
   const templateCategories = [
     {
       id: "clinic",
@@ -35,22 +37,22 @@ const SmsWhatsappTemplates = () => {
           keys: ["{{user_email}}", "{{user_name}}", "{{user_password}}"],
         },
         {
-            id: "user_verified",
-            title: "User Verified Acknowledgement notification Template",
-            body: "Your Account Has been Verified By admin On Date: {{current_date}}. Login Page: {{login_url}}. Thank you.",
-            keys: ["{{current_date}}", "{{login_url}}"],
+          id: "user_verified",
+          title: "User Verified Acknowledgement notification Template",
+          body: "Your Account Has been Verified By admin On Date: {{current_date}}. Login Page: {{login_url}}. Thank you.",
+          keys: ["{{current_date}}", "{{login_url}}"],
         },
         {
-            id: "new_admin_user",
-            title: "New Admin User Registration Notification",
-            body: "New User Register On site {{site_url}} On Date: {{current_date}}. Name : {{user_name}}, Role : {{user_role}}. Thank you.",
-            keys: ["{{site_url}}", "{{current_date}}", "{{user_name}}", "{{user_role}}"],
+          id: "new_admin_user",
+          title: "New Admin User Registration Notification",
+          body: "New User Register On site {{site_url}} On Date: {{current_date}}. Name : {{user_name}}, Role : {{user_role}}. Thank you.",
+          keys: ["{{site_url}}", "{{current_date}}", "{{user_name}}", "{{user_role}}"],
         },
         {
-            id: "payment_pending",
-            title: "Payment pending notification to user template",
-            body: "Appointment Payment. Your Appointment is cancelled due to pending payment. Thank you.",
-            keys: ["{{current_date}}"],
+          id: "payment_pending",
+          title: "Payment pending notification to user template",
+          body: "Appointment Payment. Your Appointment is cancelled due to pending payment. Thank you.",
+          keys: ["{{current_date}}"],
         },
       ],
     },
@@ -65,28 +67,28 @@ const SmsWhatsappTemplates = () => {
           keys: ["{{user_email}}", "{{user_name}}", "{{user_password}}"],
         },
         {
-            id: "new_appt_doctor",
-            title: "New Appointment Notification to Doctor Template",
-            body: "New appointment. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Patient : {{patient_name}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}"],
+          id: "new_appt_doctor",
+          title: "New Appointment Notification to Doctor Template",
+          body: "New appointment. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Patient : {{patient_name}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}"],
         },
         {
-            id: "zoom_appt_doctor",
-            title: "New Zoom video appointment notification to doctor template",
-            body: "Zoom video conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Patient : {{patient_name}} , Zoom Link : {{zoom_link}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}", "{{zoom_link}}"],
+          id: "zoom_appt_doctor",
+          title: "New Zoom video appointment notification to doctor template",
+          body: "Zoom video conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Patient : {{patient_name}} , Zoom Link : {{zoom_link}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}", "{{zoom_link}}"],
         },
         {
-            id: "google_meet_doctor",
-            title: "New Google Meet video appointment notification to doctor template",
-            body: "Google Meet conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Patient : {{patient_name}} , Google Meet Link : {{meet_link}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}", "{{meet_link}}"],
+          id: "google_meet_doctor",
+          title: "New Google Meet video appointment notification to doctor template",
+          body: "Google Meet conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Patient : {{patient_name}} , Google Meet Link : {{meet_link}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}", "{{meet_link}}"],
         },
         {
-            id: "patient_reminder_doctor",
-            title: "Patient Appointment Reminder Notification Template for Doctor",
-            body: "Doctor Appointment Reminder. You Have appointment on {{appointment_date}} , Time : {{appointment_time}} , Patient : {{patient_name}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}"],
+          id: "patient_reminder_doctor",
+          title: "Patient Appointment Reminder Notification Template for Doctor",
+          body: "Doctor Appointment Reminder. You Have appointment on {{appointment_date}} , Time : {{appointment_time}} , Patient : {{patient_name}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}", "{{patient_name}}"],
         },
       ],
     },
@@ -101,52 +103,52 @@ const SmsWhatsappTemplates = () => {
           keys: ["{{user_email}}", "{{user_password}}"],
         },
         {
-            id: "allow_cancel_appt",
-            title: "Allow Cancel appointments",
-            body: "Your appointment Booking is cancel. Date: {{appointment_date}} , Time : {{appointment_time}}. Clinic: {{clinic_name}} Doctor: {{doctor_name}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}", "{{clinic_name}}", "{{doctor_name}}"],
+          id: "allow_cancel_appt",
+          title: "Allow Cancel appointments",
+          body: "Your appointment Booking is cancel. Date: {{appointment_date}} , Time : {{appointment_time}}. Clinic: {{clinic_name}} Doctor: {{doctor_name}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}", "{{clinic_name}}", "{{doctor_name}}"],
         },
         {
-            id: "video_conf_appt_patient",
-            title: "Video conference appointment booking notification template",
-            body: "Zoom video conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Doctor : {{doctor_name}} , Zoom Link : {{zoom_link}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}", "{{doctor_name}}", "{{zoom_link}}"],
+          id: "video_conf_appt_patient",
+          title: "Video conference appointment booking notification template",
+          body: "Zoom video conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Doctor : {{doctor_name}} , Zoom Link : {{zoom_link}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}", "{{doctor_name}}", "{{zoom_link}}"],
         },
         {
-            id: "patient_appt_reminder",
-            title: "Patient Appointment Reminder Notification Template",
-            body: "Welcome to OneCare. You Have appointment on {{appointment_date}} , Time : {{appointment_time}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}"],
+          id: "patient_appt_reminder",
+          title: "Patient Appointment Reminder Notification Template",
+          body: "Welcome to OneCare. You Have appointment on {{appointment_date}} , Time : {{appointment_time}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}"],
         },
         {
-            id: "google_meet_patient",
-            title: "New Google Meet video appointment email to patient template",
-            body: "Google Meet conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Doctor : {{doctor_name}} , Google Meet Link : {{meet_link}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}", "{{doctor_name}}", "{{meet_link}}"],
+          id: "google_meet_patient",
+          title: "New Google Meet video appointment email to patient template",
+          body: "Google Meet conference. You have new appointment on Date: {{appointment_date}} , Time : {{appointment_time}} ,Doctor : {{doctor_name}} , Google Meet Link : {{meet_link}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}", "{{doctor_name}}", "{{meet_link}}"],
         },
         {
-            id: "patient_checkin",
-            title: "Patient clinic Check In notify template",
-            body: "New Patient Check In to Clinic. Patient: {{patient_name}}. Check In Date: {{current_date}}. Thank you.",
-            keys: ["{{patient_name}}", "{{current_date}}"],
+          id: "patient_checkin",
+          title: "Patient clinic Check In notify template",
+          body: "New Patient Check In to Clinic. Patient: {{patient_name}}. Check In Date: {{current_date}}. Thank you.",
+          keys: ["{{patient_name}}", "{{current_date}}"],
         },
         {
-            id: "new_appt_sms",
-            title: "New Appointment SMS Template",
-            body: "Your appointment has been booked successfully on {{appointment_date}} , Time : {{appointment_time}}. Thank you.",
-            keys: ["{{appointment_date}}", "{{appointment_time}}"],
+          id: "new_appt_sms",
+          title: "New Appointment SMS Template",
+          body: "Your appointment has been booked successfully on {{appointment_date}} , Time : {{appointment_time}}. Thank you.",
+          keys: ["{{appointment_date}}", "{{appointment_time}}"],
         },
         {
-            id: "patient_report",
-            title: "Patient Report Template",
-            body: "Welcome to OneCare. Your Report is ready. Thank you.",
-            keys: ["{{current_date}}"],
+          id: "patient_report",
+          title: "Patient Report Template",
+          body: "Welcome to OneCare. Your Report is ready. Thank you.",
+          keys: ["{{current_date}}"],
         },
         {
-            id: "patient_prescription",
-            title: "Patient Prescription Notification Template",
-            body: "You Have Medicine Prescription on Clinic : {{clinic_name}}, Doctor : {{doctor_name}}. Thank you.",
-            keys: ["{{clinic_name}}", "{{doctor_name}}"],
+          id: "patient_prescription",
+          title: "Patient Prescription Notification Template",
+          body: "You Have Medicine Prescription on Clinic : {{clinic_name}}, Doctor : {{doctor_name}}. Thank you.",
+          keys: ["{{clinic_name}}", "{{doctor_name}}"],
         },
       ],
     },
@@ -164,8 +166,71 @@ const SmsWhatsappTemplates = () => {
     },
   ];
 
-  // State for edits
+  // State for edits (Holds the current body of templates)
+  // Key: templateId, Value: { body: "..." }
   const [edits, setEdits] = useState({});
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(`${API_BASE}/api/settings/templates`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (data && data.length > 0) {
+        // Hydrate state from backend
+        const initialEdits = {};
+        data.forEach(t => {
+          initialEdits[t.templateId] = { body: t.body };
+        });
+        setEdits(initialEdits);
+      } else {
+        // Backend empty -> SEED IT
+        seedTemplates();
+      }
+    } catch (err) {
+      console.error("Error loading templates", err);
+    }
+  };
+
+  const seedTemplates = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Flatten categories to list
+      const allTemplates = [];
+      templateCategories.forEach(cat => {
+        cat.templates.forEach(t => {
+          allTemplates.push({
+            templateId: t.id,
+            category: cat.id,
+            title: t.title,
+            body: t.body,
+            keys: t.keys
+          });
+        });
+      });
+
+      await axios.post(`${API_BASE}/api/settings/templates/seed`, { templates: allTemplates }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // After seed, set edits mainly to defaults
+      const initialEdits = {};
+      allTemplates.forEach(t => {
+        initialEdits[t.templateId] = { body: t.body };
+      });
+      setEdits(initialEdits);
+
+      console.log("Templates seeded successfully");
+    } catch (err) {
+      console.error("Error seeding templates", err);
+    }
+  }
 
   const handleBodyChange = (templateId, value) => {
     setEdits((prev) => ({
@@ -174,8 +239,9 @@ const SmsWhatsappTemplates = () => {
     }));
   };
 
-  const getTemplateData = (template) => {
-    return edits[template.id] || { body: template.body };
+  // Helper to fallback to hardcoded default if not in edits (though edits should be populated)
+  const getTemplateData = (categoryTemplate) => {
+    return edits[categoryTemplate.id] || { body: categoryTemplate.body };
   };
 
   const copyToClipboard = (text) => {
@@ -204,17 +270,43 @@ const SmsWhatsappTemplates = () => {
     setSendingTest(true);
     // Simulate API call
     setTimeout(() => {
-        toast.success(`Test ${testType === 'sms' ? 'SMS' : 'WhatsApp'} sent successfully to ${testNumber}!`);
-        setSendingTest(false);
-        setShowTestModal(false);
-        setTestNumber("");
+      toast.success(`Test ${testType === 'sms' ? 'SMS' : 'WhatsApp'} sent successfully to ${testNumber}!`);
+      setSendingTest(false);
+      setShowTestModal(false);
+      setTestNumber("");
     }, 1500);
   };
-  
-  const handleSaveAll = () => {
-      // Simulate saving all templates
+
+  const handleSaveAll = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Prepare bulk update payload
+      // We reuse the /seed endpoint which does upsert/update
+      const templatesToSave = [];
+
+      templateCategories.forEach(cat => {
+        cat.templates.forEach(t => {
+          const currentData = getTemplateData(t);
+          templatesToSave.push({
+            templateId: t.id,
+            category: cat.id,
+            title: t.title,
+            body: currentData.body,
+            keys: t.keys
+          });
+        });
+      });
+
+      await axios.post(`${API_BASE}/api/settings/templates/seed`, { templates: templatesToSave }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
       toast.success("All templates saved successfully!");
-      console.log("Saved Templates:", edits);
+    } catch (err) {
+      console.error("Error saving templates", err);
+      toast.error("Failed to save templates");
+    }
   }
 
   return (
@@ -222,20 +314,20 @@ const SmsWhatsappTemplates = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4 className="fw-bold text-primary mb-0">SMS/WhatsApp Template <small className="text-muted fs-6 ms-2"><i className="bi bi-question-circle"></i></small></h4>
         <div className="d-flex gap-2">
-            <Button variant="primary" size="sm" onClick={() => openTestModal('sms')}>
+          <Button variant="primary" size="sm" onClick={() => openTestModal('sms')}>
             <FaSms className="me-2" /> Send test Sms
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => openTestModal('whatsapp')}>
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => openTestModal('whatsapp')}>
             <FaWhatsapp className="me-2" /> Send test Whatsapp
-            </Button>
+          </Button>
         </div>
       </div>
 
       <Accordion defaultActiveKey="0" className="mb-4 shadow-sm border-0">
         {templateCategories.map((category, idx) => (
-          <Accordion.Item 
-            eventKey={String(idx)} 
-            key={category.id} 
+          <Accordion.Item
+            eventKey={String(idx)}
+            key={category.id}
             className={`border-0 mb-2 rounded overflow-hidden stagger-item stagger-${(idx % 5) + 1}`}
           >
             <Accordion.Header className="bg-white">
@@ -250,8 +342,8 @@ const SmsWhatsappTemplates = () => {
                       <Accordion.Item eventKey={String(tIdx)} key={template.id} className="border-bottom">
                         <Accordion.Header>
                           <div className="d-flex align-items-center gap-2">
-                             <FaCheckSquare className="text-primary" />
-                             <span className="fw-semibold text-primary" style={{ fontSize: '0.95rem' }}>{template.title}</span>
+                            <FaCheckSquare className="text-primary" />
+                            <span className="fw-semibold text-primary" style={{ fontSize: '0.95rem' }}>{template.title}</span>
                           </div>
                         </Accordion.Header>
                         <Accordion.Body className="bg-white p-4">
@@ -294,11 +386,11 @@ const SmsWhatsappTemplates = () => {
           </Accordion.Item>
         ))}
       </Accordion>
-      
+
       <div className="d-flex justify-content-end mb-4">
-          <Button variant="primary" onClick={handleSaveAll}>
-              <FaSave className="me-2" /> Save
-          </Button>
+        <Button variant="primary" onClick={handleSaveAll}>
+          <FaSave className="me-2" /> Save
+        </Button>
       </div>
 
       {/* Test Modal */}

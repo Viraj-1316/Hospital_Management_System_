@@ -2,37 +2,64 @@ const mongoose = require("mongoose");
 
 const BillingSchema = new mongoose.Schema(
   {
-    billNumber: {       //updated
+    billNumber: {
       type: Number,
       required: true,
       unique: true
     },
-    
-    // Change required to FALSE
-    patientId: { type: String, required: true },
-    doctorId: { type: String, required: true },
 
-    // --- FIX HERE: Allow clinicId to be empty/null ---
-    clinicId: { type: String, required: false },
-    // -------------------------------------------------
+    // ObjectId references for proper population
+    patientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Patient",
+      required: false // Allow bills without linked patient
+    },
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Doctor",
+      required: false // Allow bills without linked doctor
+    },
+    clinicId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Clinic",
+      required: false
+    },
+    encounterId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Encounter",
+      required: false,
+      default: null
+    },
 
-    // backend/models/Billing.js
-    encounterId: { type: String, required: false, default: null },
+    // Denormalized names for display (fallback if population fails)
+    doctorName: { type: String, required: false, default: "" },
+    clinicName: { type: String, required: false, default: "" },
+    patientName: { type: String, required: false, default: "" },
 
-    doctorName: { type: String, required: true },
-    clinicName: { type: String, required: true },
-    patientName: { type: String, required: true },
-
-    // ... rest of your schema
-    services: { type: Array, default: [] },
+    // Billing details
+    services: [{
+      name: { type: String },
+      amount: { type: Number, default: 0 }
+    }],
     totalAmount: { type: Number, required: true },
     discount: { type: Number, default: 0 },
     amountDue: { type: Number, required: true },
-    status: { type: String, default: "unpaid" },
-    date: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ["unpaid", "paid", "partial", "cancelled"],
+      default: "unpaid"
+    },
+    date: { type: Date, required: true, default: Date.now },
     notes: { type: String, default: "" },
+    paymentMethod: { type: String, default: "" },
   },
   { timestamps: true }
 );
+
+// Index for common queries
+BillingSchema.index({ patientId: 1 });
+BillingSchema.index({ doctorId: 1 });
+BillingSchema.index({ date: -1 });
+BillingSchema.index({ status: 1 });
 
 module.exports = mongoose.model("Billing", BillingSchema);

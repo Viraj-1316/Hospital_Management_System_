@@ -1,6 +1,5 @@
 const twilio = require("twilio");
-
-
+const logger = require("./logger");
 
 let client = null;
 
@@ -10,60 +9,55 @@ let client = null;
  * @param {string} body - The message text
  */
 const sendWhatsAppMessage = async (to, body) => {
-  
+
   if (!client) {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
-    
+
     if (accountSid && authToken) {
       try {
         client = twilio(accountSid, authToken);
-        console.log("Twilio client initialized with SID:", accountSid.substring(0, 6) + "...");
+        logger.debug("Twilio client initialized", { sid: accountSid.substring(0, 6) + "..." });
       } catch (err) {
-        console.error("Error initializing Twilio client:", err.message);
+        logger.error("Failed to initialize Twilio client", { error: err.message });
       }
     } else {
-      console.warn("Twilio credentials missing in .env (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN).");
-      console.log("Debug - SID:", accountSid ? "Set" : "Missing", "| Token:", authToken ? "Set" : "Missing");
+      logger.warn("Twilio credentials missing in environment variables");
     }
   }
 
   if (!client) {
-    console.warn("Twilio client not initialized. Skipping WhatsApp message.");
+    logger.warn("Twilio client not initialized, skipping WhatsApp message");
     return;
   }
 
   if (!to) {
-    console.warn("No recipient number provided for WhatsApp message.");
+    logger.warn("No recipient number provided for WhatsApp message");
     return;
   }
 
-
   let formattedTo = to.trim();
-  
-  
+
   const digitsOnly = formattedTo.replace(/\D/g, '');
   if (digitsOnly.length === 10 && !formattedTo.includes('+')) {
-      formattedTo = `+91${formattedTo}`;
-      console.log(`Added +91 to number: ${formattedTo}`);
+    formattedTo = `+91${formattedTo}`;
+    logger.debug("Added country code to number", { original: to, formatted: formattedTo });
   } else if (!formattedTo.includes('+')) {
-// If number doesn't start with '+', add it
-      formattedTo = `+${formattedTo}`;
+    formattedTo = `+${formattedTo}`;
   }
 
   if (!formattedTo.startsWith("whatsapp:")) {
     formattedTo = `whatsapp:${formattedTo}`;
   }
 
-  
   let formattedFrom = process.env.TWILIO_WHATSAPP_NUMBER;
   if (formattedFrom && !formattedFrom.startsWith("whatsapp:")) {
     formattedFrom = `whatsapp:${formattedFrom}`;
   }
 
   if (!formattedFrom) {
-     console.warn("TWILIO_WHATSAPP_NUMBER not set in .env");
-     return;
+    logger.warn("TWILIO_WHATSAPP_NUMBER not set in environment");
+    return;
   }
 
   try {
@@ -72,10 +66,10 @@ const sendWhatsAppMessage = async (to, body) => {
       from: formattedFrom,
       to: formattedTo,
     });
-    console.log(` WhatsApp message sent to ${to}. SID: ${message.sid}`);
+    logger.info("WhatsApp message sent", { to, sid: message.sid });
     return message;
   } catch (error) {
-    console.error(`Error sending WhatsApp message to ${to}:`, error.message);
+    logger.error("Failed to send WhatsApp message", { to, error: error.message });
   }
 };
 

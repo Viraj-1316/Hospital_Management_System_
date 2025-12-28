@@ -5,8 +5,9 @@ const DoctorModel = require("../models/Doctor");
 const AppointmentModel = require("../models/Appointment");
 
 const ServiceModel = require("../models/Service");
+const { verifyToken } = require("../middleware/auth");
 
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   try {
     // 1) Format today's date: YYYY-MM-DD
     const today = new Date();

@@ -9,7 +9,7 @@ import API_BASE from '../config';
  * Login user with email and password
  * @param {string} email 
  * @param {string} password 
- * @returns {Promise<{success: boolean, data?: object, error?: string}>}
+ * @returns {Promise<{success: boolean, data?: object, error?: string, token?: string}>}
  */
 export async function loginUser(email, password) {
     try {
@@ -25,8 +25,12 @@ export async function loginUser(email, password) {
             return { success: false, error: data.message || 'Login failed' };
         }
 
-        const user = data.user || data;
-        return { success: true, data: user, token: data.token };
+        // Extract token from response (server now returns it directly)
+        const token = data.token;
+        const user = { ...data };
+        delete user.token; // Remove token from user object
+
+        return { success: true, data: user, token };
     } catch (err) {
         console.error('Login error:', err);
         return { success: false, error: 'Network error: backend not responding' };
@@ -66,7 +70,10 @@ export async function signupUser(userData) {
  */
 export async function fetchPatientData(userId) {
     try {
-        const res = await fetch(`${API_BASE}/patients/by-user/${userId}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/patients/by-user/${userId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (res.ok) {
             return await res.json();
         }
@@ -84,7 +91,10 @@ export async function fetchPatientData(userId) {
  */
 export async function fetchDoctorData(email) {
     try {
-        const res = await fetch(`${API_BASE}/doctors?email=${encodeURIComponent(email)}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/doctors?email=${encodeURIComponent(email)}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (res.ok) {
             const doctors = await res.json();
             return Array.isArray(doctors) ? doctors.find(d => d.email === email) : null;
@@ -222,3 +232,35 @@ export function clearRoleData() {
     localStorage.removeItem('patientId');
     localStorage.removeItem('doctor');
 }
+
+/**
+ * Get stored JWT token
+ * @returns {string|null}
+ */
+export function getAuthToken() {
+    return localStorage.getItem('token');
+}
+
+/**
+ * Get headers object with Authorization token for API calls
+ * @returns {object}
+ */
+export function getAuthHeaders() {
+    const token = getAuthToken();
+    return {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+    };
+}
+
+/**
+ * Logout user - clear all auth data
+ */
+export function logoutUser() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('authUser');
+    clearRoleData();
+}
+

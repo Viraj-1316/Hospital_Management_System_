@@ -5,6 +5,18 @@ const API = axios.create({
   baseURL: `${API_BASE}/api/receptionists`,
 });
 
+// Add auth token to all requests
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Get all receptionists
 export const getReceptionists = () => API.get("/");
 

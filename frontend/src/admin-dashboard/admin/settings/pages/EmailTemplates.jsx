@@ -449,7 +449,7 @@ const EmailTemplates = () => {
     },
   ];
 
- 
+
   // We'll store edits in a local state map: { [templateId]: { subject, body, enabled } }
   const [edits, setEdits] = useState({});
 
@@ -489,10 +489,12 @@ const EmailTemplates = () => {
 
     setSendingTestEmail(true);
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE}/api/email/test-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ to: testEmail, message: testMessage }),
       });
@@ -538,19 +540,19 @@ const EmailTemplates = () => {
                       <Accordion.Item eventKey={String(tIdx)} key={template.id} className="border-bottom">
                         <Accordion.Header>
                           <div className="d-flex align-items-center gap-2">
-                             <FaCheckSquare className="text-primary" />
-                             <span className="fw-semibold text-primary" style={{ fontSize: '0.95rem' }}>{template.title}</span>
+                            <FaCheckSquare className="text-primary" />
+                            <span className="fw-semibold text-primary" style={{ fontSize: '0.95rem' }}>{template.title}</span>
                           </div>
                         </Accordion.Header>
                         <Accordion.Body className="bg-white p-4">
                           <div className="mb-3 d-flex align-items-center gap-2">
-                             <Form.Check 
-                                type="checkbox" 
-                                id={`enable-${template.id}`}
-                                label={<span className="fw-bold text-primary">{template.title}</span>}
-                                checked={true} 
-                                readOnly
-                             />
+                            <Form.Check
+                              type="checkbox"
+                              id={`enable-${template.id}`}
+                              label={<span className="fw-bold text-primary">{template.title}</span>}
+                              checked={true}
+                              readOnly
+                            />
                           </div>
 
                           <Form.Group className="mb-3">
@@ -590,9 +592,9 @@ const EmailTemplates = () => {
                           </div>
 
                           <div className="d-flex justify-content-end">
-                             <Button variant="primary">
-                                <FaSave className="me-2" /> Save
-                             </Button>
+                            <Button variant="primary">
+                              <FaSave className="me-2" /> Save
+                            </Button>
                           </div>
                         </Accordion.Body>
                       </Accordion.Item>

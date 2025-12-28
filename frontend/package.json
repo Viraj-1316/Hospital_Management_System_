@@ -34,6 +34,8 @@
     "react-phone-input-2": "^2.15.1",
     "react-quill-new": "^3.6.0",
     "react-router-dom": "^7.9.6",
+    "socket.io-client": "^4.8.3",
+    "styled-components": "^6.1.19",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

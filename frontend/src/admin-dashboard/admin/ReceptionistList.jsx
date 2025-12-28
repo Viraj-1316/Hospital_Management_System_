@@ -163,7 +163,9 @@ export default function ReceptionistList({
           item._id === id ? { ...item, status: newStatus } : item
         )
       );
-    } catch (err) {}
+    } catch (err) {
+      toast.error("Failed to update status");
+    }
   };
 
   // Import CSV
@@ -183,11 +185,13 @@ export default function ReceptionistList({
       await toast.promise(p, {
         loading: "Importing...",
         success: "Done",
-        error: "Failed",
+        error: "Failed to import",
       });
 
       window.location.reload();
-    } catch (err) {}
+    } catch (err) {
+      // Error already handled by toast.promise
+    }
   };
 
   return (
@@ -368,9 +372,8 @@ export default function ReceptionistList({
 
                           <td>
                             <div
-                              className={`status-badge ${
-                                row.status ? "active" : "inactive"
-                              }`}
+                              className={`status-badge ${row.status ? "active" : "inactive"
+                                }`}
                             >
                               {row.status ? "ACTIVE" : "INACTIVE"}
                             </div>

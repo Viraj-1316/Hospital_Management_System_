@@ -22,7 +22,12 @@ export default function PatientNavbar({ toggleSidebar }) {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/user/${userId}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (res.ok) {
         const data = await res.json();
         setProfileData({
@@ -56,7 +61,7 @@ export default function PatientNavbar({ toggleSidebar }) {
 
   return (
     <nav className="navbar navbar-dark bg-primary px-3 d-flex justify-content-between align-items-center">
-      
+
       {/* left side */}
       <div className="d-flex align-items-center gap-2">
         <button

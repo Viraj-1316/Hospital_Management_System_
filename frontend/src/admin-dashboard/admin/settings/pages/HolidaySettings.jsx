@@ -112,7 +112,6 @@ export default function HolidaySettings() {
       setHolidays(hRes.data || []);
       setDoctors(dRes.data || []);
     } catch (err) {
-      console.error(err);
       toast.error("Failed to load data");
     } finally {
       setLoading(false);
@@ -212,7 +211,9 @@ export default function HolidaySettings() {
     try {
       const logoBase64 = await getBase64Image(`${window.location.origin}/logo.png`);
       if (logoBase64) doc.addImage(logoBase64, "PNG", 15, 10, 20, 20);
-    } catch (e) { }
+    } catch (e) {
+      // Logo loading is optional, continue without it
+    }
     doc.text("Clinic Holiday List", 14, 40);
     autoTable(doc, {
       head: [['ID', 'Doctor', 'From', 'To']],
