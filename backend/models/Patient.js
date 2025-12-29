@@ -28,6 +28,7 @@ const PatientSchema = new mongoose.Schema({
 // Database Indexes for improved query performance
 PatientSchema.index({ email: 1 });
 PatientSchema.index({ userId: 1 });
+PatientSchema.index({ phone: 1 }); // Optimize phone lookups
 PatientSchema.index({ clinic: 1 });
 PatientSchema.index({ isActive: 1 });
 

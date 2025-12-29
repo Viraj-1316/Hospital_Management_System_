@@ -317,72 +317,121 @@ router.get("/today", verifyToken, async (req, res) => {
 });
 
 // GET /appointments/weekly
+// GET /appointments/weekly
 router.get("/weekly", verifyToken, async (req, res) => {
   try {
-    const stats = [];
     const today = new Date();
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
+    const startOfPeriod = new Date(today);
+    startOfPeriod.setDate(today.getDate() - 6);
+    startOfPeriod.setHours(0, 0, 0, 0);
+
+    const stats = await AppointmentModel.aggregate([
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $gte: [{ $toDate: "$date" }, startOfPeriod] },
+              { $lte: [{ $toDate: "$date" }, endOfDay] }
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          dateStr: { $dateToString: { format: "%Y-%m-%d", date: { $toDate: "$date" } } }
+        }
+      },
+      {
+        $group: {
+          _id: "$dateStr",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Format results to match the last 7 days (including empty days)
+    const result = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-
-      const startOfDay = new Date(d);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(d);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      const count = await AppointmentModel.countDocuments({
-        $expr: {
-          $and: [
-            { $gte: [{ $toDate: "$date" }, startOfDay] },
-            { $lte: [{ $toDate: "$date" }, endOfDay] }
-          ]
-        }
-      });
-
+      const dateStr = d.toISOString().split("T")[0];
       const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-      stats.push({ label: dayName, count });
+
+      const found = stats.find(s => s._id === dateStr);
+      result.push({ label: dayName, count: found ? found.count : 0 });
     }
-    res.json(stats);
+
+    res.json(result);
   } catch (err) {
+    console.error("Weekly stats error:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 // GET /appointments/monthly
+// GET /appointments/monthly
 router.get("/monthly", verifyToken, async (req, res) => {
   try {
-    const stats = [];
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth();
 
-    for (let i = 0; i < 4; i++) {
-      const start = new Date(currentYear, currentMonth, (i * 7) + 1);
-      start.setHours(0, 0, 0, 0);
+    // Calculate start and end of the month
+    const startOfMonth = new Date(currentYear, currentMonth, 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
 
-      let end;
-      if (i === 3) {
-        end = new Date(currentYear, currentMonth + 1, 0);
-        end.setHours(23, 59, 59, 999);
-      } else {
-        end = new Date(currentYear, currentMonth, (i * 7) + 7);
-        end.setHours(23, 59, 59, 999);
-      }
-
-      const count = await AppointmentModel.countDocuments({
-        $expr: {
-          $and: [
-            { $gte: [{ $toDate: "$date" }, start] },
-            { $lte: [{ $toDate: "$date" }, end] }
-          ]
+    const stats = await AppointmentModel.aggregate([
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $gte: [{ $toDate: "$date" }, startOfMonth] },
+              { $lte: [{ $toDate: "$date" }, endOfMonth] }
+            ]
+          }
         }
-      });
+      },
+      {
+        $project: {
+          // Calculate week number within the month (simplified approximation matching previous logic)
+          // Previous logic: Week 1 (1-7), Week 2 (8-14), Week 3 (15-21), Week 4 (22-end)
+          dayOfMonth: { $dayOfMonth: { $toDate: "$date" } }
+        }
+      },
+      {
+        $bucket: {
+          groupBy: "$dayOfMonth",
+          boundaries: [1, 8, 15, 22, 32], // 32 to safely cover up to 31st
+          default: "Other",
+          output: {
+            count: { $sum: 1 }
+          }
+        }
+      }
+    ]);
 
-      stats.push({ label: `Week ${i + 1}`, count });
-    }
+    // Map buckets to labels
+    const weekMap = {
+      1: "Week 1",
+      8: "Week 2",
+      15: "Week 3",
+      22: "Week 4"
+    };
 
-    res.json(stats);
+    const result = [1, 8, 15, 22].map(boundary => {
+      const found = stats.find(s => s._id === boundary);
+      return {
+        label: weekMap[boundary],
+        count: found ? found.count : 0
+      };
+    });
+
+    res.json(result);
   } catch (err) {
     console.error("Monthly stats error:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
