@@ -4,7 +4,7 @@ const cors = require("cors");
 const path = require("path");
 const helmet = require("helmet");
 const compression = require("compression");
-const rateLimit = require("express-rate-limit");
+
 const mongoSanitize = require("./middleware/mongoSanitize");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
@@ -65,32 +65,9 @@ app.use(helmet({
 // Compression: Gzip responses for faster load times
 app.use(compression());
 
-// Rate Limiting: Prevent brute force and DDoS attacks
-// Only enable in production mode
-const isProduction = process.env.NODE_ENV === "production";
+// Rate Limiting: Removed as per request
 
-if (isProduction) {
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10000, // 10000 requests per 15 minutes in production
-    message: { message: "Too many requests from this IP, please try again after 15 minutes." },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-  app.use(limiter);
-  console.log("✅ Rate limiting ENABLED (production mode)");
-} else {
-  console.log("⚠️ Rate limiting DISABLED (development mode)");
-}
 
-// Stricter rate limit for auth routes (always active for security)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isProduction ? 20 : 1000, // Relaxed in development
-  message: { message: "Too many login attempts. Please try again after 15 minutes." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // --- CORS Configuration ---
 const allowedOrigins = process.env.CORS_ORIGIN
@@ -141,8 +118,7 @@ app.get("/health", (req, res) => {
 });
 
 // --- Route Registration ---
-// Apply stricter rate limit to auth routes
-app.use("/", authLimiter, authRoutes);
+app.use("/", authRoutes);
 app.use("/doctors", doctorRoutes);
 app.use("/pdf", pdfRoutes);
 app.use("/api", clinicRoutes);
@@ -176,6 +152,5 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log("Backend server running on port " + PORT);
-  const rateLimitStatus = process.env.NODE_ENV === "production" ? "✓" : "⚠️ (disabled)";
-  console.log(`Security: Helmet ✓ | Rate Limiting ${rateLimitStatus} | Compression ✓ | CORS ✓ | Sanitization ✓ | WebSockets ✓`);
+  console.log(`Security: Helmet ✓ | Compression ✓ | CORS ✓ | Sanitization ✓ | WebSockets ✓`);
 });
