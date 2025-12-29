@@ -204,6 +204,7 @@
     z-index: 5;
     pointer-events: all;
     animation: fadeIn 0.6s;
+    transition-delay: 0.1s;
 }
 
 @keyframes fadeIn {
@@ -602,7 +603,11 @@
 /* --- MOBILE RESPONSIVE --- */
 .mobile-switch {
     display: none;
-    margin-top: 20px;
+    display: none;
+    margin-top: 25px;
+    width: 100%;
+    position: relative;
+    z-index: 100;
 }
 
 .mobile-switch p {
@@ -625,10 +630,25 @@
 }
 
 @media (max-width: 768px) {
+    .onecare-auth-page {
+        padding: 10px;
+        background: #fff;
+        /* Simplified background for mobile */
+    }
+
+    .bg-shapes {
+        display: none;
+        /* Hide heavy background shapes on mobile */
+    }
+
     .auth-wrapper {
         width: 100%;
-        min-height: auto;
-        border-radius: 15px;
+        min-height: 100vh;
+        /* Full viewport height */
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        background: transparent;
     }
 
     .slide-panel-wrapper {
@@ -638,40 +658,119 @@
     .auth-form-box {
         width: 100%;
         position: relative;
-        padding: 30px 20px;
+        padding: 20px;
+        height: auto;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
+    /* Override absolute positioning for mobile flow */
     .login-form-box,
     .register-form-box {
+        position: absolute;
+        /* Keep absolute to allow fading between them */
+        top: 0;
         left: 0;
         width: 100%;
+        height: 100%;
+        padding: 40px 20px;
+        overflow-y: auto;
+        /* Allow scrolling if content is tall */
+    }
+
+    /* Ensure forms are centered and scrollable */
+    .onecare-auth-page form {
+        height: auto;
+        min-height: 100%;
+        justify-content: center;
+        padding: 20px 0;
+    }
+
+    /* VISIBILITY CONTROLS */
+    /* By default (Login View): Login is visible, Signup is hidden */
+    .login-form-box {
+        opacity: 1;
+        pointer-events: all;
+        z-index: 5;
+        transform: none;
+        transition: opacity 0.4s ease;
     }
 
     .register-form-box {
+        opacity: 0;
+        pointer-events: none;
+        z-index: 1;
+        transform: none;
+        display: flex;
+        /* Keep it flex but hidden via opacity */
+    }
+
+    /* Active State (Signup View): Login fades out, Signup fades in */
+    .auth-wrapper.panel-active .login-form-box {
+        opacity: 0;
+        pointer-events: none;
+        z-index: 1;
+        transform: none;
         display: none;
-        opacity: 1;
+        /* Remove from flow to prevent scroll interference */
     }
 
     .auth-wrapper.panel-active .register-form-box {
-        display: flex;
-        animation: fadeIn 0.5s;
+        opacity: 1;
         pointer-events: all;
+        z-index: 5;
+        transform: none;
+        animation: fadeInMobile 0.5s ease forwards;
     }
 
-    .auth-wrapper.panel-active .login-form-box {
-        display: none;
+    @keyframes fadeInMobile {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .mobile-switch {
         display: block;
+        padding-bottom: 20px;
+    }
+
+    /* Adjust sizing for mobile */
+    .onecare-auth-page h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+
+    .social-links a {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .input-group input {
+        height: 45px;
+        /* Larger touch target */
+        font-size: 16px;
+        /* Prevent zoom on iOS */
     }
 
     .role-options {
+        flex-direction: row;
+        /* Keep row but wrap if needed */
         flex-wrap: wrap;
+        width: 100%;
     }
 
     .role-card {
-        min-width: 70px;
-        padding: 8px 12px;
+        flex: 1;
+        min-width: 80px;
+        padding: 10px 5px;
     }
 }
