@@ -28,7 +28,7 @@ const ChangePasswordForm = () => {
         if (authUser.googleId) {
           setIsGoogleUser(true);
         }
-      } catch (e) {
+      } catch {
         // Error parsing, continue as regular user
       }
     }

@@ -128,7 +128,7 @@ export default function PatientBookAppointment() {
             }
           }
         }
-      } catch (err) {
+      } catch {
         // Error loading initial data, form will be empty
       } finally {
         if (mounted) setLoadingData(false);
@@ -137,7 +137,7 @@ export default function PatientBookAppointment() {
 
     loadData();
     return () => { mounted = false; };
-  }, []);
+  }, [patientClinicId]);
 
   // --- 2. Filter Doctors when Clinic Changes ---
   useEffect(() => {
@@ -194,7 +194,7 @@ export default function PatientBookAppointment() {
             setDynamicSlots(res.data.slots || []);
           }
 
-        } catch (err) {
+        } catch {
           // Error fetching slots
           setDynamicSlots([]);
         } finally {
