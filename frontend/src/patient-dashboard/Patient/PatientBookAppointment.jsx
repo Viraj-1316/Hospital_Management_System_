@@ -31,6 +31,9 @@ export default function PatientBookAppointment() {
   })();
 
   const patientName = storedPatient?.name || (storedPatient?.firstName ? `${storedPatient.firstName} ${storedPatient.lastName || ""}`.trim() : "") || "Patient";
+  
+  // Get patient's registered clinicId
+  const patientClinicId = storedPatient?.clinicId || null;
   const params = new URLSearchParams(location.search);
   const preselectedDate = params.get("date") || "";
 
@@ -113,6 +116,17 @@ export default function PatientBookAppointment() {
               doctorName: s.doctor || ""
             };
           }));
+
+          // Auto-set clinic from patient's registered clinic
+          if (patientClinicId) {
+            const patientClinic = clinicData.find(c => 
+              (c._id === patientClinicId) || (c.id === patientClinicId)
+            );
+            if (patientClinic) {
+              const clinicName = patientClinic.name || patientClinic.clinicName || "";
+              setForm(prev => ({ ...prev, clinic: clinicName }));
+            }
+          }
         }
       } catch (err) {
         // Error loading initial data, form will be empty
@@ -311,18 +325,33 @@ export default function PatientBookAppointment() {
             {/* LEFT COLUMN */}
             <div className="col-lg-6">
 
-              <div className="mb-3">
-                <label className="form-label">Select Clinic <span className="text-danger">*</span></label>
-                <select name="clinic" className="form-select" value={form.clinic} onChange={handleChange} required>
-                  <option value="">Select clinic</option>
-                  {loadingData ? <option disabled>Loading...</option> :
-                    clinics.map((c, idx) => {
-                      const cName = c.name || c.clinicName || "Clinic " + (idx + 1);
-                      return <option key={c._id || idx} value={cName}>{cName}</option>;
-                    })
-                  }
-                </select>
-              </div>
+              {/* Show clinic as read-only if patient has a registered clinic */}
+              {patientClinicId && form.clinic ? (
+                <div className="mb-3">
+                  <label className="form-label">Your Clinic</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={form.clinic} 
+                    disabled 
+                    style={{ backgroundColor: '#f8f9fa' }}
+                  />
+                  <small className="text-muted">Appointments are booked at your registered clinic.</small>
+                </div>
+              ) : (
+                <div className="mb-3">
+                  <label className="form-label">Select Clinic <span className="text-danger">*</span></label>
+                  <select name="clinic" className="form-select" value={form.clinic} onChange={handleChange} required>
+                    <option value="">Select clinic</option>
+                    {loadingData ? <option disabled>Loading...</option> :
+                      clinics.map((c, idx) => {
+                        const cName = c.name || c.clinicName || "Clinic " + (idx + 1);
+                        return <option key={c._id || idx} value={cName}>{cName}</option>;
+                      })
+                    }
+                  </select>
+                </div>
+              )}
 
               <div className="mb-3">
                 <label className="form-label">Doctor <span className="text-danger">*</span></label>

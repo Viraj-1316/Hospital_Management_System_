@@ -203,6 +203,7 @@ export function saveAuthData(user, token) {
         mustChangePassword: user.mustChangePassword || false,
         clinicId: user.clinicId || user.clinic?._id || null,
         clinicName: user.clinicName || user.clinic?.name || user.clinic || '',
+        googleId: user.googleId || null, // Include googleId for Google login users
     };
 
     localStorage.setItem('authUser', JSON.stringify(authUser));

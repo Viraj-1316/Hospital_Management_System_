@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Encounter = require("../models/Encounter");
+const PatientModel = require("../models/Patient");
 const mongoose = require("mongoose");
 // IMPORT UPLOAD MIDDLEWARE (Needed for file handling)
 const upload = require("../middleware/upload");
@@ -33,6 +34,14 @@ router.get("/", verifyToken, async (req, res) => {
 
     if (effectiveRole === "admin") {
       // Global View
+    } else if (effectiveRole === "patient") {
+      // Patients can only see their own encounters
+      const patientRecord = await PatientModel.findOne({ userId: req.user.id });
+      if (patientRecord) {
+        query.patientId = patientRecord._id;
+      } else {
+        return res.json([]);
+      }
     } else if (safeClinicId) {
       query.clinicId = safeClinicId;
     } else {

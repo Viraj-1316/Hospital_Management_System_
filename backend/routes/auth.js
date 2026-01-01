@@ -130,7 +130,8 @@ router.post("/google", async (req, res) => {
       role: user.role,
       name: user.name,
       profileCompleted: user.profileCompleted,
-      clinicId: user.clinicId // Include clinicId in token payload
+      clinicId: user.clinicId, // Include clinicId in token payload
+      googleId: user.googleId // Include googleId to identify Google login users
     };
 
     const jwtToken = generateToken(userPayload);
@@ -581,6 +582,43 @@ router.post("/change-password", changePasswordValidation, async (req, res) => {
   } catch (err) {
     console.error("Change password error:", err.message);
     res.status(500).json({ message: "Server error while changing password" });
+  }
+});
+
+// Set Password for Google Login Users (who don't have a known password)
+router.post("/set-password", async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "Email and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    // Only allow this for Google login users in User collection
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify user has googleId (Google login user)
+    if (!user.googleId) {
+      return res.status(400).json({ 
+        message: "This feature is only available for Google login users. Please use the regular change password form." 
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.json({ message: "Password set successfully. You can now login with email and password." });
+  } catch (err) {
+    console.error("Set password error:", err.message);
+    res.status(500).json({ message: "Server error while setting password" });
   }
 });
 

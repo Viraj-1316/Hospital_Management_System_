@@ -231,6 +231,19 @@ router.get("/", verifyToken, async (req, res) => {
 
     if (effectiveRole === "admin") {
       // Global View
+    } else if (effectiveRole === "patient") {
+      // Patients can only see their own appointments
+      // Look up patient record by userId to get patientId
+      const patientRecord = await PatientModel.findOne({ userId: req.user.id });
+      if (patientRecord) {
+        query.patientId = patientRecord._id;
+      } else {
+        // No patient record found, return empty
+        return res.json({
+          data: [],
+          pagination: { nextCursor: null, hasMore: false, limit: parseInt(limit) || 20 }
+        });
+      }
     } else if (safeClinicId) {
       query.clinicId = safeClinicId;
     } else {
@@ -334,6 +347,14 @@ router.get("/all", verifyToken, async (req, res) => {
 
     if (effectiveRole === "admin") {
       // Global
+    } else if (effectiveRole === "patient") {
+      // Patients can only see their own appointments
+      const patientRecord = await PatientModel.findOne({ userId: req.user.id });
+      if (patientRecord) {
+        query.patientId = patientRecord._id;
+      } else {
+        return res.json([]);
+      }
     } else if (safeClinicId) {
       query.clinicId = safeClinicId;
     } else {
