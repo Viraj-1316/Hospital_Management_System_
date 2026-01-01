@@ -101,12 +101,16 @@ const ChangePasswordForm = () => {
         return;
       }
 
+      // Get auth token for authenticated requests
+      const token = localStorage.getItem("token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
       // Use different endpoint for Google users
       if (isGoogleUser) {
         const res = await axios.post(`${API_BASE}/set-password`, {
           email,
           newPassword,
-        });
+        }, { headers: authHeaders });
         toast.success(res.data.message);
       } else {
         const res = await axios.post(`${API_BASE}/change-password`, {

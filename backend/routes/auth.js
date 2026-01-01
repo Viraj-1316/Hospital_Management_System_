@@ -586,6 +586,7 @@ router.post("/change-password", changePasswordValidation, async (req, res) => {
 });
 
 // Set Password for Google Login Users (who don't have a known password)
+// Requires authentication to prevent unauthorized password setting
 router.post("/set-password", async (req, res) => {
   try {
     const { email, newPassword } = req.body;
@@ -596,6 +597,26 @@ router.post("/set-password", async (req, res) => {
 
     if (newPassword.length < 6) {
       return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    // Verify authentication token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const jwt = require("jsonwebtoken");
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    // Ensure the logged-in user is setting their own password
+    if (decoded.email !== email) {
+      return res.status(403).json({ message: "You can only set your own password" });
     }
 
     // Only allow this for Google login users in User collection
