@@ -200,7 +200,7 @@ router.put("/:id", verifyToken, async (req, res) => {
     // Convert string IDs to ObjectIds
     const updateData = {
       ...req.body,
-      services: services !== undefined ? services : undefined,
+      services,
       patientId: req.body.patientId ? toObjectId(req.body.patientId) : undefined,
       doctorId: req.body.doctorId ? toObjectId(req.body.doctorId) : undefined,
       clinicId: req.body.clinicId ? toObjectId(req.body.clinicId) : undefined,
