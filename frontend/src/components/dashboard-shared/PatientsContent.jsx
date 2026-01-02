@@ -217,7 +217,13 @@ const PatientsContent = ({ basePath = "/admin" }) => {
                                                 <button
                                                     className="btn btn-sm btn-outline-primary"
                                                     title="Encounter"
-                                                    onClick={() => navigate(`${basePath}/encounters?patientId=${p._id}`)}
+                                                    onClick={() => {
+                                                        // For clinic-dashboard, use encounter-list path
+                                                        const encounterPath = basePath === "/clinic-dashboard" 
+                                                            ? `${basePath}/encounter-list?patientId=${p._id}`
+                                                            : `${basePath}/encounters?patientId=${p._id}`;
+                                                        navigate(encounterPath);
+                                                    }}
                                                 >
                                                     <FaFileMedical />
                                                 </button>

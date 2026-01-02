@@ -105,7 +105,7 @@ const EditBill = () => {
       setSaving(true);
       await axios.put(`${API_BASE}/api/bills/${id}`, payload);
       alert("Bill updated successfully!");
-      navigate("/BillingRecords");
+      navigate("/clinic-dashboard/BillingRecords");
     } catch (err) {
       console.error(err);
       alert("Error updating bill.");
@@ -269,7 +269,7 @@ const EditBill = () => {
             <button
               type="button"
               className="btn btn-secondary ms-2"
-              onClick={() => navigate("/BillingRecords")}
+              onClick={() => navigate("/clinic-dashboard/BillingRecords")}
             >
               Cancel
             </button>

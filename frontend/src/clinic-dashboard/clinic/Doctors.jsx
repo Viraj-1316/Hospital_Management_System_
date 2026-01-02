@@ -160,7 +160,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
 
   // Doctor Session navigation
   const handleDoctorSession = (doctor) => {
-    navigate("/DoctorSession", {
+    navigate("/clinic-dashboard/DoctorSession", {
       state: { doctorFilter: `${doctor.firstName} ${doctor.lastName}` }
     });
   };

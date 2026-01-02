@@ -155,7 +155,7 @@ const AddBill = () => {
 
       await axios.post(`${API_BASE}/bills`, payload);
       toast.success("Bill created successfully!");
-      navigate("/BillingRecords");
+      navigate("/clinic-dashboard/BillingRecords");
     } catch (err) {
       console.error(err);
       toast.error("Error creating bill. Please try again.");
@@ -345,7 +345,7 @@ const AddBill = () => {
             <button
               type="button"
               className="btn btn-secondary ms-2"
-              onClick={() => navigate("/BillingRecords")}
+              onClick={() => navigate("/clinic-dashboard/BillingRecords")}
             >
               Cancel
             </button>

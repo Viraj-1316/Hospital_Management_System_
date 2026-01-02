@@ -385,7 +385,7 @@ export default function ReceptionistList({
                                 className="btn btn-sm btn-outline-primary"
                                 onClick={() =>
                                   navigate(
-                                    `/add-receptionist?receptionistId=${row._id}`
+                                    `/clinic-dashboard/add-receptionist?receptionistId=${row._id}`
                                   )
                                 }
                               >

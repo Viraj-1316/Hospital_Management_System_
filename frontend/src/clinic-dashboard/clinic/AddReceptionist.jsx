@@ -139,7 +139,7 @@ export default function AddReceptionist() {
       error: "Failed to save receptionist",
     });
 
-    navigate("/receptionists");
+    navigate("/clinic-dashboard/receptionists");
   };
 
   return (
@@ -332,7 +332,7 @@ export default function AddReceptionist() {
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={() => navigate("/receptionists")}
+              onClick={() => navigate("/clinic-dashboard/receptionists")}
             >
               Cancel
             </button>

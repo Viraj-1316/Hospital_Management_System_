@@ -175,7 +175,7 @@ const AddDoctor = () => {
 
         if (res.ok) {
           toast.success("Doctor updated successfully!");
-          navigate("/doctors");
+          navigate("/clinic-dashboard/doctors");
         } else {
           toast.error(data.message || "Something went wrong!");
         }
@@ -195,7 +195,7 @@ const AddDoctor = () => {
 
         if (res.ok) {
           toast.success("Doctor added successfully!");
-          navigate("/doctors");
+          navigate("/clinic-dashboard/doctors");
         } else {
           toast.error(data.message || "Something went wrong!");
         }
@@ -564,7 +564,7 @@ const AddDoctor = () => {
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={() => navigate("/doctors")}
+              onClick={() => navigate("/clinic-dashboard/doctors")}
             >
               Cancel
             </button>

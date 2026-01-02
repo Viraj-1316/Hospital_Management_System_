@@ -87,7 +87,7 @@ const AddPatient = () => {
         error: "Failed to add patient.",
       });
 
-      navigate("/patients");
+      navigate("/clinic-dashboard/patients");
 
     } catch (error) {
       console.error("Error adding patient:", error);
@@ -104,7 +104,7 @@ const AddPatient = () => {
           <h4 className="fw-bold text-primary mb-0">Add Patient</h4>
           <button
             className="btn btn-outline-primary d-flex align-items-center gap-2"
-            onClick={() => navigate("/patients")}
+            onClick={() => navigate("/clinic-dashboard/patients")}
           >
             <FaArrowLeft /> Back
           </button>
@@ -328,7 +328,7 @@ const AddPatient = () => {
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={() => navigate("/patients")}
+              onClick={() => navigate("/clinic-dashboard/patients")}
             >
               Cancel
             </button>

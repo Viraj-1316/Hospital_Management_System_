@@ -67,6 +67,9 @@ const ClinicProfile = lazy(() => import("./clinic-dashboard/clinic/ClinicProfile
 const ClinicChangePassword = lazy(() => import("./clinic-dashboard/clinic/ClinicChangePassword"));
 const ClinicEncounterList = lazy(() => import("./clinic-dashboard/clinic/EncounterList"));
 const ClinicEncounterTemplateList = lazy(() => import("./clinic-dashboard/clinic/EncounterTemplateList"));
+const ClinicMedicalReportPage = lazy(() => import("./clinic-dashboard/clinic/MedicalReportPage"));
+const ClinicEncounterDetails = lazy(() => import("./clinic-dashboard/clinic/EncounterDetails"));
+const ClinicEncounterTemplateDetails = lazy(() => import("./clinic-dashboard/clinic/EncounterTemplateDetails"));
 /* Clinic Settings - Reuse Admin Settings layout/pages or duplicate if needed. For now assuming reuse but mapped to clinic paths if they are generic enough, OR use copied settings if duplicated. */
 const ClinicSettingsLayout = lazy(() => import("./clinic-dashboard/clinic/settings/SettingsLayout")); // Assuming copied
 const ClinicHolidaySettings = lazy(() => import("./clinic-dashboard/clinic/settings/pages/HolidaySettings"));
@@ -355,6 +358,18 @@ function App() {
           } />
           <Route path="/clinic-dashboard/encounter-templates" element={
             <ClinicEncounterTemplateList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/clinic-dashboard/encounter-details/:id" element={
+            <ClinicEncounterDetails sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/clinic-dashboard/encounter-template-details/:id" element={
+            <ClinicEncounterTemplateDetails sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/clinic-dashboard/reports" element={
+            <ClinicMedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/clinic-dashboard/encounters/:id/reports" element={
+            <ClinicMedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
           } />
           <Route path="/clinic-dashboard/settings" element={<ClinicSettingsLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}>
             <Route index element={<ClinicHolidaySettings />} />
