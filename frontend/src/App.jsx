@@ -81,6 +81,7 @@ const ClinicEditBill = lazy(() => import("./clinic-dashboard/clinic/EditBill"));
 const ClinicSettingsLayout = lazy(() => import("./clinic-dashboard/clinic/settings/SettingsLayout")); // Assuming copied
 const ClinicHolidaySettings = lazy(() => import("./clinic-dashboard/clinic/settings/pages/HolidaySettings"));
 const ClinicListingSettings = lazy(() => import("./clinic-dashboard/clinic/settings/pages/ListingSettings"));
+const PendingApprovals = lazy(() => import("./clinic-dashboard/components/PendingApprovals"));
 const PatientDashboard = lazy(() => import("./patient-dashboard/Patient/PatientDashboard"));
 const PatientAppointments = lazy(() => import("./patient-dashboard/Patient/PatientAppointments"));
 const PatientBookAppointment = lazy(() => import("./patient-dashboard/Patient/PatientBookAppointment"));
@@ -377,6 +378,8 @@ function App() {
           } />
           <Route path="/clinic-dashboard/encounters/:id/reports" element={
             <ClinicMedicalReportPage sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          <Route path="/clinic-dashboard/pending-approvals" element={
+            <PendingApprovals />
           } />
           <Route path="/clinic-dashboard/settings" element={<ClinicSettingsLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}>
             <Route index element={<ClinicHolidaySettings />} />

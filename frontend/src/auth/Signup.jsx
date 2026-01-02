@@ -20,6 +20,7 @@ function Signup() {
   const [hospitalId, setHospitalId] = useState("");
 
   const [clinics, setClinics] = useState([]);
+  const [showApprovalPendingModal, setShowApprovalPendingModal] = useState(false); // Modal state
 
   // Fetch clinics for dropdown
   useEffect(() => {
@@ -69,6 +70,9 @@ function Signup() {
     }
   };
 
+  // State for approval pending modal
+  const [showApprovalPendingModal, setShowApprovalPendingModal] = useState(false);
+
   const handleSignup = async (e) => {
     e.preventDefault();
 
@@ -104,14 +108,29 @@ function Signup() {
         }),
       });
 
+      const resData = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        toast.error(errData.message || "Signup failed");
+        toast.error(resData.message || "Signup failed");
         return;
       }
 
-      await res.json().catch(() => ({}));
+      // Check if approval is pending (doctor/staff signup)
+      if (resData.approvalStatus === "pending") {
+        // Show approval pending modal
+        setShowApprovalPendingModal(true);
 
+        // Clear form
+        setName("");
+        setEmail("");
+        setPassword("");
+        setPhone("");
+        setRole("PATIENT");
+        setHospitalId("");
+        return;
+      }
+
+      // For patients - normal login flow
       toast.success("Signup successful! You can now login.");
 
       // Clear form
@@ -391,6 +410,43 @@ function Signup() {
       </div>
         </div >
       </main >
+
+    {/* Approval Pending Modal */ }
+  {
+    showApprovalPendingModal && (
+      <>
+        <div className="modal-backdrop fade show" style={{ zIndex: 2000 }}></div>
+        <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 2001 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+              <div className="modal-body text-center p-5">
+                <div style={{ fontSize: '60px', marginBottom: '20px' }}>📋</div>
+                <h4 style={{ color: '#2563eb', fontWeight: 'bold', marginBottom: '16px' }}>Request Submitted!</h4>
+                <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6' }}>
+                  Your registration request has been sent to the <strong>hospital admin</strong>.
+                </p>
+                <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6' }}>
+                  Once approved, you will be able to <strong>login</strong> using your credentials.
+                </p>
+                <div style={{ marginTop: '24px' }}>
+                  <button
+                    className="btn btn-primary px-5 py-2"
+                    style={{ borderRadius: '25px', fontWeight: '600' }}
+                    onClick={() => {
+                      setShowApprovalPendingModal(false);
+                      navigate("/");
+                    }}
+                  >
+                    Go to Login
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
     </div >
   );
 }

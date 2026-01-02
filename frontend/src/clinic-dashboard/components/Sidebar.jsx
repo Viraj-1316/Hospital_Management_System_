@@ -16,7 +16,8 @@ import {
   FaMoneyBill,
   FaFileInvoice,
   FaChevronDown,
-  FaChevronUp
+  FaChevronUp,
+  FaUserCheck
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
@@ -138,6 +139,13 @@ export default function Sidebar({ collapsed = false }) {
             <NavLink to="/clinic-dashboard/receptionists" className={linkClass}>
               <FaUsers style={{ minWidth: 20 }} />
               {!collapsed && <span>Receptionist</span>}
+            </NavLink>
+          </li>
+
+          <li className="nav-item mb-2">
+            <NavLink to="/clinic-dashboard/pending-approvals" className={linkClass}>
+              <FaUserCheck style={{ minWidth: 20 }} />
+              {!collapsed && <span>Pending Approvals</span>}
             </NavLink>
           </li>
 

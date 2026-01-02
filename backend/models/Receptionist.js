@@ -40,6 +40,12 @@ const receptionistSchema = new mongoose.Schema(
       default: true,
     },
 
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "approved", // Admins create receptionists as approved, self-signup = pending
+    },
+
     mustChangePassword: {
       type: Boolean,
       default: true,

@@ -12,6 +12,11 @@ const DoctorSchema = new mongoose.Schema({
   experience: String,
   gender: String,
   status: String,
+  approvalStatus: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "approved"  // Admins create doctors as approved, self-signup = pending
+  },
   address: String,
   city: String,
   country: String,

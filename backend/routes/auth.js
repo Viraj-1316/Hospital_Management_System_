@@ -188,6 +188,28 @@ router.post("/login", loginValidation, async (req, res) => {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      // Check approval status for self-registered receptionists
+      if (receptionist.approvalStatus === "pending") {
+        return res.status(403).json({
+          message: "Your registration is pending approval from the hospital admin. You will be able to login once approved.",
+          approvalStatus: "pending"
+        });
+      }
+      if (receptionist.approvalStatus === "rejected") {
+        return res.status(403).json({
+          message: "Your registration request has been rejected. Please contact the hospital admin.",
+          approvalStatus: "rejected"
+        });
+      }
+
+      // Fetch clinic name for sidebar
+      const Clinic = require("../models/Clinic");
+      let clinicName = "";
+      if (receptionist.clinicIds && receptionist.clinicIds.length > 0) {
+        const clinic = await Clinic.findById(receptionist.clinicIds[0]);
+        if (clinic) clinicName = clinic.name;
+      }
+
       const receptionistPayload = {
         id: receptionist._id,
         email: receptionist.email,
@@ -196,6 +218,7 @@ router.post("/login", loginValidation, async (req, res) => {
         mustChangePassword: receptionist.mustChangePassword,
         profileCompleted: true,
         clinicId: receptionist.clinicIds?.[0], // Default to first clinic
+        clinicName, // Include clinic name
       };
 
       const token = generateToken(receptionistPayload);
@@ -214,6 +237,28 @@ router.post("/login", loginValidation, async (req, res) => {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      // Check approval status for self-registered doctors
+      if (doctor.approvalStatus === "pending") {
+        return res.status(403).json({
+          message: "Your registration is pending approval from the hospital admin. You will be able to login once approved.",
+          approvalStatus: "pending"
+        });
+      }
+      if (doctor.approvalStatus === "rejected") {
+        return res.status(403).json({
+          message: "Your registration request has been rejected. Please contact the hospital admin.",
+          approvalStatus: "rejected"
+        });
+      }
+
+      // Fetch clinic name for sidebar
+      const Clinic = require("../models/Clinic");
+      let clinicName = "";
+      if (doctor.clinicId) {
+        const clinic = await Clinic.findById(doctor.clinicId);
+        if (clinic) clinicName = clinic.name;
+      }
+
       const doctorPayload = {
         id: doctor._id,
         email: doctor.email,
@@ -222,6 +267,7 @@ router.post("/login", loginValidation, async (req, res) => {
         mustChangePassword: doctor.mustChangePassword,
         profileCompleted: true,
         clinicId: doctor.clinicId,
+        clinicName, // Include clinic name
       };
 
       const token = generateToken(doctorPayload);
@@ -298,7 +344,30 @@ router.post("/signup", signupValidation, async (req, res) => {
 
     // Route to appropriate creation logic based on role
     if (normalizedRole === "doctor") {
-      // Create Doctor record
+      // Validate hospitalId is provided for Doctor signup
+      if (!hospitalId) {
+        return res.status(400).json({ message: "Hospital ID is required for doctor registration" });
+      }
+
+      // Find the clinic by hospitalId (ObjectId or String)
+      const Clinic = require("../models/Clinic");
+      let clinic;
+
+      // Check if hospitalId is a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(hospitalId)) {
+        clinic = await Clinic.findById(hospitalId);
+      }
+
+      // If not found by ID or not an ObjectId, try finding by string hospitalId
+      if (!clinic) {
+        clinic = await Clinic.findOne({ hospitalId: hospitalId });
+      }
+
+      if (!clinic) {
+        return res.status(400).json({ message: "Invalid Hospital ID. Please check with your clinic admin." });
+      }
+
+      // Create Doctor record with pending approval
       const nameParts = name.trim().split(" ");
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
@@ -311,27 +380,57 @@ router.post("/signup", signupValidation, async (req, res) => {
         password: hashedPassword,
         mustChangePassword: true,
         status: "Active",
-        hospitalId: hospitalId || "",
+        clinicId: clinic._id, // Link to clinic via ObjectId
+        approvalStatus: "pending", // Require admin approval
       });
 
-      const doctorPayload = {
-        id: newDoctor._id,
-        email: newDoctor.email,
-        role: "doctor",
-        name: `${firstName} ${lastName}`.trim(),
-        phone: newDoctor.phone,
-        mustChangePassword: true,
-      };
+      // Send notification email to hospital admin
+      const adminEmail = clinic.admin?.email || clinic.email;
+      if (adminEmail) {
+        const { staffSignupRequestTemplate } = require("../utils/emailTemplates");
+        sendEmail({
+          to: adminEmail,
+          subject: "New Doctor Registration Request - OneCare",
+          html: staffSignupRequestTemplate({
+            staffName: name,
+            staffEmail: email,
+            staffRole: "Doctor",
+            clinicName: clinic.name,
+            hospitalId: clinic.hospitalId,
+          }),
+        });
+      }
 
-      const token = generateToken(doctorPayload);
-
+      // Return success WITHOUT token (pending approval)
       return res.status(201).json({
-        ...doctorPayload,
-        token,
+        success: true,
+        message: "Your registration request has been sent to the hospital admin. You will be able to login once approved.",
+        approvalStatus: "pending",
       });
 
     } else if (normalizedRole === "receptionist") {
-      // Create Receptionist record
+      // Validate hospitalId is provided for Staff signup
+      if (!hospitalId) {
+        return res.status(400).json({ message: "Hospital ID is required for staff registration" });
+      }
+
+      // Find the clinic by _id or hospitalId
+      const Clinic = require("../models/Clinic");
+      let clinic;
+
+      if (mongoose.Types.ObjectId.isValid(hospitalId)) {
+        clinic = await Clinic.findById(hospitalId);
+      }
+
+      if (!clinic) {
+        clinic = await Clinic.findOne({ hospitalId: hospitalId });
+      }
+
+      if (!clinic) {
+        return res.status(400).json({ message: "Invalid Clinic selected. Please check with your clinic admin." });
+      }
+
+      // Create Receptionist record with pending approval
       const newReceptionist = await Receptionist.create({
         name,
         email,
@@ -339,23 +438,32 @@ router.post("/signup", signupValidation, async (req, res) => {
         password: hashedPassword,
         mustChangePassword: true,
         status: true,
-        hospitalId: hospitalId || "",
+        clinicIds: [clinic._id], // Link to clinic
+        approvalStatus: "pending", // Require admin approval
       });
 
-      const receptionistPayload = {
-        id: newReceptionist._id,
-        email: newReceptionist.email,
-        role: "receptionist",
-        name: newReceptionist.name,
-        phone: newReceptionist.mobile,
-        mustChangePassword: true,
-      };
+      // Send notification email to hospital admin
+      const adminEmail = clinic.admin?.email || clinic.email;
+      if (adminEmail) {
+        const { staffSignupRequestTemplate } = require("../utils/emailTemplates");
+        sendEmail({
+          to: adminEmail,
+          subject: "New Staff Registration Request - OneCare",
+          html: staffSignupRequestTemplate({
+            staffName: name,
+            staffEmail: email,
+            staffRole: "Staff/Receptionist",
+            clinicName: clinic.name,
+            hospitalId: clinic.hospitalId,
+          }),
+        });
+      }
 
-      const token = generateToken(receptionistPayload);
-
+      // Return success WITHOUT token (pending approval)
       return res.status(201).json({
-        ...receptionistPayload,
-        token,
+        success: true,
+        message: "Your registration request has been sent to the hospital admin. You will be able to login once approved.",
+        approvalStatus: "pending",
       });
 
     } else {
@@ -633,8 +741,8 @@ router.post("/set-password", async (req, res) => {
 
     // Verify user has googleId (Google login user)
     if (!user.googleId) {
-      return res.status(400).json({ 
-        message: "This feature is only available for Google login users. Please use the regular change password form." 
+      return res.status(400).json({
+        message: "This feature is only available for Google login users. Please use the regular change password form."
       });
     }
 

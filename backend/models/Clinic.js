@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 
 const clinicSchema = new mongoose.Schema(
   {
+    hospitalId: { type: String, unique: true, required: true },
     name: { type: String, required: true },
     email: { type: String, required: true },
     contact: { type: String, required: true },

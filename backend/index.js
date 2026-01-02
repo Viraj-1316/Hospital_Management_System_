@@ -43,6 +43,7 @@ const smsRoutes = require("./routes/smsRoutes");
 // ✅ NEW: Import Listing Routes
 const listingRoutes = require("./routes/listingRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
+const approvalRoutes = require("./routes/approvalRoutes");
 
 // Import Interface for Socket.io
 const { initSocket } = require("./utils/socketServer");
@@ -145,6 +146,7 @@ app.use("/holidays", holidayRoutes);
 // ✅ NEW: Register Listing Routes
 app.use("/listings", listingRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/approvals", approvalRoutes);
 
 
 // --- 404 Handler (Must be after all routes) ---
