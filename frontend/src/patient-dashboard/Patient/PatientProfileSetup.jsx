@@ -57,12 +57,12 @@ export default function PatientProfileSetup() {
       const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
 
       setForm((prev) => ({
-  ...prev,
-  firstName,
-  lastName,
-  email: parsed.email || "",
-  phone: parsed.phone || "",   
-}));
+        ...prev,
+        firstName,
+        lastName,
+        email: parsed.email || "",
+        phone: parsed.phone || "",
+      }));
 
     } catch (err) {
       console.error("Error parsing authUser:", err);
@@ -77,10 +77,13 @@ export default function PatientProfileSetup() {
         const data = res.data;
         if (data.success && Array.isArray(data.clinics)) {
           setClinics(data.clinics);
+          // Auto-select first if none selected
           if (!form.clinic && data.clinics.length > 0) {
+            const first = data.clinics[0];
             setForm((prev) => ({
               ...prev,
-              clinic: data.clinics[0].name,
+              clinic: first.name,
+              clinicId: first._id
             }));
           }
         } else {
@@ -98,10 +101,21 @@ export default function PatientProfileSetup() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // Special handling for clinic dropdown to capture ID
+    if (name === "clinic") {
+      const selectedClinic = clinics.find(c => c.name === value);
+      setForm(prev => ({
+        ...prev,
+        clinic: value,
+        clinicId: selectedClinic ? selectedClinic._id : ""
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -130,6 +144,8 @@ export default function PatientProfileSetup() {
       const payload = {
         ...form,
         phone: fullPhone,
+        // Ensure clinicId is sent
+        clinicId: form.clinicId
       };
 
       const patientRes = await axios.put(
@@ -147,6 +163,7 @@ export default function PatientProfileSetup() {
         profileCompleted: true,
         name: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
+        clinicId: form.clinicId // Update local storage user
       };
 
       localStorage.setItem("authUser", JSON.stringify(updatedUser));
@@ -163,6 +180,7 @@ export default function PatientProfileSetup() {
             patientDoc.email || form.email || updatedUser.email || "",
           phone: patientDoc.phone || fullPhone || "",
           clinic: patientDoc.clinic || form.clinic || "",
+          clinicId: patientDoc.clinicId || form.clinicId,
           dob: patientDoc.dob || form.dob || "",
           address: patientDoc.address || form.address || "",
         })
@@ -244,7 +262,7 @@ export default function PatientProfileSetup() {
               name="clinic"
               className="form-select"
               value={form.clinic}
-              disabled
+              disabled={false} // ENABLED for selection
               onChange={handleChange}
               required
             >

@@ -13,22 +13,21 @@ export default function PatientLayout({
   toggleSidebar,
 }) {
   return (
-    <div className="patient-layout d-flex" style={{ background: "#f5f7fb"  }}>
-      {/* Sidebar width changes based on collapse state */}
+    <div className="patient-layout d-flex" style={{ background: "#f5f7fb" }}>
+
+      {/* Mobile Overlay - Close sidebar when clicking outside */}
+      {!sidebarCollapsed && (
+        <div
+          className="sidebar-overlay d-md-none"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+
+      {/* Sidebar */}
       <PatientSidebar isOpen={!sidebarCollapsed} />
 
-      <div
-        className="patient-main"
-        style={{
-          flexGrow: 1,
-          // shifts screen when sidebar opens/closes
-          marginLeft: sidebarCollapsed ? "64px" : "250px",
-          transition: "margin-left 0.25s ease",
-          backgroundColor: "#f5f7fb",
-          minHeight: "100vh",
-          paddingLeft: "0px",
-        }}
-      >
+      <div className={`patient-main ${sidebarCollapsed ? 'expanded' : ''}`}>
+
         {/* Top blue navbar */}
         <PatientNavbar toggleSidebar={toggleSidebar} />
 
@@ -42,8 +41,9 @@ export default function PatientLayout({
             className="content-card shadow-sm"
             style={{
               background: "white",
-              padding: "25px",
+              padding: "20px",
               borderRadius: "8px",
+              minHeight: "85vh" // Ensure card takes reasonable height
             }}
           >
             <PageTransition>{children}</PageTransition>

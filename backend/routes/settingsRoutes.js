@@ -12,4 +12,8 @@ router.get("/templates", verifyToken, settingsController.getAllTemplates);
 router.put("/templates/:templateId", verifyToken, settingsController.updateTemplate);
 router.post("/templates/seed", verifyToken, settingsController.seedTemplates); // To populate DB from frontend constants
 
+// Pro Settings (Twilio SMS/WhatsApp)
+router.get("/pro", verifyToken, settingsController.getProSettings);
+router.put("/pro", verifyToken, settingsController.updateProSettings);
+
 module.exports = router;

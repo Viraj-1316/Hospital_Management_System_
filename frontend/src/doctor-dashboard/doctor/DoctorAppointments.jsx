@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { FaFilter, FaPlus } from "react-icons/fa";
+import { FaFilter, FaPlus, FaCalendarAlt, FaUser, FaStethoscope } from "react-icons/fa";
 import DoctorLayout from "../layouts/DoctorLayout";
 import API_BASE from "../../config";
 
@@ -64,10 +64,8 @@ const DoctorAppointments = () => {
    const fetchAppointments = async (query = {}) => {
       try {
          setLoading(true);
-         // ✅ Force filter by current Doctor ID
          const params = { ...query, doctorId: doctorId };
          const res = await axios.get(`${API_BASE}/appointments`, { params });
-         // Handle both array and { data: [...] } response formats
          const data = res.data?.data || res.data;
          setAppointments(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -99,7 +97,7 @@ const DoctorAppointments = () => {
       }
    };
 
-   // --- Slot Fetching (Server Side) ---
+   // --- Slot Fetching ---
    useEffect(() => {
       const fetchSlots = async () => {
          if (doctorId && form.date) {
@@ -168,6 +166,8 @@ const DoctorAppointments = () => {
          slot: "",
       });
       setPanelOpen(true);
+      // Scroll to form on mobile
+      setTimeout(() => document.getElementById('appointment-form')?.scrollIntoView({ behavior: 'smooth' }), 100);
    };
 
    const openEditForm = (item) => {
@@ -185,6 +185,7 @@ const DoctorAppointments = () => {
          slot: item.time || item.slot || "",
       });
       setPanelOpen(true);
+      setTimeout(() => document.getElementById('appointment-form')?.scrollIntoView({ behavior: 'smooth' }), 100);
    };
 
    const handleSave = async (e) => {
@@ -192,7 +193,7 @@ const DoctorAppointments = () => {
       try {
          const payload = {
             clinic: form.clinic,
-            doctorId: doctorId, // ✅ Locked to current user
+            doctorId: doctorId,
             doctorName: doctorName,
             patientId: form.patient,
             patientName: form.patientName,
@@ -240,59 +241,95 @@ const DoctorAppointments = () => {
    // --- JSX ---
    return (
       <DoctorLayout>
+         {/* Internal Style for Mobile Card View Transformation */}
+         <style>{`
+            @media (max-width: 768px) {
+               .mobile-table thead { display: none; }
+               .mobile-table tr { 
+                  display: block; 
+                  margin-bottom: 1rem; 
+                  background: #fff; 
+                  border-radius: 8px; 
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                  border: 1px solid #eee;
+                  padding: 10px;
+               }
+               .mobile-table td { 
+                  display: flex; 
+                  justify-content: space-between; 
+                  align-items: center;
+                  padding: 8px 0;
+                  border-bottom: 1px solid #f0f0f0;
+               }
+               .mobile-table td:last-child { border-bottom: none; }
+               .mobile-table td::before { 
+                  content: attr(data-label); 
+                  font-weight: 600; 
+                  color: #666; 
+                  font-size: 0.85rem;
+                  margin-right: 1rem;
+               }
+               .mobile-table td .btn-link { padding: 0; }
+            }
+         `}</style>
+
          <div className="container-fluid py-4">
 
-            {/* Top Header */}
-            <div className="d-flex justify-content-between align-items-center mb-4">
+            {/* Top Header - Mobile Optimized (flex-wrap) */}
+            <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
                <div>
                   <h4 className="fw-bold text-primary mb-1">My Appointments</h4>
                   <p className="text-muted small mb-0">Manage bookings and schedules</p>
                </div>
-               <div className="d-flex gap-2">
-                  <button className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2" onClick={() => setFiltersOpen(!filtersOpen)}>
+               <div className="d-flex gap-2 w-100 w-md-auto">
+                  <button className="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1 flex-md-grow-0" onClick={() => setFiltersOpen(!filtersOpen)}>
                      <FaFilter /> Filter
                   </button>
-                  <button className="btn btn-primary btn-sm d-flex align-items-center gap-2" onClick={openAddForm}>
-                     <FaPlus /> Add Appointment
+                  <button className="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1 flex-md-grow-0" onClick={openAddForm}>
+                     <FaPlus /> <span className="d-none d-sm-inline">Add Appointment</span><span className="d-inline d-sm-none">Add</span>
                   </button>
                </div>
             </div>
 
-            {/* Tabs */}
-            <div className="btn-group mb-4">
-               {['all', 'upcoming', 'past'].map(t => (
-                  <button key={t} className={`btn btn-sm ${tab === t ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setTab(t)}>
-                     {t.toUpperCase()}
-                  </button>
-               ))}
+            {/* Tabs - Scrollable on mobile */}
+            <div className="overflow-auto pb-2 mb-2">
+                <div className="btn-group" style={{minWidth: '300px'}}>
+                   {['all', 'upcoming', 'past'].map(t => (
+                      <button key={t} className={`btn btn-sm px-4 ${tab === t ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setTab(t)}>
+                         {t.toUpperCase()}
+                      </button>
+                   ))}
+                </div>
             </div>
 
-            {/* Filters Panel */}
+            {/* Filters Panel - Stacked on mobile */}
             {filtersOpen && (
                <div className="card p-3 mb-4 bg-light border-0">
                   <div className="row g-3">
-                     <div className="col-md-3">
+                     <div className="col-12 col-md-3">
                         <label className="form-label small">Date</label>
                         <input type="date" className="form-control form-control-sm" value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })} />
                      </div>
-                     <div className="col-md-3 d-flex align-items-end">
+                     <div className="col-12 col-md-3 d-flex align-items-end">
                         <button className="btn btn-secondary btn-sm w-100" onClick={() => fetchAppointments(filters)}>Apply Filters</button>
                      </div>
                   </div>
                </div>
             )}
 
-            {/* ✅ ADD/EDIT FORM PANEL */}
+            {/* ADD/EDIT FORM PANEL */}
             {panelOpen && (
-               <div className="card border-0 shadow-sm mb-4">
+               <div id="appointment-form" className="card border-0 shadow-sm mb-4">
                   <div className="card-header bg-white py-3">
                      <h6 className="fw-bold mb-0 text-primary">{editId ? "Edit Appointment" : "New Appointment"}</h6>
                   </div>
                   <div className="card-body">
                      <form onSubmit={handleSave}>
                         <div className="row g-3">
+                           {/* Using col-12 col-md-6 ensures stacking on mobile */}
+                           
                            {/* Clinic */}
-                           <div className="col-md-6">
+                           <div className="col-12 col-md-6">
                               <label className="form-label small fw-bold">Clinic *</label>
                               <select name="clinic" className="form-select" value={form.clinic} onChange={handleFormChange} required>
                                  <option value="">Select Clinic</option>
@@ -301,7 +338,7 @@ const DoctorAppointments = () => {
                            </div>
 
                            {/* Service */}
-                           <div className="col-md-6">
+                           <div className="col-12 col-md-6">
                               <label className="form-label small fw-bold">Service *</label>
                               <select name="service" className="form-select" value={form.service} onChange={handleFormChange} required>
                                  <option value="">Select Service</option>
@@ -310,7 +347,7 @@ const DoctorAppointments = () => {
                            </div>
 
                            {/* Patient */}
-                           <div className="col-md-6">
+                           <div className="col-12 col-md-6">
                               <label className="form-label small fw-bold">Patient *</label>
                               <select name="patient" className="form-select" value={form.patient} onChange={handleFormChange} required>
                                  <option value="">Select Patient</option>
@@ -319,13 +356,13 @@ const DoctorAppointments = () => {
                            </div>
 
                            {/* Date */}
-                           <div className="col-md-6">
+                           <div className="col-12 col-md-6">
                               <label className="form-label small fw-bold">Date *</label>
                               <input type="date" name="date" className="form-control" value={form.date} onChange={handleFormChange} required />
                            </div>
 
                            {/* Status */}
-                           <div className="col-md-6">
+                           <div className="col-12 col-md-6">
                               <label className="form-label small fw-bold">Status</label>
                               <select name="status" className="form-select" value={form.status} onChange={handleFormChange}>
                                  <option value="booked">Booked</option>
@@ -335,7 +372,7 @@ const DoctorAppointments = () => {
                            </div>
 
                            {/* Charges */}
-                           <div className="col-md-6">
+                           <div className="col-12 col-md-6">
                               <label className="form-label small fw-bold">Charges</label>
                               <input name="servicesDetail" className="form-control" value={form.servicesDetail} onChange={handleFormChange} />
                            </div>
@@ -361,20 +398,22 @@ const DoctorAppointments = () => {
                               </div>
                            </div>
                         </div>
-                        <div className="mt-4 text-end gap-2 d-flex justify-content-end">
-                           <button type="button" className="btn btn-light border" onClick={() => setPanelOpen(false)}>Cancel</button>
-                           <button type="submit" className="btn btn-primary px-4">Save Appointment</button>
+                        
+                        {/* Action Buttons - Stack on very small screens */}
+                        <div className="mt-4 d-flex flex-wrap justify-content-end gap-2">
+                           <button type="button" className="btn btn-light border flex-grow-1 flex-md-grow-0" onClick={() => setPanelOpen(false)}>Cancel</button>
+                           <button type="submit" className="btn btn-primary px-4 flex-grow-1 flex-md-grow-0">Save Appointment</button>
                         </div>
                      </form>
                   </div>
                </div>
             )}
 
-            {/* Appointments Table */}
-            <div className="card border-0 shadow-sm">
+            {/* Appointments Table - Mobile Optimized with CSS Cards */}
+            <div className="card border-0 shadow-sm bg-transparent bg-md-white">
                <div className="card-body p-0">
                   <div className="table-responsive">
-                     <table className="table table-hover align-middle mb-0">
+                     <table className="table table-hover align-middle mb-0 mobile-table">
                         <thead className="bg-light">
                            <tr>
                               <th className="ps-4">Patient</th>
@@ -390,18 +429,36 @@ const DoctorAppointments = () => {
                               <tr><td colSpan="6" className="text-center py-5 text-muted">No appointments found.</td></tr>
                            ) : filteredAppointments.map(a => (
                               <tr key={a._id}>
-                                 <td className="ps-4 fw-medium">{a.patientName}</td>
-                                 <td>{a.services}</td>
-                                 <td>{a.date ? new Date(a.date).toLocaleDateString("en-GB") : "N/A"}</td>
-                                 <td><span className="badge bg-light text-dark border">{a.time || a.slot || "-"}</span></td>
-                                 <td>
+                                 {/* Added data-label attributes for mobile CSS */}
+                                 <td className="ps-4 fw-medium" data-label="Patient">
+                                    <div className="d-flex align-items-center gap-2">
+                                       <span className="d-md-none text-primary"><FaUser /></span>
+                                       {a.patientName}
+                                    </div>
+                                 </td>
+                                 <td data-label="Service">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span className="d-md-none text-info"><FaStethoscope /></span>
+                                        {a.services}
+                                    </div>
+                                 </td>
+                                 <td data-label="Date">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span className="d-md-none text-secondary"><FaCalendarAlt /></span>
+                                        {a.date ? new Date(a.date).toLocaleDateString("en-GB") : "N/A"}
+                                    </div>
+                                 </td>
+                                 <td data-label="Time"><span className="badge bg-light text-dark border">{a.time || a.slot || "-"}</span></td>
+                                 <td data-label="Status">
                                     <span className={`badge ${a.status === 'booked' ? 'bg-primary' : a.status === 'completed' ? 'bg-success' : 'bg-secondary'}`}>
                                        {a.status}
                                     </span>
                                  </td>
-                                 <td className="text-end pe-4">
-                                    <button className="btn btn-sm btn-link text-decoration-none" onClick={() => openEditForm(a)}>Edit</button>
-                                    <button className="btn btn-sm btn-link text-decoration-none text-dark" onClick={() => window.open(`${API_BASE}/appointments/${a._id}/pdf`, '_blank')}>Receipt</button>
+                                 <td className="text-end pe-4" data-label="Actions">
+                                    <div className="d-flex justify-content-end gap-3">
+                                        <button className="btn btn-sm btn-link text-decoration-none p-0" onClick={() => openEditForm(a)}>Edit</button>
+                                        <button className="btn btn-sm btn-link text-decoration-none text-dark p-0" onClick={() => window.open(`${API_BASE}/appointments/${a._id}/pdf`, '_blank')}>Receipt</button>
+                                    </div>
                                  </td>
                               </tr>
                            ))}

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Encounter = require("../models/Encounter");
+const PatientModel = require("../models/Patient");
 const mongoose = require("mongoose");
 // IMPORT UPLOAD MIDDLEWARE (Needed for file handling)
 const upload = require("../middleware/upload");
@@ -13,6 +14,39 @@ router.get("/", verifyToken, async (req, res) => {
     let query = {};
     if (doctorId) query.doctorId = doctorId;
     if (patientId) query.patientId = patientId;
+
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === "admin") {
+      // Global View
+    } else if (effectiveRole === "patient") {
+      // Patients can only see their own encounters
+      const patientRecord = await PatientModel.findOne({ userId: req.user.id });
+      if (patientRecord) {
+        query.patientId = patientRecord._id;
+      } else {
+        return res.json([]);
+      }
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      return res.json([]);
+    }
 
     const encounters = await Encounter.find(query)
       .populate("doctorId", "firstName lastName clinic specialization")
@@ -45,7 +79,11 @@ router.post("/", verifyToken, async (req, res) => {
     if (req.body.patientId && !mongoose.Types.ObjectId.isValid(req.body.patientId)) {
       return res.status(400).json({ message: "Invalid Patient ID" });
     }
-    const dataToSave = { ...req.body };
+    const dataToSave = {
+      ...req.body,
+      // Strict Isolation: Only Admins can manually set clinicId. Others must use their token's clinicId.
+      clinicId: req.user.role === 'admin' ? (req.body.clinicId || req.user.clinicId) : req.user.clinicId
+    };
     if (!dataToSave.encounterId) {
       dataToSave.encounterId = `ENC-${Math.floor(1000 + Math.random() * 9000)}`;
     }

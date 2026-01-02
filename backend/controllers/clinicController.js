@@ -7,11 +7,61 @@ const fs = require("fs");
 const csv = require("csv-parser");
 
 // email section
+// email section
 const { sendEmail } = require("../utils/emailService");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const generateRandomPassword = require("../utils/generatePassword");
 const { clinicAddedTemplate, credentialsTemplate } = require("../utils/emailTemplates");
+
+// Helper: Extract Initials from Clinic Name
+const extractInitials = (name) => {
+  if (!name) return "XXX";
+
+  // Remove special characters and keep only letters and spaces
+  const cleanName = name.replace(/[^a-zA-Z ]/g, "").toUpperCase();
+
+  // Split by words
+  const words = cleanName.split(/\s+/).filter(Boolean);
+
+  let initials = "";
+  if (words.length === 1) {
+    // Single word: take first 3 chars or fewer
+    initials = words[0].substring(0, 3);
+  } else {
+    // Multiple words: take first char of each word, max 5 chars
+    initials = words.map(w => w[0]).join("").substring(0, 5);
+  }
+
+  return initials || "XXX";
+};
+
+// Helper: Generate Sequential Hospital ID
+const generateHospitalId = async (clinicName) => {
+  const prefix = "OC";
+  const initials = extractInitials(clinicName);
+  const baseId = `${prefix}-${initials}`; // e.g., OC-CGH
+
+  // Find the last clinic with this prefix using regex
+  // Matches: OC-CGH-001, OC-CGH-002, etc.
+  const regex = new RegExp(`^${baseId}-(\\d{3})$`);
+
+  const lastClinic = await Clinic.findOne({ hospitalId: regex })
+    .sort({ hospitalId: -1 }) // Sort DESC to get latest
+    .select("hospitalId");
+
+  let sequence = 1;
+  if (lastClinic && lastClinic.hospitalId) {
+    const parts = lastClinic.hospitalId.split("-");
+    const lastSeq = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(lastSeq)) {
+      sequence = lastSeq + 1;
+    }
+  }
+
+  // Format: OC-CGH-001
+  return `${baseId}-${sequence.toString().padStart(3, "0")}`;
+};
 
 // Create clinic  POST /api/clinics
 exports.createClinic = async (req, res) => {
@@ -39,7 +89,12 @@ exports.createClinic = async (req, res) => {
 
     const parsedSpecialties = specialties ? JSON.parse(specialties) : [];
 
+
+    // Generate unique Hospital ID (format: OC-INITIALS-SEQ)
+    const hospitalId = await generateHospitalId(name);
+
     const clinic = new Clinic({
+      hospitalId,
       name,
       email,
       contact,
@@ -69,36 +124,39 @@ exports.createClinic = async (req, res) => {
     // 2️⃣ Create User for Clinic Admin if not exists
     const targetEmail = adminEmail || email;
     let password = generateRandomPassword();
-    
+
     if (targetEmail) {
-        let user = await User.findOne({ email: targetEmail });
-        if (!user) {
-            const hashedPassword = await bcrypt.hash(password, 10);
-            user = new User({
-                email: targetEmail,
-                password: hashedPassword,
-                role: "clinic_admin", // Using a specific role
-                name: `${adminFirstName} ${adminLastName}`,
-                profileCompleted: true,
-            });
-            await user.save();
-        } else {
-            password = null; // Don't send password if we didn't generate it
-        }
+      let user = await User.findOne({ email: targetEmail });
+      if (!user) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        user = new User({
+          email: targetEmail,
+          password: hashedPassword,
+          role: "clinic_admin", // Using a specific role
+          name: `${adminFirstName} ${adminLastName}`,
+          clinicId: clinic._id,
+          profileCompleted: true,
+        });
+        await user.save();
+      } else {
+        password = null; // Don't send password if we didn't generate it
+      }
     }
 
-    // 3️⃣ Send email
+    // 3️⃣ Send email with Hospital ID
     if (targetEmail) {
-      const html = password 
+      const html = password
         ? credentialsTemplate({
-            name: adminFirstName || "Admin",
-            email: targetEmail,
-            password: password
-          })
+          name: adminFirstName || "Admin",
+          email: targetEmail,
+          password: password,
+          hospitalId: hospitalId
+        })
         : clinicAddedTemplate({
-            clinicName: name,
-            contactName: adminFirstName || "there",
-          });
+          clinicName: name,
+          contactName: adminFirstName || "there",
+          hospitalId: hospitalId
+        });
 
       sendEmail({
         to: targetEmail,
@@ -330,12 +388,16 @@ exports.importClinics = async (req, res) => {
           try {
             const specialties = row.specialties
               ? row.specialties
-                  .split(/[|,]/)
-                  .map((s) => s.trim())
-                  .filter(Boolean)
+                .split(/[|,]/)
+                .map((s) => s.trim())
+                .filter(Boolean)
               : [];
 
+            // Generate unique Hospital ID for each imported clinic
+            const hospitalId = await generateHospitalId(row.name || "Unknown Clinic");
+
             const clinic = new Clinic({
+              hospitalId,
               name: row.name,
               email: row.email,
               contact: row.contact,

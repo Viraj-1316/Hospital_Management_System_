@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { GoogleLogin } from "@react-oauth/google";
+import { googleLogin, saveAuthData, savePatientData, clearRoleData, fetchPatientData } from "./authService";
 import API_BASE from "../config";
 import "./OneCareAuth.css";
 
@@ -16,6 +18,26 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("PATIENT");
   const [hospitalId, setHospitalId] = useState("");
+
+  const [clinics, setClinics] = useState([]);
+  const [showApprovalPendingModal, setShowApprovalPendingModal] = useState(false); // Modal state
+
+  // Fetch clinics for dropdown
+  useEffect(() => {
+    const fetchClinics = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/clinics`); // Updated endpoint
+        const data = await res.json();
+        // Handle different response structures
+        if (Array.isArray(data)) setClinics(data);
+        else if (data.clinics && Array.isArray(data.clinics)) setClinics(data.clinics);
+        else if (data.data && Array.isArray(data.data)) setClinics(data.data);
+      } catch (err) {
+        console.error("Error fetching clinics:", err);
+      }
+    };
+    fetchClinics();
+  }, []);
 
   // Loading animation
   useEffect(() => {
@@ -47,6 +69,9 @@ function Signup() {
       setHospitalId(""); // Clear hospital ID if patient
     }
   };
+
+  // State for approval pending modal
+  const [showApprovalPendingModal, setShowApprovalPendingModal] = useState(false);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -83,14 +108,29 @@ function Signup() {
         }),
       });
 
+      const resData = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        toast.error(errData.message || "Signup failed");
+        toast.error(resData.message || "Signup failed");
         return;
       }
 
-      await res.json().catch(() => ({}));
+      // Check if approval is pending (doctor/staff signup)
+      if (resData.approvalStatus === "pending") {
+        // Show approval pending modal
+        setShowApprovalPendingModal(true);
 
+        // Clear form
+        setName("");
+        setEmail("");
+        setPassword("");
+        setPhone("");
+        setRole("PATIENT");
+        setHospitalId("");
+        return;
+      }
+
+      // For patients - normal login flow
       toast.success("Signup successful! You can now login.");
 
       // Clear form
@@ -108,6 +148,42 @@ function Signup() {
       console.error(err);
       toast.error("Network error: backend not responding");
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    if (credentialResponse.credential) {
+      const result = await googleLogin(credentialResponse.credential);
+
+      if (!result.success) {
+        toast.error(result.error);
+        setIsLoading(false);
+        return;
+      }
+
+      const authUser = saveAuthData(result.data, result.token);
+      clearRoleData();
+
+      // For signup, we might want to check profile completion or just log them in
+      if (authUser.role === 'patient' && authUser.id) {
+        const patientDoc = await fetchPatientData(authUser.id);
+        if (patientDoc) savePatientData(patientDoc, authUser.id);
+      }
+
+      toast.success('Signup with Google successful!');
+
+      // Redirect logic similar to Login
+      if (authUser.role === 'patient') {
+        navigate(authUser.profileCompleted ? '/patient-dashboard' : '/patient/profile-setup');
+      } else {
+        navigate('/'); // Fallback
+      }
+    }
+    setIsLoading(false);
+  };
+
+  const handleGoogleError = () => {
+    toast.error('Google Sign Up was unsuccessful.');
   };
 
   return (
@@ -136,9 +212,17 @@ function Signup() {
             <h1 className="animate-enter" style={{ '--i': 0 }}>Create Account</h1>
 
             <div className="social-links animate-enter" style={{ '--i': 1 }}>
-              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-              <a href="#" aria-label="Google"><i className="fab fa-google"></i></a>
-              <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
+              <div className="google-btn-wrapper">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="filled_blue"
+                  shape="pill"
+                  text="signup_with"
+                  logo_alignment="left"
+                  width="300"
+                />
+              </div>
             </div>
             <span className="animate-enter" style={{ '--i': 2 }}>or use your email for registration</span>
 
@@ -235,21 +319,36 @@ function Signup() {
               </div>
             </div>
 
-            {/* Hospital ID field - shown for Doctor/Receptionist */}
-            <div
-              className={`role-extra ${(role === "DOCTOR" || role === "RECEPTIONIST") ? 'show' : ''}`}
-              id="professionalFields"
-            >
-              <div className="input-group">
-                <input
-                  type="text"
-                  placeholder="Hospital ID"
-                  value={hospitalId}
-                  onChange={(e) => setHospitalId(e.target.value)}
-                />
-                <i className="fas fa-id-badge input-icon"></i>
-              </div>
-            </div>
+        </div>
+    </div>
+
+            {/* Clinic Selection - REQUIRED for all roles now */ }
+  <div className="input-group animate-enter" style={{ '--i': 7.5 }}>
+    <select
+      className="form-select" // styles from global or bootstrap
+      style={{
+        width: '100%',
+        padding: '10px 15px',
+        borderRadius: '8px',
+        border: '1px solid #ddd',
+        outline: 'none',
+        background: '#f0f0f0'
+      }}
+      value={hospitalId}
+      onChange={(e) => setHospitalId(e.target.value)}
+      required
+    >
+      <option value="">Select Your Clinic</option>
+      {clinics.map(clinic => (
+        <option key={clinic._id} value={clinic._id}>
+          {clinic.name}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* Hospital ID field - Hidden/Redundant now that we use dropdown */ }
+  {/* <div className={`role-extra ...`} ... > ... </div> */ }
 
             <button type="submit" className="animate-enter" style={{ '--i': 8 }}>Sign Up</button>
 
@@ -257,60 +356,98 @@ function Signup() {
               <p>Already have an account?</p>
               <button type="button" onClick={() => navigate("/")}>Sign In</button>
             </div>
-          </form>
+          </form >
+        </div >
+
+    {/* Login Form (Placeholder - redirect to login page) */ }
+    < div className = "auth-form-box login-form-box" >
+      <form>
+        <h1 className="animate-enter" style={{ '--i': 0 }}>Welcome Back</h1>
+        <div className="social-links animate-enter" style={{ '--i': 1 }}>
+          {/* Placeholder for visuals, functional button is in Login component */}
+          <div className="google-btn-wrapper" style={{ opacity: 0.7, pointerEvents: 'none' }}>
+            Logged in mode only
+          </div>
+        </div>
+        <span className="animate-enter" style={{ '--i': 2 }}>or use your account</span>
+
+        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+          <Link
+            to="/"
+            style={{
+              color: 'var(--primary)',
+              textDecoration: 'underline',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Go to Login Page →
+          </Link>
         </div>
 
-        {/* Login Form (Placeholder - redirect to login page) */}
-        <div className="auth-form-box login-form-box">
-          <form>
-            <h1 className="animate-enter" style={{ '--i': 0 }}>Welcome Back</h1>
-            <div className="social-links animate-enter" style={{ '--i': 1 }}>
-              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-              <a href="#" aria-label="Google"><i className="fab fa-google"></i></a>
-              <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
-            </div>
-            <span className="animate-enter" style={{ '--i': 2 }}>or use your account</span>
-
-            <div style={{ marginTop: '15px', textAlign: 'center' }}>
-              <Link
-                to="/"
-                style={{
-                  color: 'var(--primary)',
-                  textDecoration: 'underline',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-              >
-                Go to Login Page →
-              </Link>
-            </div>
-
-            <div className="mobile-switch">
-              <p>Don't have an account?</p>
-              <button type="button" onClick={() => togglePanel(true)}>Sign Up</button>
-            </div>
-          </form>
+        <div className="mobile-switch">
+          <p>Don't have an account?</p>
+          <button type="button" onClick={() => togglePanel(true)}>Sign Up</button>
         </div>
+      </form>
+        </div >
 
-        {/* Sliding Panel */}
-        <div className="slide-panel-wrapper">
-          <div className="slide-panel">
-            <div className="panel-content panel-content-left">
-              <h1>OneCare</h1>
-              <p>Access your medical records, appointments, and prescriptions in one secure place.</p>
-              <Link to="/">
-                <button className="transparent-btn" type="button">Sign In</button>
-              </Link>
-            </div>
-            <div className="panel-content panel-content-right">
-              <h1>Join Us</h1>
-              <p>Connect with the best healthcare professionals. Your journey to better health starts here.</p>
-              <button className="transparent-btn" type="button" onClick={() => togglePanel(true)}>Sign Up</button>
+    {/* Sliding Panel */ }
+    < div className = "slide-panel-wrapper" >
+      <div className="slide-panel">
+        <div className="panel-content panel-content-left">
+          <h1>OneCare</h1>
+          <p>Access your medical records, appointments, and prescriptions in one secure place.</p>
+          <Link to="/">
+            <button className="transparent-btn" type="button">Sign In</button>
+          </Link>
+        </div>
+        <div className="panel-content panel-content-right">
+          <h1>Join Us</h1>
+          <p>Connect with the best healthcare professionals. Your journey to better health starts here.</p>
+          <button className="transparent-btn" type="button" onClick={() => togglePanel(true)}>Sign Up</button>
+        </div>
+      </div>
+        </div >
+      </main >
+
+    {/* Approval Pending Modal */ }
+  {
+    showApprovalPendingModal && (
+      <>
+        <div className="modal-backdrop fade show" style={{ zIndex: 2000 }}></div>
+        <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 2001 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+              <div className="modal-body text-center p-5">
+                <div style={{ fontSize: '60px', marginBottom: '20px' }}>📋</div>
+                <h4 style={{ color: '#2563eb', fontWeight: 'bold', marginBottom: '16px' }}>Request Submitted!</h4>
+                <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6' }}>
+                  Your registration request has been sent to the <strong>hospital admin</strong>.
+                </p>
+                <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6' }}>
+                  Once approved, you will be able to <strong>login</strong> using your credentials.
+                </p>
+                <div style={{ marginTop: '24px' }}>
+                  <button
+                    className="btn btn-primary px-5 py-2"
+                    style={{ borderRadius: '25px', fontWeight: '600' }}
+                    onClick={() => {
+                      setShowApprovalPendingModal(false);
+                      navigate("/");
+                    }}
+                  >
+                    Go to Login
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </>
+    )
+  }
+    </div >
   );
 }
 

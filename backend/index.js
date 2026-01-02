@@ -8,6 +8,8 @@ const compression = require("compression");
 const mongoSanitize = require("./middleware/mongoSanitize");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
+const isProduction = process.env.NODE_ENV === "production";
+
 // --- DB Connection ---
 const connectDB = require("./config/db");
 
@@ -16,7 +18,7 @@ require("./models/Doctor");
 require("./models/Appointment");
 // (Add other models here if they rely on being registered early)
 
-console.log("🔧 Dotenv loaded. TWILIO_ACCOUNT_SID present:", !!process.env.TWILIO_ACCOUNT_SID);
+console.log("🔧 Dotenv loaded. WHATSAPP_ACCESS_TOKEN present:", !!process.env.WHATSAPP_ACCESS_TOKEN);
 
 // --- Route Imports ---
 const authRoutes = require("./routes/auth");
@@ -36,10 +38,12 @@ const encounterRoutes = require("./routes/encounterRoutes");
 const encounterTemplateRoutes = require("./routes/encounterTemplateRoutes");
 const holidayRoutes = require("./routes/holidayRoutes");
 const emailRoutes = require("./routes/emailRoutes");
+const smsRoutes = require("./routes/smsRoutes");
 
 // ✅ NEW: Import Listing Routes
 const listingRoutes = require("./routes/listingRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
+const approvalRoutes = require("./routes/approvalRoutes");
 
 // Import Interface for Socket.io
 const { initSocket } = require("./utils/socketServer");
@@ -136,11 +140,13 @@ app.use("/", userRoutes);
 app.use("/encounters", encounterRoutes);
 app.use("/encounter-templates", encounterTemplateRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/sms", smsRoutes);
 app.use("/holidays", holidayRoutes);
 
 // ✅ NEW: Register Listing Routes
 app.use("/listings", listingRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/approvals", approvalRoutes);
 
 
 // --- 404 Handler (Must be after all routes) ---

@@ -9,6 +9,7 @@ const AppointmentSchema = new mongoose.Schema({
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "Doctor", required: false },
   doctorName: String,
   clinic: String,
+  clinicId: { type: mongoose.Schema.Types.ObjectId, ref: "Clinic" },
   date: { type: Date },
   time: String,
   services: String,
@@ -22,6 +23,7 @@ const AppointmentSchema = new mongoose.Schema({
 // Database Indexes for improved query performance
 AppointmentSchema.index({ doctorId: 1, date: 1 });
 AppointmentSchema.index({ patientId: 1 });
+AppointmentSchema.index({ clinicId: 1 });
 AppointmentSchema.index({ status: 1 });
 AppointmentSchema.index({ date: -1 });
 

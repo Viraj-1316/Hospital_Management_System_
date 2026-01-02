@@ -32,10 +32,13 @@ const EditBill = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        const token = localStorage.getItem("token");
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        
         const [docRes, patRes, billRes] = await Promise.all([
-          axios.get(`${API_BASE}/doctors`),
-          axios.get(`${API_BASE}/patients`),
-          axios.get(`${API_BASE}/api/bills/${id}`),
+          axios.get(`${API_BASE}/doctors`, config),
+          axios.get(`${API_BASE}/patients`, config),
+          axios.get(`${API_BASE}/bills/${id}`, config),
         ]);
 
         setDoctors(docRes.data);
@@ -43,19 +46,34 @@ const EditBill = () => {
 
         const bill = billRes.data;
 
+        // Handle services - can be array of strings or array of objects
+        let servicesStr = "";
+        if (Array.isArray(bill.services)) {
+          servicesStr = bill.services.map(svc => 
+            typeof svc === 'string' ? svc : (svc.name || '')
+          ).filter(Boolean).join(", ");
+        } else if (typeof bill.services === 'string') {
+          servicesStr = bill.services;
+        }
+
+        // Format date for input field
+        let dateStr = "";
+        if (bill.date) {
+          const d = new Date(bill.date);
+          dateStr = d.toISOString().split("T")[0];
+        }
+
         setForm({
           doctorName: bill.doctorName || "",
           clinicName: bill.clinicName || "",
           patientName: bill.patientName || "",
-          services: Array.isArray(bill.services)
-            ? bill.services.join(", ")
-            : bill.services,
-          totalAmount: bill.totalAmount,
-          discount: bill.discount,
-          amountDue: bill.amountDue,
-          date: bill.date,
-          status: bill.status,
-          notes: bill.notes,
+          services: servicesStr,
+          totalAmount: bill.totalAmount || "",
+          discount: bill.discount || 0,
+          amountDue: bill.amountDue || "",
+          date: dateStr,
+          status: bill.status || "unpaid",
+          notes: bill.notes || "",
         });
 
         setLoading(false);
@@ -103,7 +121,9 @@ const EditBill = () => {
 
     try {
       setSaving(true);
-      await axios.put(`${API_BASE}/api/bills/${id}`, payload);
+      const token = localStorage.getItem("token");
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.put(`${API_BASE}/bills/${id}`, payload, config);
       alert("Bill updated successfully!");
       navigate("/BillingRecords");
     } catch (err) {
@@ -143,11 +163,14 @@ const EditBill = () => {
                   onChange={handleChange}
                 >
                   <option value="">-- Select Doctor --</option>
-                  {doctors.map((doc) => (
-                    <option key={doc._id} value={doc.name}>
-                      {doc.name}
-                    </option>
-                  ))}
+                  {doctors.map((doc) => {
+                    const name = doc.name || `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+                    return (
+                      <option key={doc._id} value={name}>
+                        {name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -161,11 +184,14 @@ const EditBill = () => {
                   onChange={handleChange}
                 >
                   <option value="">-- Select Patient --</option>
-                  {patients.map((p) => (
-                    <option key={p._id} value={p.name}>
-                      {p.name}
-                    </option>
-                  ))}
+                  {patients.map((p) => {
+                    const name = p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim();
+                    return (
+                      <option key={p._id} value={name}>
+                        {name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

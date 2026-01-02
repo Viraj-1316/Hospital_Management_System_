@@ -3,6 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import listPlugin from "@fullcalendar/list";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import PatientLayout from "../layouts/PatientLayout";
@@ -14,12 +15,12 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
 
   // --- State for Filters & Data ---
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [rawAppointments, setRawAppointments] = useState([]); 
+  const [rawAppointments, setRawAppointments] = useState([]);
   const [filters, setFilters] = useState({ doctor: "", status: "" });
 
   // --- State for Appointment Details Modal ---
-  const [selectedAppointment, setSelectedAppointment] = useState(null); 
-  
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [errorEvents, setErrorEvents] = useState(null);
@@ -29,7 +30,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
 
   // Auth / LocalStorage Logic
   const storedPatient = (() => {
-    try { return JSON.parse(localStorage.getItem("patient") || "null"); } 
+    try { return JSON.parse(localStorage.getItem("patient") || "null"); }
     catch { return null; }
   })();
 
@@ -42,8 +43,8 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
     if (!isoString) return "";
     const date = new Date(isoString);
     // Check if date is valid
-    if (isNaN(date.getTime())) return isoString; 
-    
+    if (isNaN(date.getTime())) return isoString;
+
     return date.toLocaleDateString("en-US", {
       month: "short", // Nov
       day: "numeric", // 30
@@ -74,7 +75,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
       allDay: true,
       backgroundColor: bgColor,
       borderColor: bgColor,
-      extendedProps: { raw: a }, 
+      extendedProps: { raw: a },
     };
   };
 
@@ -126,7 +127,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
         const res = await axios.get(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
         const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
         if (mounted) setUpcoming(data.slice(0, 6));
-      } catch (err) { if (mounted) setUpcoming([]); } 
+      } catch (err) { if (mounted) setUpcoming([]); }
       finally { if (mounted) setLoadingUpcoming(false); }
     };
     fetchUpcoming();
@@ -146,16 +147,16 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
   };
 
   const handleFilterChange = (e) => setFilters((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  
+
   return (
     <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="container-fluid py-4 position-relative">
-        
+
         {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h3 className="fw-bold text-primary m-0">Appointment</h3>
-          <button className="btn btn-outline-secondary" onClick={() => setShowFilterModal(true)}>
-              Apply filters
+        <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+          <h3 className="fw-bold text-primary m-0 fs-4">Your Schedule</h3>
+          <button className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2" onClick={() => setShowFilterModal(true)}>
+            <i className="fa fa-filter"></i> <span>Filters</span>
           </button>
         </div>
 
@@ -164,8 +165,10 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
         <div className="row g-4">
           {/* Calendar Column */}
           <div className="col-lg-9">
-            <div className="card shadow-sm p-3">
-              <div className="d-flex justify-content-between align-items-center mb-3">
+            {/* Mobile-Friendly Calendar Toolbar */}
+            <div className="card shadow-sm p-3 mb-4">
+              {/* Desktop Toolbar */}
+              <div className="d-none d-md-flex justify-content-between align-items-center mb-3">
                 <div>
                   <button className="btn btn-sm btn-primary me-1" onClick={() => calendarRef.current?.getApi().prev()}>◀</button>
                   <button className="btn btn-sm btn-primary me-1" onClick={() => calendarRef.current?.getApi().next()}>▶</button>
@@ -175,13 +178,30 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
                   <button className="btn btn-sm btn-outline-secondary" onClick={() => calendarRef.current?.getApi().changeView("dayGridMonth")}>Month</button>
                   <button className="btn btn-sm btn-outline-secondary" onClick={() => calendarRef.current?.getApi().changeView("timeGridWeek")}>Week</button>
                   <button className="btn btn-sm btn-outline-secondary" onClick={() => calendarRef.current?.getApi().changeView("timeGridDay")}>Day</button>
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => calendarRef.current?.getApi().changeView("listWeek")}>List</button>
+                </div>
+              </div>
+
+              {/* Mobile Toolbar (Stacked & Simplified) */}
+              <div className="d-md-none d-flex flex-column gap-2 mb-3">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div className="btn-group">
+                    <button className="btn btn-sm btn-outline-primary" onClick={() => calendarRef.current?.getApi().prev()}>&lt;</button>
+                    <button className="btn btn-sm btn-outline-primary" onClick={() => calendarRef.current?.getApi().today()}>Today</button>
+                    <button className="btn btn-sm btn-outline-primary" onClick={() => calendarRef.current?.getApi().next()}>&gt;</button>
+                  </div>
+                  {/* View Switcher (Segmented Control style) */}
+                  <div className="btn-group">
+                    <button className="btn btn-sm btn-light border" onClick={() => calendarRef.current?.getApi().changeView("dayGridMonth")}>Month</button>
+                    <button className="btn btn-sm btn-primary" onClick={() => calendarRef.current?.getApi().changeView("listWeek")}>List</button>
+                  </div>
                 </div>
               </div>
 
               <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+                initialView={window.innerWidth < 768 ? "listWeek" : "dayGridMonth"}
                 headerToolbar={false}
                 selectable={true}
                 selectMirror={true}
@@ -190,6 +210,11 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
                 eventClick={handleEventClick}
                 height="auto"
                 dayMaxEvents={3}
+                windowResizeDelay={0}
+                handleWindowResize={true}
+                views={{
+                  dayGridMonth: { titleFormat: { month: 'short', year: 'numeric' } }
+                }}
               />
             </div>
           </div>
@@ -199,23 +224,23 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
             <div className="card shadow-sm h-100">
               <div className="card-header bg-white border-0"><h6 className="mb-0 fw-bold">Upcoming appointments</h6></div>
               <div className="card-body p-2" style={{ maxHeight: 400, overflowY: "auto" }}>
-                {loadingUpcoming ? <p className="text-muted small">Loading...</p> : 
-                 upcoming.length === 0 ? <p className="text-muted small">No upcoming appointments.</p> : 
-                 upcoming.map((a) => (
-                    <div key={a._id} className="p-2 mb-2 border rounded-3 bg-light" style={{cursor:"pointer"}} onClick={() => setSelectedAppointment(a)}>
-                      <div className="d-flex justify-content-between">
-                        <span className="fw-semibold small">{a.doctorName || "Doctor"}</span>
-                        <span className="badge bg-white text-dark border">{a.status}</span>
-                      </div>
-                      <div className="small text-muted">{a.clinic}</div>
-                      
-                      {/* --- 2. UPDATED CODE HERE --- */}
-                      <div className="small mt-1 fw-semibold">
-                        {formatDate(a.date)} {a.time ? `• ${a.time}` : ''}
-                      </div>
+                {loadingUpcoming ? <p className="text-muted small">Loading...</p> :
+                  upcoming.length === 0 ? <p className="text-muted small">No upcoming appointments.</p> :
+                    upcoming.map((a) => (
+                      <div key={a._id} className="p-2 mb-2 border rounded-3 bg-light" style={{ cursor: "pointer" }} onClick={() => setSelectedAppointment(a)}>
+                        <div className="d-flex justify-content-between">
+                          <span className="fw-semibold small">{a.doctorName || "Doctor"}</span>
+                          <span className="badge bg-white text-dark border">{a.status}</span>
+                        </div>
+                        <div className="small text-muted">{a.clinic}</div>
 
-                    </div>
-                 ))
+                        {/* --- 2. UPDATED CODE HERE --- */}
+                        <div className="small mt-1 fw-semibold">
+                          {formatDate(a.date)} {a.time ? `• ${a.time}` : ''}
+                        </div>
+
+                      </div>
+                    ))
                 }
               </div>
             </div>
@@ -234,7 +259,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
                 <div className="modal-body">
                   <div className="mb-3">
                     <label className="form-label">Doctor Name</label>
-                    <input type="text" className="form-control" name="doctor" value={filters.doctor} onChange={handleFilterChange} placeholder="e.g. Sharma"/>
+                    <input type="text" className="form-control" name="doctor" value={filters.doctor} onChange={handleFilterChange} placeholder="e.g. Sharma" />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Status</label>
@@ -247,7 +272,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button className="btn btn-outline-secondary" onClick={() => { setFilters({doctor:"", status:""}); setShowFilterModal(false); }}>Clear</button>
+                  <button className="btn btn-outline-secondary" onClick={() => { setFilters({ doctor: "", status: "" }); setShowFilterModal(false); }}>Clear</button>
                   <button className="btn btn-primary" onClick={() => setShowFilterModal(false)}>Apply</button>
                 </div>
               </div>
@@ -266,51 +291,51 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
                 </div>
                 <div className="modal-body">
                   <div className="text-center mb-4">
-                      <div className="display-6 text-primary mb-1">
-                         {new Date(selectedAppointment.date).getDate()}
-                      </div>
-                      <div className="text-muted text-uppercase small fw-bold">
-                         {new Date(selectedAppointment.date).toLocaleString('default', { month: 'long', year: 'numeric' })}
-                      </div>
-                      <div className="badge bg-warning text-dark mt-2">{selectedAppointment.status?.toUpperCase() || 'BOOKED'}</div>
+                    <div className="display-6 text-primary mb-1">
+                      {new Date(selectedAppointment.date).getDate()}
+                    </div>
+                    <div className="text-muted text-uppercase small fw-bold">
+                      {new Date(selectedAppointment.date).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                    </div>
+                    <div className="badge bg-warning text-dark mt-2">{selectedAppointment.status?.toUpperCase() || 'BOOKED'}</div>
                   </div>
 
                   <div className="row g-3">
-                      <div className="col-6">
-                         <small className="text-muted d-block">Doctor</small>
-                         <span className="fw-semibold">{selectedAppointment.doctorName || "Unknown"}</span>
+                    <div className="col-6">
+                      <small className="text-muted d-block">Doctor</small>
+                      <span className="fw-semibold">{selectedAppointment.doctorName || "Unknown"}</span>
+                    </div>
+                    <div className="col-6">
+                      <small className="text-muted d-block">Clinic</small>
+                      <span className="fw-semibold">{selectedAppointment.clinic || "Unknown"}</span>
+                    </div>
+                    <div className="col-6">
+                      <small className="text-muted d-block">Time</small>
+                      <span className="fw-semibold">{selectedAppointment.time || "Not set"}</span>
+                    </div>
+                    <div className="col-6">
+                      <small className="text-muted d-block">Charges</small>
+                      <span className="fw-semibold">₹{selectedAppointment.charges || 0}</span>
+                    </div>
+                    <div className="col-12">
+                      <small className="text-muted d-block">Service(s)</small>
+                      <div className="p-2 bg-light rounded border mt-1">
+                        {selectedAppointment.services || selectedAppointment.serviceName || "Consultation"}
                       </div>
-                      <div className="col-6">
-                         <small className="text-muted d-block">Clinic</small>
-                         <span className="fw-semibold">{selectedAppointment.clinic || "Unknown"}</span>
-                      </div>
-                      <div className="col-6">
-                         <small className="text-muted d-block">Time</small>
-                         <span className="fw-semibold">{selectedAppointment.time || "Not set"}</span>
-                      </div>
-                      <div className="col-6">
-                         <small className="text-muted d-block">Charges</small>
-                         <span className="fw-semibold">₹{selectedAppointment.charges || 0}</span>
-                      </div>
-                      <div className="col-12">
-                         <small className="text-muted d-block">Service(s)</small>
-                         <div className="p-2 bg-light rounded border mt-1">
-                            {selectedAppointment.services || selectedAppointment.serviceName || "Consultation"}
-                         </div>
-                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button 
+                  <button
                     className="btn btn-outline-primary btn-sm"
                     onClick={() => {
-                        const targetId = selectedAppointment._id || selectedAppointment.id;
-                        if (targetId) {
-                            navigate(`/patient/appointments/${targetId}`);
-                        } else {
-                            console.error("No valid ID found on appointment object:", selectedAppointment);
-                            alert("Error: Cannot find appointment ID.");
-                        }
+                      const targetId = selectedAppointment._id || selectedAppointment.id;
+                      if (targetId) {
+                        navigate(`/patient/appointments/${targetId}`);
+                      } else {
+                        console.error("No valid ID found on appointment object:", selectedAppointment);
+                        alert("Error: Cannot find appointment ID.");
+                      }
                     }}
                   >
                     View Full Receipt

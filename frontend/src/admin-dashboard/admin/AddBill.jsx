@@ -39,10 +39,13 @@ const AddBill = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = localStorage.getItem("token");
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+
         const [docRes, patRes, clinicRes] = await Promise.all([
-          axios.get(`${API_BASE}/doctors`),
-          axios.get(`${API_BASE}/patients`),
-          axios.get(`${API_BASE}/api/clinics`)
+          axios.get(`${API_BASE}/doctors`, config),
+          axios.get(`${API_BASE}/patients`, config),
+          axios.get(`${API_BASE}/api/clinics`, config)
         ]);
 
         // Normalize Data
@@ -67,7 +70,9 @@ const AddBill = () => {
   // --- 3. Fetch Encounters (Server-Side Filter) ---
   useEffect(() => {
     if (form.patientId) {
-      axios.get(`${API_BASE}/encounters?patientId=${form.patientId}`)
+      const token = localStorage.getItem("token");
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      axios.get(`${API_BASE}/encounters?patientId=${form.patientId}`, config)
         .then((res) => {
           const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
           setEncounters(data);
@@ -153,7 +158,9 @@ const AddBill = () => {
         clinicId: form.clinicId || null
       };
 
-      await axios.post(`${API_BASE}/bills`, payload);
+      const token = localStorage.getItem("token");
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.post(`${API_BASE}/bills`, payload, config);
       toast.success("Bill created successfully!");
       navigate("/BillingRecords");
     } catch (err) {
@@ -245,8 +252,8 @@ const AddBill = () => {
                 >
                   <option value="">-- Select Encounter --</option>
                   {encounters.map((enc) => (
-                    <option key={enc._id} value={enc.encounterId || enc._id}>
-                      {new Date(enc.date).toLocaleDateString()} (ID: {enc.encounterId || "Pending"})
+                    <option key={enc._id} value={enc._id}>
+                      {new Date(enc.date).toLocaleDateString()} (ID: {enc.encounterId || enc._id})
                     </option>
                   ))}
                 </select>

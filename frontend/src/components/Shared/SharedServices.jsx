@@ -155,14 +155,25 @@ function DurationPicker({ value, onChange }) {
 // ------------------------------------------------------
 // Service Form (Shared)
 // ------------------------------------------------------
-function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, doctorInfo }) {
+function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, doctorInfo, isClinic, clinicInfo }) {
   const [clinics, setClinics] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
-  // If doctor, use doctorInfo. If admin, use empty defaults.
-  const defaultClinic = isDoctor ? (doctorInfo?.clinic || "") : "";
-  const defaultDoctor = isDoctor ? (`${doctorInfo?.firstName || ""} ${doctorInfo?.lastName || ""}`.trim()) : "";
+  // Determine default clinic/doctor based on role
+  const getDefaultClinic = () => {
+    if (isDoctor) return doctorInfo?.clinic || "";
+    if (isClinic) return clinicInfo?.clinicName || "";
+    return "";
+  };
+  
+  const getDefaultDoctor = () => {
+    if (isDoctor) return `${doctorInfo?.firstName || ""} ${doctorInfo?.lastName || ""}`.trim();
+    return "";
+  };
+
+  const defaultClinic = getDefaultClinic();
+  const defaultDoctor = getDefaultDoctor();
 
   const [form, setForm] = useState(
     initial || {
@@ -206,6 +217,7 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
     fetchOptions();
   }, [isDoctor]);
 
+  // Filter doctors by clinic (for clinic or admin)
   const filteredDoctors = form.clinicName
     ? doctors.filter(d => (d.clinic || "").toLowerCase() === form.clinicName.toLowerCase())
     : doctors;
@@ -214,7 +226,7 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
     const val = e.target.value;
     setForm(prev => {
       const updates = { ...prev, [k]: val };
-      if (!isDoctor && k === "clinicName") updates.doctor = "";
+      if (!isDoctor && !isClinic && k === "clinicName") updates.doctor = "";
       return updates;
     });
   };
@@ -255,9 +267,7 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
         <form className="modal-content" onSubmit={submit}>
           <div className="modal-header">
             <h5 className="modal-title">{initial ? (isDoctor ? "Edit My Service" : "Edit Service") : (isDoctor ? "Add My Service" : "Add Service")}</h5>
-            <div className="d-flex gap-2">
-              <button type="button" className="btn btn-light btn-sm" onClick={onClose}>{isDoctor ? "Close" : "close form"}</button>
-            </div>
+            <button type="button" className="btn-close" onClick={onClose} aria-label="Close"></button>
           </div>
           <div className="modal-body">
             <div className="row g-3">
@@ -275,7 +285,7 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
                   </div>
 
                   <div className="col-md-6"><label className="form-label">Name*</label><input className="form-control" value={form.name} onChange={change("name")} required /></div>
-                  <div className="col-md-6"><label className="form-label">Charges*</label><input className="form-control" type={isDoctor ? "number" : "text"} value={form.charges} onChange={change("charges")} required /></div>
+                  <div className="col-md-6"><label className="form-label">Charges*</label><input className="form-control" type="number" min="0" step="0.01" value={form.charges} onChange={change("charges")} required /></div>
                   <div className="col-md-6"><label className="form-label">Telemed?*</label><select className="form-select" value={form.isTelemed} onChange={change("isTelemed")}><option>No</option><option>Yes</option></select></div>
 
                   {isDoctor ? (
@@ -287,6 +297,23 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
                       <div className="col-md-6">
                         <label className="form-label">Doctor (Locked)</label>
                         <input className="form-control bg-light" value={form.doctor} readOnly />
+                      </div>
+                    </>
+                  ) : isClinic ? (
+                    <>
+                      <div className="col-md-6">
+                        <label className="form-label">Clinic (Auto-detected)</label>
+                        <input className="form-control bg-light" value={form.clinicName} readOnly />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Doctor*</label>
+                        <select className="form-select" value={form.doctor} onChange={change("doctor")} required>
+                          <option value="">Select Doctor</option>
+                          {filteredDoctors.map(d => {
+                            const dName = d.firstName ? `${d.firstName} ${d.lastName} ${d.specialization ? `(${d.specialization})` : ""}` : d.name;
+                            return <option key={d._id} value={dName}>{dName}</option>;
+                          })}
+                        </select>
                       </div>
                     </>
                   ) : (
@@ -433,7 +460,7 @@ function ImportModal({ open, onClose, onSave }) {
 }
 
 /* ---------- Main Shared Component ---------- */
-export default function SharedServices({ isDoctor = false, doctorInfo = null }) {
+export default function SharedServices({ isDoctor = false, doctorInfo = null, isClinic = false, clinicInfo = null }) {
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -481,6 +508,11 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
         params.doctor = doctorName;
       }
 
+      // If clinic, force clinic filter
+      if (isClinic && clinicInfo?.clinicName) {
+        params.clinicName = clinicInfo.clinicName;
+      }
+
       const { data } = await api.get(SERVICES_BASE, { params });
       if (Array.isArray(data)) { setRows(data); setTotal(data.length); }
       else { setRows(data.rows || []); setTotal(data.total || 0); }
@@ -489,19 +521,24 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
   };
 
   useEffect(() => {
-    // Only load if not doctor OR (is doctor AND doctorInfo is available)
-    if (!isDoctor || (isDoctor && doctorInfo?.firstName)) {
+    // Load data based on role:
+    // - For regular admin: load immediately
+    // - For doctor: wait until doctorInfo is available
+    // - For clinic: load immediately (clinicInfo is available from localStorage)
+    const shouldLoad = !isDoctor || (isDoctor && doctorInfo?.firstName);
+    if (shouldLoad) {
       load();
     }
-  }, [page, limit, isDoctor, doctorInfo]);
+  }, [page, limit, isDoctor, doctorInfo, isClinic, clinicInfo]);
 
   useEffect(() => {
     const t = setTimeout(() => {
       setPage(1);
-      if (!isDoctor || (isDoctor && doctorInfo?.firstName)) load();
+      const shouldLoad = !isDoctor || (isDoctor && doctorInfo?.firstName);
+      if (shouldLoad) load();
     }, 400);
     return () => clearTimeout(t);
-  }, [search, filters, isDoctor, doctorInfo]);
+  }, [search, filters, isDoctor, doctorInfo, isClinic, clinicInfo]);
 
   const onAdd = () => { setEditing(null); setModalOpen(true); };
   const onEdit = (r) => { setEditing(r); setModalOpen(true); };
@@ -695,7 +732,7 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null }) 
 
         <div className="mt-3 text-secondary small">© OneCare</div>
 
-        {modalOpen && <ServiceForm initial={editing} onClose={() => setModalOpen(false)} onSave={save} availableCategories={categories} isDoctor={isDoctor} doctorInfo={doctorInfo} />}
+        {modalOpen && <ServiceForm initial={editing} onClose={() => setModalOpen(false)} onSave={save} availableCategories={categories} isDoctor={isDoctor} doctorInfo={doctorInfo} isClinic={isClinic} clinicInfo={clinicInfo} />}
 
         <ImportModal
           open={importModalOpen}

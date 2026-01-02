@@ -1,75 +1,76 @@
-const twilio = require("twilio");
 const logger = require("./logger");
 
-let client = null;
-
 /**
- * Send a WhatsApp message
- * @param {string} to - The recipient's phone number 
+ * Send a WhatsApp message using Meta WhatsApp Cloud API
+ * @param {string} to - The recipient's phone number
  * @param {string} body - The message text
  */
 const sendWhatsAppMessage = async (to, body) => {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-  if (!client) {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-
-    if (accountSid && authToken) {
-      try {
-        client = twilio(accountSid, authToken);
-        logger.debug("Twilio client initialized", { sid: accountSid.substring(0, 6) + "..." });
-      } catch (err) {
-        logger.error("Failed to initialize Twilio client", { error: err.message });
-      }
-    } else {
-      logger.warn("Twilio credentials missing in environment variables");
-    }
-  }
-
-  if (!client) {
-    logger.warn("Twilio client not initialized, skipping WhatsApp message");
-    return;
+  if (!accessToken || !phoneNumberId) {
+    logger.warn("Meta WhatsApp API credentials missing in environment variables");
+    return null;
   }
 
   if (!to) {
     logger.warn("No recipient number provided for WhatsApp message");
-    return;
+    return null;
   }
 
-  let formattedTo = to.trim();
-
+  // Format phone number (remove 'whatsapp:' prefix if present, ensure country code)
+  let formattedTo = to.trim().replace(/^whatsapp:/, '');
   const digitsOnly = formattedTo.replace(/\D/g, '');
+
+  // Add India country code if 10 digits without country code
   if (digitsOnly.length === 10 && !formattedTo.includes('+')) {
-    formattedTo = `+91${formattedTo}`;
-    logger.debug("Added country code to number", { original: to, formatted: formattedTo });
-  } else if (!formattedTo.includes('+')) {
-    formattedTo = `+${formattedTo}`;
+    formattedTo = `91${digitsOnly}`;
+  } else {
+    formattedTo = digitsOnly;
   }
 
-  if (!formattedTo.startsWith("whatsapp:")) {
-    formattedTo = `whatsapp:${formattedTo}`;
-  }
+  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
 
-  let formattedFrom = process.env.TWILIO_WHATSAPP_NUMBER;
-  if (formattedFrom && !formattedFrom.startsWith("whatsapp:")) {
-    formattedFrom = `whatsapp:${formattedFrom}`;
-  }
-
-  if (!formattedFrom) {
-    logger.warn("TWILIO_WHATSAPP_NUMBER not set in environment");
-    return;
-  }
+  const payload = {
+    messaging_product: "whatsapp",
+    to: formattedTo,
+    type: "text",
+    text: { body: body }
+  };
 
   try {
-    const message = await client.messages.create({
-      body: body,
-      from: formattedFrom,
-      to: formattedTo,
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
     });
-    logger.info("WhatsApp message sent", { to, sid: message.sid });
-    return message;
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      logger.error("Meta WhatsApp API error", {
+        to: formattedTo,
+        status: response.status,
+        error: data
+      });
+      return null;
+    }
+
+    logger.info("WhatsApp message sent via Meta API", {
+      to: formattedTo,
+      messageId: data.messages?.[0]?.id
+    });
+    return data;
   } catch (error) {
-    logger.error("Failed to send WhatsApp message", { to, error: error.message });
+    logger.error("Failed to send WhatsApp message", {
+      to: formattedTo,
+      error: error.message
+    });
+    return null;
   }
 };
 

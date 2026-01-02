@@ -108,6 +108,9 @@ router.post("/", verifyToken, async (req, res) => {
       patientPhone: req.body.patientPhone || req.body.phone || "",
       doctorId: req.body.doctorId || null,
       doctorName: req.body.doctorName || req.body.doctor || "",
+      // Strict Isolation: Only Admins can manually set clinicId
+      clinicId: req.user.role === 'admin' ? (req.body.clinicId || req.user.clinicId) : req.user.clinicId,
+
       clinic: req.body.clinic || "",
       date: req.body.date || "",
       time: req.body.time || "",
@@ -207,6 +210,50 @@ router.get("/", verifyToken, async (req, res) => {
     if (patientId && mongoose.Types.ObjectId.isValid(patientId)) query.patientId = patientId;
     if (status) query.status = status;
 
+    // Multi-tenant filtering (strict)
+    // Multi-tenant filtering (strict)
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === "admin") {
+      // Global View
+    } else if (effectiveRole === "patient") {
+      // Patients can only see their own appointments
+      // Look up patient record by userId to get patientId
+      const patientRecord = await PatientModel.findOne({ userId: req.user.id });
+      if (patientRecord) {
+        query.patientId = patientRecord._id;
+      } else {
+        // No patient record found, return empty
+        return res.json({
+          data: [],
+          pagination: { nextCursor: null, hasMore: false, limit: parseInt(limit) || 20 }
+        });
+      }
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      // Fallback for paginated response
+      return res.json({
+        data: [],
+        pagination: { nextCursor: null, hasMore: false, limit: parseInt(limit) || 20 }
+      });
+    }
+
     // Date filter
     if (date) {
       const startOfDay = new Date(date);
@@ -280,7 +327,40 @@ router.get("/", verifyToken, async (req, res) => {
 // GET /appointments/all
 router.get("/all", verifyToken, async (req, res) => {
   try {
-    const list = await AppointmentModel.find()
+    const query = {};
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === "admin") {
+      // Global
+    } else if (effectiveRole === "patient") {
+      // Patients can only see their own appointments
+      const patientRecord = await PatientModel.findOne({ userId: req.user.id });
+      if (patientRecord) {
+        query.patientId = patientRecord._id;
+      } else {
+        return res.json([]);
+      }
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      return res.json([]);
+    }
+    const list = await AppointmentModel.find(query)
       .sort({ createdAt: -1 })
       .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
       .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
@@ -301,9 +381,36 @@ router.get("/today", verifyToken, async (req, res) => {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    const list = await AppointmentModel.find({
+    const query = {
       date: { $gte: startOfDay, $lte: endOfDay }
-    })
+    };
+
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === "admin") {
+      // Global
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      return res.json([]);
+    }
+
+    const list = await AppointmentModel.find(query)
       .sort({ createdAt: -1 })
       .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
       .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
@@ -328,17 +435,41 @@ router.get("/weekly", verifyToken, async (req, res) => {
     startOfPeriod.setDate(today.getDate() - 6);
     startOfPeriod.setHours(0, 0, 0, 0);
 
+    let matchStage = {
+      $expr: {
+        $and: [
+          { $gte: [{ $toDate: "$date" }, startOfPeriod] },
+          { $lte: [{ $toDate: "$date" }, endOfDay] }
+        ]
+      }
+    };
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === 'admin') {
+      // Global
+    } else if (safeClinicId) {
+      matchStage.clinicId = new mongoose.Types.ObjectId(safeClinicId);
+    } else {
+      return res.json([]);
+    }
+
     const stats = await AppointmentModel.aggregate([
-      {
-        $match: {
-          $expr: {
-            $and: [
-              { $gte: [{ $toDate: "$date" }, startOfPeriod] },
-              { $lte: [{ $toDate: "$date" }, endOfDay] }
-            ]
-          }
-        }
-      },
+      { $match: matchStage },
       {
         $project: {
           dateStr: { $dateToString: { format: "%Y-%m-%d", date: { $toDate: "$date" } } }
@@ -385,17 +516,41 @@ router.get("/monthly", verifyToken, async (req, res) => {
     const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
 
+    let matchStage = {
+      $expr: {
+        $and: [
+          { $gte: [{ $toDate: "$date" }, startOfMonth] },
+          { $lte: [{ $toDate: "$date" }, endOfMonth] }
+        ]
+      }
+    };
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === 'admin') {
+      // Global
+    } else if (safeClinicId) {
+      matchStage.clinicId = new mongoose.Types.ObjectId(safeClinicId);
+    } else {
+      return res.json([]);
+    }
+
     const stats = await AppointmentModel.aggregate([
-      {
-        $match: {
-          $expr: {
-            $and: [
-              { $gte: [{ $toDate: "$date" }, startOfMonth] },
-              { $lte: [{ $toDate: "$date" }, endOfMonth] }
-            ]
-          }
-        }
-      },
+      { $match: matchStage },
       {
         $project: {
           // Calculate week number within the month (simplified approximation matching previous logic)

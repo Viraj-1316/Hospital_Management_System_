@@ -48,6 +48,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
 
   const [filters, setFilters] = useState({
     id: "",
+    hospitalId: "",
     name: "",
     email: "",
     adminEmail: "",
@@ -149,6 +150,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
       return {
         tableId: index + 1,
         _id: c._id,
+        hospitalId: c.hospitalId ?? "-",
         name: c.name ?? "-",
         email: c.email ?? "-",
         adminEmail: c.admin?.email ?? "-",
@@ -170,6 +172,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
         if (global) {
           const combined = (
             row.tableId + " " +
+            row.hospitalId + " " +
             row.name + " " +
             row.email + " " +
             row.adminEmail + " " +
@@ -182,11 +185,13 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
         }
 
         const idMatch = !filters.id || String(row.tableId).startsWith(filters.id);
+        const hospitalIdMatch = !filters.hospitalId || row.hospitalId.toLowerCase().includes(filters.hospitalId.toLowerCase());
         const statusMatch = !filters.status || filters.status === row.status;
         const specializationMatch = !filters.specialization || row.specialization === filters.specialization;
 
         return (
           idMatch &&
+          hospitalIdMatch &&
           matchText(row.name, filters.name || "") &&
           matchText(row.email, filters.email || "") &&
           matchText(row.adminEmail, filters.adminEmail || "") &&
@@ -303,6 +308,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Hospital ID</th>
                       <th>Name</th>
                       <th>Email</th>
                       <th>Clinic Admin Email</th>
@@ -315,6 +321,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
                     {/* Filters Row */}
                     <tr>
                       <th><input className="form-control form-control-sm" value={filters.id} onChange={(e) => handleFilterChange("id", e.target.value)} /></th>
+                      <th><input className="form-control form-control-sm" value={filters.hospitalId} onChange={(e) => handleFilterChange("hospitalId", e.target.value)} placeholder="HOSP-..." /></th>
                       <th><input className="form-control form-control-sm" value={filters.name} onChange={(e) => handleFilterChange("name", e.target.value)} /></th>
                       <th><input className="form-control form-control-sm" value={filters.email} onChange={(e) => handleFilterChange("email", e.target.value)} /></th>
                       <th><input className="form-control form-control-sm" value={filters.adminEmail} onChange={(e) => handleFilterChange("adminEmail", e.target.value)} /></th>
@@ -343,6 +350,7 @@ export default function ClinicList({ sidebarCollapsed, toggleSidebar }) {
                       return (
                         <tr key={row._id}>
                           <td>{row.tableId}</td>
+                          <td><code style={{ fontSize: '0.85em', backgroundColor: '#e9ecef', padding: '2px 6px', borderRadius: '4px' }}>{row.hospitalId}</code></td>
                           <td>
                             <div className="d-flex align-items-center gap-2">
                               {row.logo ? (

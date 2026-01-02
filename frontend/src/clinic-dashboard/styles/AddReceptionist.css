@@ -1,0 +1,118 @@
+/* ---------------------------------------------------
+   Add / Edit Receptionist Form Styling
+---------------------------------------------------- */
+
+/* Card wrapper */
+.receptionist-form-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  background: #fff;
+}
+
+/* Section titles */
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 6px;
+}
+
+/* Labels */
+.receptionist-form-card .form-label {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Form controls */
+.receptionist-form-card .form-control,
+.receptionist-form-card .form-select,
+.receptionist-form-card textarea {
+  border-radius: 6px;
+  border-color: #d1d5db;
+  font-size: 14px;
+}
+
+.receptionist-form-card .form-control:focus,
+.receptionist-form-card .form-select:focus,
+.receptionist-form-card textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+/* Image upload section */
+.receptionist-image-box {
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: #eef3ff;
+  border: 2px dashed #c6d4ff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: 0.2s ease;
+}
+
+.receptionist-image-box:hover {
+  border-color: #3b82f6;
+}
+
+/* Placeholder */
+.receptionist-image-placeholder {
+  width: 100%;
+  height: 100%;
+  font-size: 48px;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Preview Image */
+.receptionist-image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Hidden input */
+.receptionist-image-input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+}
+
+/* Gender Radio Buttons */
+.receptionist-form-card input[type="radio"] {
+  cursor: pointer;
+}
+
+/* Buttons row */
+.text-end .btn {
+  min-width: 100px;
+}
+
+/* Save Button */
+.btn-primary {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+.btn-primary:hover {
+  background-color: #1e4fd1;
+  border-color: #1e4fd1;
+}
+
+/* Cancel Button */
+.btn-outline-secondary:hover {
+  background-color: #f1f5f9;
+}
+
+/* Spacing between sections */
+.receptionist-form-card .row > div {
+  padding-bottom: 4px;
+}

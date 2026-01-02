@@ -38,6 +38,9 @@ router.post("/", verifyToken, async (req, res) => {
       ...req.body,
       password: hashedPassword,
       mustChangePassword: true,
+      // For Admin: Use body.clinicId (allow assigning to any clinic)
+      // For Clinic Admin: Force req.user.clinicId
+      clinicId: req.user.role === 'admin' ? (req.body.clinicId || null) : req.user.clinicId
     };
 
     const doctor = await DoctorModel.create(doctorData);
@@ -66,9 +69,43 @@ router.post("/", verifyToken, async (req, res) => {
 });
 
 // Get all doctors
+// Get all doctors
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const doctors = await DoctorModel.find();
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    // Initialize query if not present (although it was present above in original code, I should keep it or replace including it)
+    // Looking at file content, const query = {}; is at line 75. 
+    // And I am replacing from line 73. 
+    // So I MUST include const query = {};
+
+    const query = {};
+
+    if (effectiveRole === "admin") {
+      // Global View
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      // Fallback
+      return res.json([]);
+    }
+
+    const doctors = await DoctorModel.find(query);
     res.json(doctors);
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });

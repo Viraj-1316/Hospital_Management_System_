@@ -1,9 +1,42 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const Admin = require("../models/Admin");
 const { verifyToken } = require("../middleware/auth");
 
-// 1) by email – this MUST come first
+// 1) Admin profile by id
+router.get("/api/admin/:id", verifyToken, async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.params.id).select("-password");
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+    res.json(admin);
+  } catch (err) {
+    console.error("Admin GET error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 2) Update Admin profile
+router.put("/api/admin/:id", verifyToken, async (req, res) => {
+  try {
+    const { name, phone, avatar } = req.body;
+    
+    const updatedAdmin = await Admin.findByIdAndUpdate(
+      req.params.id,
+      { name, phone, avatar },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedAdmin) return res.status(404).json({ message: "Admin not found" });
+
+    res.json(updatedAdmin);
+  } catch (err) {
+    console.error("Admin UPDATE error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 3) by email – this MUST come first
 router.get("/api/user/email/:email", verifyToken, async (req, res) => {
   try {
     const email = decodeURIComponent(req.params.email);

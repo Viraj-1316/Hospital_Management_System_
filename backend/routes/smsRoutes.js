@@ -11,11 +11,15 @@ router.post("/test-whatsapp", async (req, res) => {
   }
 
   try {
-    await sendWhatsAppMessage(to, message);
-    res.status(200).json({ message: "Test WhatsApp sent successfully." });
+    const result = await sendWhatsAppMessage(to, message);
+    if (result) {
+      res.status(200).json({ message: "Test WhatsApp sent successfully.", data: result });
+    } else {
+      res.status(500).json({ message: "Failed to send WhatsApp - check server logs for details." });
+    }
   } catch (error) {
     console.error("Error sending test WhatsApp:", error);
-    res.status(500).json({ message: "Failed to send test WhatsApp." });
+    res.status(500).json({ message: "Failed to send test WhatsApp.", error: error.message });
   }
 });
 

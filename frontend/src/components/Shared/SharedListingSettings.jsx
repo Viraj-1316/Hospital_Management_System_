@@ -384,21 +384,89 @@ const SharedListingSettings = () => {
           .btn-export.excel { color: #198754; }
           .btn-export.csv { color: #0d6efd; }
           .btn-export.pdf { color: #dc3545; }
+
+          /* --- PASTE THIS AT THE BOTTOM OF YOUR STYLE BLOCK --- */
+          @media (max-width: 768px) {
+             /* Hide the table header row on mobile */
+             .table thead { display: none; }
+             
+             /* Turn the Table Row into a Card */
+             .table tr { 
+                display: block; 
+                margin-bottom: 1rem; 
+                border: 1px solid #dee2e6; 
+                border-radius: 8px; 
+                padding: 15px; 
+                background: #fff; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+             }
+             
+             /* Make cells full width and flexible */
+             .table td { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                border: none; 
+                padding: 8px 0; 
+                border-bottom: 1px solid #f0f0f0; 
+                text-align: right; 
+             }
+             .table td:last-child { border-bottom: none; }
+             
+             /* This adds the LABEL (like "ID", "Name") before the value */
+             .table td::before { 
+                content: attr(data-label); 
+                font-weight: 700; 
+                color: #6c757d; 
+                font-size: 0.85rem; 
+                text-transform: uppercase; 
+                text-align: left; 
+                margin-right: 15px; 
+             }
+             
+             /* Hide the checkbox column on mobile */
+             .table td:first-child { display: none; }
+             
+             /* Fix Action buttons alignment */
+             .table td[data-label="Action"] { justify-content: space-between; }
+          }
         `}
       </style>
 
       {/* --- Top Header --- */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      {/* --- Top Header (Improved Styling) --- */}
+      <div className="services-topbar services-card d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div className="d-flex align-items-center gap-2">
-          <h5 className="mb-0 fw-bold text-dark">Listing Data</h5>
-          <FaQuestionCircle className="text-secondary opacity-75" size={14} style={{ cursor: 'pointer' }} />
+          <h5 className="mb-0 fw-bold text-white">Listing Data</h5>
+          <FaQuestionCircle className="text-white opacity-75" size={14} style={{ cursor: 'pointer' }} />
         </div>
+        
         <div className="d-flex gap-2">
-          <button className="btn btn-primary d-flex align-items-center gap-2 px-3 fw-medium" style={{ fontSize: '0.9rem' }} onClick={handleImportClick}>
-            <FaFileImport size={12} /> Import data
+          <button 
+            className="btn btn-outline-light btn-sm d-flex align-items-center gap-2" 
+            onClick={handleImportClick}
+            title="Import Data"
+          >
+            <FaFileImport /> 
+            <span className="d-none d-md-inline">Import data</span>
           </button>
-          <button className="btn btn-primary d-flex align-items-center gap-2 px-3 fw-medium" style={{ fontSize: '0.9rem' }} onClick={toggleForm}>
-            {showForm ? <><FaTimes size={12} /> Close form</> : <><FaPlus size={10} /> Add List Data</>}
+          
+          <button 
+            className="btn btn-light btn-sm d-flex align-items-center gap-2" 
+            onClick={toggleForm}
+            title={showForm ? "Close Form" : "Add List Data"}
+          >
+            {showForm ? (
+              <>
+                <FaTimes /> 
+                <span className="d-none d-md-inline">Close form</span>
+              </>
+            ) : (
+              <>
+                <FaPlus /> 
+                <span className="d-none d-md-inline">Add List Data</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -517,10 +585,10 @@ const SharedListingSettings = () => {
                     />
                   </td>
                   {/* Calculate ID based on pagination */}
-                  <td className="text-muted small">{(currentPage - 1) * rowsPerPage + i + 1}</td>
-                  <td className="text-muted small">{item.name}</td>
-                  <td className="text-muted small">{item.type}</td>
-                  <td>
+                  <td className="text-muted small" data-label="ID">{(currentPage - 1) * rowsPerPage + i + 1}</td>
+                  <td className="text-muted small" data-label="Name">{item.name}</td>
+                  <td className="text-muted small" data-label="Type">{item.type}</td>
+                  <td data-label="Status">
                     <div className="d-flex align-items-center gap-2">
                       <div className="form-check form-switch">
                         <input
@@ -535,7 +603,7 @@ const SharedListingSettings = () => {
                       <span className={`badge ${item.status === 'Active' ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'} border rounded-1`} style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', padding: '4px 6px' }}>{item.status}</span>
                     </div>
                   </td>
-                  <td className="text-center pe-4">
+                  <td className="text-center pe-4" data-label="Action">
                     <div className="d-flex justify-content-start gap-2">
                       <button className="btn-action-square" onClick={() => handleEdit(item)}>
                         <FaEdit size={14} />

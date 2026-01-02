@@ -16,6 +16,39 @@ router.get("/", verifyToken, async (req, res) => {
     const dd = String(today.getDate()).padStart(2, "0");
     const todayStr = `${yyyy}-${mm}-${dd}`;
 
+    const query = {};
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === 'admin') {
+      // Global View
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      // Fallback: Return 0s
+      return res.json({
+        totalPatients: 0,
+        totalDoctors: 0,
+        totalAppointments: 0,
+        todayAppointments: 0,
+        totalServices: 0,
+      });
+    }
+
     // 2) Count data in parallel
     const [
       totalPatients,
@@ -24,11 +57,17 @@ router.get("/", verifyToken, async (req, res) => {
       todayAppointments,
       totalServices,
     ] = await Promise.all([
-      PatientModel.countDocuments(),
-      DoctorModel.countDocuments(),
-      AppointmentModel.countDocuments(),
-      AppointmentModel.countDocuments({ date: todayStr }),
-      ServiceModel.countDocuments(),
+      PatientModel.countDocuments(query),
+      DoctorModel.countDocuments(query),
+      AppointmentModel.countDocuments(query),
+      AppointmentModel.countDocuments({
+        ...query,
+        date: {
+          $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          $lte: new Date(new Date().setHours(23, 59, 59, 999))
+        }
+      }),
+      ServiceModel.countDocuments(query),
     ]);
 
     // 3) Send response only once

@@ -266,6 +266,25 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
     }
   };
 
+  // --- PDF HANDLER ---
+  const handlePdf = async (billId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_BASE}/bills/${billId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+
+      // Create blob URL and open in new tab
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+      toast.error("Failed to generate PDF");
+    }
+  };
+
   // --- HELPERS ---
   const handleFilterChange = (key, value) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
@@ -273,11 +292,24 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
   };
 
   const lookupCustomId = (bill) => {
-    if (bill.encounterId && bill.encounterId.startsWith("ENC-")) return bill.encounterId;
-    const mongoId = bill.encounterId || bill.encounter_id || bill.encounter;
-    if (!mongoId) return "-";
-    const found = encountersList.find((e) => e._id === mongoId);
-    return (found && found.encounterId) ? found.encounterId : (typeof mongoId === "string" ? mongoId.substring(0, 8) + "..." : "-");
+    // Check encounterCustomId first (set by backend)
+    if (bill.encounterCustomId) {
+      return bill.encounterCustomId;
+    }
+    // Check encounterId
+    if (bill.encounterId) {
+      const encId = bill.encounterId;
+      if (typeof encId === 'string') {
+        if (encId.startsWith("ENC-")) return encId;
+        // If it's a MongoDB ObjectId string, show truncated version
+        if (encId.length === 24) return `ENC-${encId.substring(0, 6)}`;
+        return encId;
+      }
+      if (typeof encId === 'object' && encId._id) {
+        return encId.encounterId || `ENC-${encId._id.toString().substring(0, 6)}`;
+      }
+    }
+    return "-";
   };
 
   // --- FILTER LOGIC ---
@@ -401,7 +433,12 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                       <td>{bill.doctorName}</td>
                       <td>{bill.clinicName}</td>
                       <td>{bill.patientName}</td>
-                      <td>{Array.isArray(bill.services) ? bill.services[0] : (bill.services || "-")}</td>
+                      <td>
+                        {Array.isArray(bill.services)
+                          ? bill.services.map(s => (typeof s === 'string' ? s : s.name)).join(", ")
+                          : (bill.services || "-")
+                        }
+                      </td>
 
                       <td style={{ textAlign: 'right' }}>{bill.totalAmount}</td>
                       <td style={{ textAlign: 'right' }}>{bill.discount}</td>
@@ -426,9 +463,9 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                             <FaTrash size={14} />
                           </button>
 
-                          <a href={`${API_BASE}/bills/${bill._id}/pdf`} target="_blank" rel="noopener noreferrer" className="pdf-link">
+                          <button className="pdf-link" onClick={() => handlePdf(bill._id)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
                             <FaFilePdf /> PDF
-                          </a>
+                          </button>
                         </div>
                       </td>
                     </tr>

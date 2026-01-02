@@ -6,8 +6,25 @@ import admin from "../images/admin.png";
 
 const Navbar = ({ toggleSidebar }) => {
   const [open, setOpen] = useState(false);
+  const [userName, setUserName] = useState("Admin");
   const menuRef = useRef();
   const navigate = useNavigate();
+
+  // Load user name from localStorage
+  useEffect(() => {
+    const authUserStr = localStorage.getItem("authUser");
+    if (authUserStr) {
+      try {
+        const authUser = JSON.parse(authUserStr);
+        if (authUser.name) {
+          setUserName(authUser.name);
+        }
+      } catch (err) {
+        // Failed to parse authUser from localStorage - using default name
+        console.debug("Could not parse authUser:", err);
+      }
+    }
+  }, []);
 
   // close dropdown on outside click
   useEffect(() => {
@@ -23,6 +40,7 @@ const Navbar = ({ toggleSidebar }) => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
+    localStorage.removeItem("authUser");
     navigate("/");
   };
 
@@ -53,7 +71,7 @@ const Navbar = ({ toggleSidebar }) => {
             height="35"
             className="rounded-circle"
           />
-          <span className="text-white ms-2 fw-semibold">Admin</span>
+          <span className="text-white ms-2 fw-semibold">{userName}</span>
         </div>
 
         {open && (

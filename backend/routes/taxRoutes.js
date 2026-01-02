@@ -11,7 +11,33 @@ const upload = multer({ dest: "uploads/" });
 // Get all taxes
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const list = await TaxModel.find().sort({ createdAt: -1 });
+    const query = {};
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === "admin") {
+      // Global View
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      return res.json([]);
+    }
+
+    const list = await TaxModel.find(query).sort({ createdAt: -1 });
     res.json(list);
   } catch (err) {
     console.error("Error fetching taxes:", err);
@@ -27,6 +53,15 @@ router.post("/", verifyToken, async (req, res) => {
     // ensure number
     if (typeof payload.taxRate === "string") {
       payload.taxRate = parseFloat(payload.taxRate) || 0;
+    }
+
+    // Enforce Isolation
+    if (req.user.role !== 'admin') {
+      payload.clinicId = req.user.clinicId;
+    } else {
+      // Admin can optionally set it, or leave it null (global tax?)
+      // If not set by admin, maybe default to global?
+      if (!payload.clinicId) payload.clinicId = null;
     }
 
     const doc = await TaxModel.create(payload);

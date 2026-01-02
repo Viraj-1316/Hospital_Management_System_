@@ -6,30 +6,20 @@ const PatientSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: false, // will be filled for signup patients
+    required: true, // Must exist now
   },
 
-  firstName: String,
-  lastName: String,
   clinic: String,
-  email: String,
-  phone: String,
-  dob: String,
-  bloodGroup: String,
-  gender: String,
-  address: String,
-  city: String,
-  country: String,
-  postalCode: String,
+  clinicId: { type: mongoose.Schema.Types.ObjectId, ref: "Clinic" },
+
+
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });
 
 // Database Indexes for improved query performance
-PatientSchema.index({ email: 1 });
 PatientSchema.index({ userId: 1 });
-PatientSchema.index({ phone: 1 }); // Optimize phone lookups
-PatientSchema.index({ clinic: 1 });
+PatientSchema.index({ clinicId: 1 });
 PatientSchema.index({ isActive: 1 });
 
 const PatientModel = mongoose.model("Patient", PatientSchema);

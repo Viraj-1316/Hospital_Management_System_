@@ -4,13 +4,35 @@
   background: white;
   border-right: 1px solid #e5e7eb;
   padding: 15px;
-  transition: 0.25s ease;
+  transition: all 0.25s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1000;
+  overflow-x: hidden;
 }
 
 .patient-sidebar.closed {
   width: 70px;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding: 15px 5px;
+  /* Reduce padding when closed */
+}
+
+/* Hide text when closed */
+.patient-sidebar.closed .title-text,
+.patient-sidebar.closed .link-text {
+  display: none;
+}
+
+/* Center icons when closed */
+.patient-sidebar.closed .nav-link {
+  justify-content: center;
+  padding: 10px;
+}
+
+.patient-sidebar.closed .icon-wrapper {
+  margin: 0;
 }
 
 .sidebar-header {
@@ -52,4 +74,90 @@
 
 .patient-sidebar.closed .nav-link {
   justify-content: center;
+}
+
+/* --- MAIN LAYOUT --- */
+.patient-main {
+  flex-grow: 1;
+  margin-left: 250px;
+  transition: margin-left 0.25s ease;
+  background-color: #f5f7fb;
+  min-height: 100vh;
+  padding-left: 0;
+}
+
+.patient-main.expanded {
+  margin-left: 70px;
+  /* Width of closed sidebar */
+}
+
+/* --- MOBILE STYLES --- */
+@media (max-width: 768px) {
+  .patient-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    transform: translateX(0);
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .patient-sidebar.closed {
+    transform: translateX(-100%);
+    /* Hide completely off-screen */
+    width: 250px;
+    /* Keep full width when sliding */
+    padding: 15px;
+    padding: 15px;
+    /* Reset padding */
+  }
+
+  /* Force hidden text on mobile closed state just in case */
+  .patient-sidebar.closed .title-text,
+  .patient-sidebar.closed .link-text {
+    display: block;
+    /* We want them visible when it slides In, so don't hide them via display:none unless truly needed. 
+                     Actually, on mobile, "closed" means hidden offscreen. 
+                     "open" means visible. 
+                     The logic in component is isOpen ? "open" : "closed".
+                     On mobile:
+                     - Desktop Collapsed (isOpen=false) -> Mobile Hidden (offscreen)
+                     - Desktop Open (isOpen=true) -> Mobile Overlay (onscreen)
+                     
+                     So we don't need special text hiding for 'closed' on mobile because the whole thing is hidden.
+                     But we need to ensure when it IS open, text is shown.
+                  */
+  }
+
+  /* Undo the "text centering" of closed sidebar items on mobile */
+  .patient-sidebar.closed .nav-link {
+    justify-content: flex-start;
+  }
+
+  .patient-sidebar.closed span {
+    display: inline;
+    /* Show text even if "closed" class is technically there (though we use transform to hide) */
+  }
+
+  .patient-main {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .patient-main.expanded {
+    margin-left: 0 !important;
+  }
+
+  /* Optional: Overlay when sidebar is open */
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: block;
+  }
 }

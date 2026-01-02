@@ -6,6 +6,7 @@ const DoctorSessionSchema = new mongoose.Schema(
     doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "Doctor" },
     doctorName: String,
     clinic: String,
+    clinicId: { type: mongoose.Schema.Types.ObjectId, ref: "Clinic" },
 
     // e.g. ["Mon","Tue","Wed"]
     days: [String],

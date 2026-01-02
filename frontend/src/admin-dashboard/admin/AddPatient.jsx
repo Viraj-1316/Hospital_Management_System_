@@ -19,6 +19,7 @@ const AddPatient = () => {
     firstName: "",
     lastName: "",
     clinic: "",
+    clinicId: "", // Added for precise tracking
     email: "",
     phone: "",
     dob: "",
@@ -35,8 +36,10 @@ const AddPatient = () => {
     const fetchClinics = async () => {
       try {
         setIsLoadingClinics(true);
+        const token = localStorage.getItem("token");
+        const config = { headers: { Authorization: `Bearer ${token}` } };
         // Note: Ensure this endpoint matches your backend route exactly
-        const res = await axios.get(`${API_BASE}/api/clinics`);
+        const res = await axios.get(`${API_BASE}/api/clinics`, config);
 
         // Handle different response structures
         if (Array.isArray(res.data)) {
@@ -78,7 +81,9 @@ const AddPatient = () => {
     }
 
     try {
-      const promise = axios.post(`${API_BASE}/patients`, formData);
+      const token = localStorage.getItem("token");
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const promise = axios.post(`${API_BASE}/patients`, formData, config);
 
       await toast.promise(promise, {
         loading: "Saving patient...",
@@ -145,8 +150,15 @@ const AddPatient = () => {
               <select
                 name="clinic"
                 className="form-select"
-                value={formData.clinic}
-                onChange={handleChange}
+                value={formData.clinicId} // Use ID as value
+                onChange={(e) => {
+                  const selectedClinic = clinics.find(c => c._id === e.target.value);
+                  setFormData({
+                    ...formData,
+                    clinicId: e.target.value,
+                    clinic: selectedClinic ? selectedClinic.name : ""
+                  });
+                }}
                 required
               >
                 <option value="">Select clinic</option>
@@ -154,7 +166,7 @@ const AddPatient = () => {
                 {/* Render options if clinics exist */}
                 {clinics.length > 0 ? (
                   clinics.map((clinic, index) => (
-                    <option key={clinic._id || index} value={clinic.name}>
+                    <option key={clinic._id || index} value={clinic._id}>
                       {clinic.name}
                     </option>
                   ))

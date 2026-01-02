@@ -94,3 +94,48 @@ exports.seedTemplates = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
+
+// ==========================================
+// Pro Settings (Twilio SMS/WhatsApp)
+// ==========================================
+const ProSetting = require("../models/ProSetting");
+
+// Token mask constant for sensitive data
+const TOKEN_MASK = "••••••••";
+
+exports.getProSettings = async (req, res) => {
+    try {
+        let settings = await ProSetting.findOne();
+        if (!settings) {
+            settings = await ProSetting.create({});
+        }
+        // Mask sensitive tokens for response
+        const masked = settings.toObject();
+        if (masked.smsToken) masked.smsToken = TOKEN_MASK;
+        if (masked.whatsappToken) masked.whatsappToken = TOKEN_MASK;
+        res.json(masked);
+    } catch (err) {
+        console.error("Error fetching pro settings:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+exports.updateProSettings = async (req, res) => {
+    try {
+        let settings = await ProSetting.findOne();
+        if (!settings) {
+            settings = new ProSetting(req.body);
+        } else {
+            // Only update if a new token is provided (not masked placeholder)
+            const update = { ...req.body };
+            if (update.smsToken === TOKEN_MASK) delete update.smsToken;
+            if (update.whatsappToken === TOKEN_MASK) delete update.whatsappToken;
+            Object.assign(settings, update);
+        }
+        await settings.save();
+        res.json({ message: "Pro settings saved successfully", data: settings });
+    } catch (err) {
+        console.error("Error updating pro settings:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};

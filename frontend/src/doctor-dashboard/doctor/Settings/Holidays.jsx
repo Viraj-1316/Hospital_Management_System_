@@ -478,6 +478,53 @@ const handleExport = (type) => {
                background-color: #fff; border: 1px solid #dee2e6; border-radius: 6px; transition: all 0.2s;
           }
           .btn-export:hover { background-color: #f8f9fa; border-color: #adb5bd; }
+          /* --- PASTE THIS AT THE BOTTOM OF YOUR STYLE BLOCK --- */
+          @media (max-width: 768px) {
+             /* Hide the table header row on mobile */
+             .mobile-table thead { display: none; }
+             
+             /* Turn the Table Row into a Card */
+             .mobile-table tr { 
+                display: block; 
+                margin-bottom: 1rem; 
+                border: 1px solid #dee2e6; 
+                border-radius: 8px; 
+                padding: 15px; 
+                background: #fff; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+             }
+             
+             /* Make cells full width and flexible */
+             .mobile-table td { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                border: none; 
+                padding: 8px 0; 
+                border-bottom: 1px solid #f0f0f0; 
+                text-align: right;
+             }
+             .mobile-table td:last-child { border-bottom: none; }
+             
+             /* This adds the LABEL (like "ID", "Name") before the value */
+             .mobile-table td::before { 
+                content: attr(data-label); 
+                font-weight: 700; 
+                color: #6c757d; 
+                font-size: 0.85rem; 
+                text-align: left;
+                margin-right: 10px;
+             }
+             
+             /* Fix alignment for the Action buttons */
+             .mobile-table td[data-label="Action"] { 
+                justify-content: flex-end; 
+                margin-top: 5px; 
+             }
+             
+             /* Hide the filter row on mobile */
+             .filter-row { display: none !important; }
+          }
         `}
       </style>
 
@@ -575,7 +622,7 @@ const handleExport = (type) => {
 
       {/* --- TABLE --- */}
       <div className="border rounded">
-        <table className="table mb-0">
+        <table className="table mb-0 mobile-table">
           <thead className="bg-light">
             <tr style={{ backgroundColor: "#f9fafb" }}>
               <th className="py-3 fw-semibold text-secondary border-bottom-0 ps-4" style={{ width: "80px", fontSize: "0.9rem" }}>
@@ -653,14 +700,25 @@ const handleExport = (type) => {
                 </td>
               </tr>
             ) : (
-              currentData.map((h) => (
-                <tr key={h.id} className="align-middle">
-                  <td className="ps-4 text-secondary">{h.id}</td>
-                  <td className="text-secondary">{h.scheduleOf}</td>
-                  <td className="text-secondary">{h.name}</td>
-                  <td className="text-secondary">{h.from}</td>
-                  <td className="text-secondary">{h.to}</td>
-                  <td className="text-end pe-4">
+currentData.map((h) => (
+                <tr key={h.id} className="align-middle bg-white">
+                  {/* Added data-label="ID" */}
+                  <td className="ps-4 text-secondary" data-label="ID">{h.id}</td>
+                  
+                  {/* Added data-label="Schedule Of" */}
+                  <td className="text-secondary" data-label="Schedule Of">{h.scheduleOf}</td>
+                  
+                  {/* Added data-label="Name" */}
+                  <td className="text-secondary" data-label="Name">{h.name}</td>
+                  
+                  {/* Added data-label="From Date" */}
+                  <td className="text-secondary" data-label="From Date">{h.from}</td>
+                  
+                  {/* Added data-label="To Date" */}
+                  <td className="text-secondary" data-label="To Date">{h.to}</td>
+                  
+                  {/* Added data-label="Action" */}
+                  <td className="text-end pe-4" data-label="Action">
                     <div className="d-flex justify-content-end gap-2">
                       <button className="btn-action-square" onClick={() => handleEdit(h)}>
                         <FaEdit />

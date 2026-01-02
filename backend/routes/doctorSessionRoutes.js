@@ -5,15 +5,43 @@ const csv = require("csv-parser");
 const DoctorSessionModel = require("../models/DoctorSession");
 const AppointmentModel = require("../models/Appointment");
 const upload = require("../middleware/upload");
+const { verifyToken } = require("../middleware/auth");
 
 // ===============================
 //   CRUD: Doctor Sessions
 // ===============================
 
 // Get all sessions -> GET /doctor-sessions
-router.get("/", async (req, res) => {
+// Get all sessions -> GET /doctor-sessions
+router.get("/", verifyToken, async (req, res) => {
   try {
-    const list = await DoctorSessionModel.find().sort({ createdAt: -1 });
+    const query = {};
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+
+    if (effectiveRole === 'admin') {
+      // Global View
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      return res.json([]);
+    }
+
+    const list = await DoctorSessionModel.find(query).sort({ createdAt: -1 });
     res.json(list);
   } catch (err) {
     console.error("Error fetching doctor sessions:", err);
@@ -22,9 +50,13 @@ router.get("/", async (req, res) => {
 });
 
 // Create session -> POST /doctor-sessions
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
-    const doc = await DoctorSessionModel.create(req.body);
+    const payload = {
+      ...req.body,
+      clinicId: req.user.clinicId
+    };
+    const doc = await DoctorSessionModel.create(payload);
     res.json({ message: "Doctor session created", data: doc });
   } catch (err) {
     console.error("Error creating doctor session:", err);
@@ -128,10 +160,10 @@ router.post("/import", upload.single("file"), async (req, res) => {
 // This explicitly uses the date parts to avoid UTC shifting issues.
 const parseTime = (timeStr, dateStr) => {
   if (!timeStr) return null;
-  
+
   // Split date "2025-11-28" -> [2025, 11, 28]
   const [y, m, d] = dateStr.split('-').map(Number);
-  
+
   // Create date object at midnight local time
   const dateObj = new Date(y, m - 1, d); // Month is 0-indexed
 
@@ -164,7 +196,7 @@ router.get("/available-slots", async (req, res) => {
     // Splitting ensures we treat the date as local YMD, avoiding UTC shifts
     const [y, m, d] = date.split('-').map(Number);
     const inputDate = new Date(y, m - 1, d);
-    
+
     const daysMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const longDay = daysMap[inputDate.getDay()];
     const shortDay = longDay.substring(0, 3);
@@ -188,7 +220,7 @@ router.get("/available-slots", async (req, res) => {
 
     for (const range of ranges) {
       if (range.start && range.end && range.start !== "-" && range.end !== "-") {
-        
+
         let current = parseTime(range.start, date);
         const endTime = parseTime(range.end, date);
 

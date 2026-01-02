@@ -5,6 +5,7 @@ const EncounterTemplateSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  clinicId: { type: mongoose.Schema.Types.ObjectId, ref: "Clinic" },
   problems: [{
     type: String
   }],

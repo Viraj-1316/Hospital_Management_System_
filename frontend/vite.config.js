@@ -61,6 +61,11 @@ export default defineConfig({
 
     // Open browser on start
     open: false,
+
+    // Fix for Google Login Cross-Origin-Opener-Policy warning
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
   },
 
   // Optimize dependencies

@@ -6,6 +6,7 @@ exports.createTemplate = async (req, res) => {
     const { name } = req.body;
     const newTemplate = new EncounterTemplateModel({
       name,
+      clinicId: req.user.clinicId, // Assign clinicId
       problems: [],
       observations: [],
       notes: [],
@@ -22,7 +23,33 @@ exports.createTemplate = async (req, res) => {
 // Get all templates
 exports.getTemplates = async (req, res) => {
   try {
-    const templates = await EncounterTemplateModel.find().sort({ createdAt: -1 });
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+    const query = {};
+
+    if (effectiveRole === "admin") {
+      // Global View
+    } else if (safeClinicId) {
+      query.clinicId = safeClinicId;
+    } else {
+      return res.json([]);
+    }
+
+    const templates = await EncounterTemplateModel.find(query).sort({ createdAt: -1 });
     res.json(templates);
   } catch (err) {
     console.error("Error fetching templates:", err);

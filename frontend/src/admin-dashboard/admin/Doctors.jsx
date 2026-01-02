@@ -3,7 +3,7 @@ import axios from "axios";
 import API_BASE from "../../config";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import { FaSearch, FaPlus, FaTrash, FaEdit, FaDownload, FaEnvelope, FaCalendarAlt, FaBriefcaseMedical } from "react-icons/fa";
+import { FaSearch, FaPlus, FaTrash, FaEdit, FaDownload, FaEnvelope, FaCalendarAlt, FaBriefcaseMedical, FaCamera, FaPencilAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/admin-shared.css";
@@ -195,18 +195,38 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
       return toast.error("Please fill required fields");
     }
 
+    if (!serviceForm.charges) {
+      return toast.error("Please enter charges");
+    }
+
     try {
       const payload = {
         ...serviceForm,
+        charges: parseFloat(serviceForm.charges) || 0,
         doctor: `${selectedDoctor.firstName} ${selectedDoctor.lastName}`,
         doctorId: selectedDoctor._id,
         clinicName: serviceForm.clinic,
         active: serviceForm.status === "Active",
+        isTelemed: serviceForm.isTelemedicine,
+        allowMulti: serviceForm.allowMultiSelection ? "Yes" : "No",
       };
 
-      await axios.post(`${API_BASE}/services`, payload);
+      const token = localStorage.getItem("token");
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.post(`${API_BASE}/services`, payload, config);
       toast.success("Service added successfully!");
       setServiceModalOpen(false);
+      // Reset form
+      setServiceForm({
+        name: "",
+        category: "",
+        charges: "",
+        duration: "00:30",
+        clinic: "",
+        isTelemedicine: false,
+        status: "Active",
+        allowMultiSelection: true,
+      });
     } catch (error) {
       console.error("Error adding service:", error);
       toast.error("Error adding service");
@@ -231,9 +251,13 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
         ];
         setCategories(categoriesData);
 
-        const clinicsRes = await axios.get(`${API_BASE}/api/clinics`);
+        const token = localStorage.getItem("token");
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const clinicsRes = await axios.get(`${API_BASE}/api/clinics`, config);
         if (clinicsRes.data.success) {
           setClinics(clinicsRes.data.clinics || []);
+        } else if (Array.isArray(clinicsRes.data)) {
+          setClinics(clinicsRes.data);
         }
       } catch (error) {
         console.error("Error loading options:", error);
@@ -523,7 +547,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
                               }}
                             >
                               <div className="text-center">
-                                <i className="bi bi-camera" style={{ fontSize: "36px", color: "#999" }}></i>
+                                <FaCamera style={{ fontSize: "36px", color: "#999" }} />
                                 <div style={{ fontSize: "11px", color: "#999", marginTop: "5px" }}>Upload Image</div>
                               </div>
                             </div>
@@ -540,7 +564,7 @@ const Doctors = ({ sidebarCollapsed, toggleSidebar }) => {
                                 boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
                               }}
                             >
-                              <i className="bi bi-pencil-fill"></i>
+                              <FaPencilAlt />
                             </button>
                           </div>
                         </div>

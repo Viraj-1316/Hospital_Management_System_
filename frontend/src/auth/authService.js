@@ -38,6 +38,37 @@ export async function loginUser(email, password) {
 }
 
 /**
+ * Login with Google
+ * @param {string} token - Google ID Token
+ * @returns {Promise<{success: boolean, data?: object, error?: string, token?: string}>}
+ */
+export async function googleLogin(token) {
+    try {
+        const res = await fetch(`${API_BASE}/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return { success: false, error: data.message || 'Google login failed' };
+        }
+
+        // Extract token from response
+        const authToken = data.token;
+        const user = { ...data };
+        delete user.token;
+
+        return { success: true, data: user, token: authToken };
+    } catch (err) {
+        console.error('Google Login error:', err);
+        return { success: false, error: 'Network error: backend not responding' };
+    }
+}
+
+/**
  * Register new user
  * @param {object} userData - {name, email, password, phone, role, hospitalId}
  * @returns {Promise<{success: boolean, data?: object, error?: string}>}
@@ -132,17 +163,31 @@ export const validators = {
     phone: (phone) => {
         if (!phone) return 'Phone number is required';
         const digits = phone.replace(/\D/g, '');
-        if (digits.length < 10) return 'Please enter a valid phone number';
+        if (digits.length !== 10) return 'Please enter a valid 10-digit phone number';
         return null;
     },
 };
 
 /**
- * Format phone number for API
+ * Format phone number for API (adds +91 if needed)
  * @param {string} phone 
  * @returns {string}
  */
 export function formatPhone(phone) {
+    // Remove all non-digit characters
+    const digits = phone.replace(/\D/g, '');
+
+    // If already has country code (starts with 91 and has 12 digits), just add +
+    if (digits.startsWith('91') && digits.length === 12) {
+        return `+${digits}`;
+    }
+
+    // If it's a 10-digit number, add +91
+    if (digits.length === 10) {
+        return `+91${digits}`;
+    }
+
+    // Fallback: just add + if not present
     return phone.startsWith('+') ? phone : `+${phone}`;
 }
 
@@ -170,6 +215,9 @@ export function saveAuthData(user, token) {
         name: user.name || '',
         profileCompleted: !!user.profileCompleted,
         mustChangePassword: user.mustChangePassword || false,
+        clinicId: user.clinicId || user.clinic?._id || null,
+        clinicName: user.clinicName || user.clinic?.name || user.clinic || '',
+        googleId: user.googleId || null, // Include googleId for Google login users
     };
 
     localStorage.setItem('authUser', JSON.stringify(authUser));
@@ -194,6 +242,7 @@ export function savePatientData(patientDoc, userId) {
         email: patientDoc.email || '',
         phone: patientDoc.phone || '',
         clinic: patientDoc.clinic || '',
+        clinicId: patientDoc.clinicId || null, // Include clinicId for auto-selecting clinic
         dob: patientDoc.dob || '',
         address: patientDoc.address || '',
     };

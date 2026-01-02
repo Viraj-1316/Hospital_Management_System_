@@ -162,6 +162,16 @@ function DoctorProfile() {
         paddingBottom: "24px",
       }}
     >
+      {/* ✅ CSS Correction for Calendar/Inputs: Prevents Mobile Zoom & Fixes Sizing */}
+      <style>{`
+        @media (max-width: 768px) {
+          .form-control, .form-select, input[type="date"] {
+            font-size: 16px !important; /* Stops iOS/Android zoom */
+            min-height: 45px; /* Better touch target */
+          }
+        }
+      `}</style>
+
       <div className="container" style={{ maxWidth: "1100px" }}>
         <button
           type="button"
@@ -327,7 +337,8 @@ function DoctorProfile() {
                     />
                   </div>
 
-                  <div className="col-md-3">
+                  {/* ✅ Grid Correction: Use col-12 on mobile to prevent squishing */}
+                  <div className="col-12 col-md-3">
                     <label className="small mb-1">Gender</label>
                     <select
                       name="gender"
@@ -342,7 +353,8 @@ function DoctorProfile() {
                     </select>
                   </div>
 
-                  <div className="col-md-3">
+                  {/* ✅ Grid Correction: Use col-12 on mobile */}
+                  <div className="col-12 col-md-3">
                     <label className="small mb-1">Date of birth</label>
                     <input
                       type="date"

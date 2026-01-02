@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Form, Button, Row, Col, Card } from "react-bootstrap";
 import { FaSave, FaSms, FaWhatsapp } from "react-icons/fa";
 import toast from "react-hot-toast";
+import axios from "axios";
+import API_BASE from "../../../../config";
 
 const ProSettings = () => {
   // SMS State
-  const [smsEnabled, setSmsEnabled] = useState(true);
-  const [smsSid, setSmsSid] = useState("Enter Here");
-  const [smsToken, setSmsToken] = useState("Enter Here");
-  const [smsPhone, setSmsPhone] = useState("Enter Here");
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [smsSid, setSmsSid] = useState("");
+  const [smsToken, setSmsToken] = useState("");
+  const [smsPhone, setSmsPhone] = useState("");
 
   // WhatsApp State
-  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [waSid, setWaSid] = useState("");
   const [waToken, setWaToken] = useState("");
   const [waPhone, setWaPhone] = useState("");
@@ -19,13 +21,76 @@ const ProSettings = () => {
   // Copyright State
   const [copyrightText, setCopyrightText] = useState("OneCare © 2024. All rights reserved.");
 
-  const handleSave = (section) => {
-    toast.success(`${section} settings saved!`);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(`${API_BASE}/api/settings/pro`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data) {
+        setSmsEnabled(data.smsEnabled ?? false);
+        setSmsSid(data.smsSid ?? "");
+        setSmsToken(data.smsToken ?? "");
+        setSmsPhone(data.smsPhone ?? "");
+        setWhatsappEnabled(data.whatsappEnabled ?? false);
+        setWaSid(data.whatsappSid ?? "");
+        setWaToken(data.whatsappToken ?? "");
+        setWaPhone(data.whatsappPhone ?? "");
+        setCopyrightText(data.copyrightText ?? "OneCare © 2024. All rights reserved.");
+      }
+    } catch (err) {
+      console.error("Failed to fetch pro settings", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (section) => {
+    try {
+      const token = localStorage.getItem("token");
+      let payload = {};
+
+      if (section === 'SMS') {
+        payload = {
+          smsEnabled,
+          smsSid,
+          smsToken,
+          smsPhone,
+        };
+      } else if (section === 'WhatsApp') {
+        payload = {
+          whatsappEnabled,
+          whatsappSid: waSid,
+          whatsappToken: waToken,
+          whatsappPhone: waPhone,
+        };
+      } else if (section === 'Copyright') {
+        payload = { copyrightText };
+      }
+
+      await axios.put(`${API_BASE}/api/settings/pro`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success(`${section} settings saved successfully!`);
+    } catch (err) {
+      console.error(err);
+      toast.error(`Failed to save ${section} settings`);
+    }
   };
 
   const handleTest = (type) => {
-    toast.success(`Test ${type} sent!`);
+    toast.success(`Test ${type} sent! (Note: Full integration requires backend SMS service setup)`);
   };
+
+  if (loading) {
+    return <div className="p-4">Loading settings...</div>;
+  }
 
   return (
     <div className="p-2">

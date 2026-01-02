@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import axios from "axios";
 import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
@@ -39,13 +40,15 @@ axios.interceptors.response.use(
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <ErrorBoundary>
-    <BrowserRouter>
-      <SocketProvider>
-        <ConfirmProvider>
-          <App />
-        </ConfirmProvider>
-      </SocketProvider>
-    </BrowserRouter>
-  </ErrorBoundary>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID"}>
+      <BrowserRouter>
+        <SocketProvider>
+          <ConfirmProvider>
+            <App />
+          </ConfirmProvider>
+        </SocketProvider>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
+  </ErrorBoundary >
 );
 

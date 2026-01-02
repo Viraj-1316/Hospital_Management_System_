@@ -8,6 +8,7 @@ function AdminProfile() {
   const navigate = useNavigate();
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
   const userId = authUser?.id;
+  const userRole = authUser?.role;
 
   const [form, setForm] = useState({
     name: "",
@@ -38,7 +39,9 @@ function AdminProfile() {
   const loadProfile = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/user/${userId}`, {
+      // Use admin endpoint if role is admin
+      const endpoint = userRole === 'admin' ? `${API_BASE}/api/admin/${userId}` : `${API_BASE}/api/user/${userId}`;
+      const res = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -94,7 +97,9 @@ function AdminProfile() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/user/${userId}`, {
+      // Use admin endpoint if role is admin
+      const endpoint = userRole === 'admin' ? `${API_BASE}/api/admin/${userId}` : `${API_BASE}/api/user/${userId}`;
+      const res = await fetch(endpoint, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

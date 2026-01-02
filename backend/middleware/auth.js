@@ -21,6 +21,7 @@ function generateToken(payload, expiresIn = "24h") {
             id: payload.id,
             email: payload.email,
             role: payload.role,
+            clinicId: payload.clinicId,
         },
         JWT_SECRET,
         { expiresIn }
@@ -33,13 +34,19 @@ function generateToken(payload, expiresIn = "24h") {
  */
 function verifyToken(req, res, next) {
     try {
+        let token;
         const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return res.status(401).json({ message: "Access denied. No token provided." });
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+            token = authHeader.split(" ")[1];
+        } else if (req.query.token) {
+            // Fallback for file downloads where headers can't be set easily
+            token = req.query.token;
         }
 
-        const token = authHeader.split(" ")[1];
+        if (!token) {
+            return res.status(401).json({ message: "Access denied. No token provided." });
+        }
         const decoded = jwt.verify(token, JWT_SECRET);
 
         // Attach user info to request
@@ -53,10 +60,7 @@ function verifyToken(req, res, next) {
     }
 }
 
-/**
- * Optional token verification - doesn't block if no token
- * Useful for routes that work both authenticated and unauthenticated
- */
+
 function optionalToken(req, res, next) {
     try {
         const authHeader = req.headers.authorization;

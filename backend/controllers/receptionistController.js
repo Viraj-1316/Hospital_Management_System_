@@ -41,7 +41,11 @@ exports.addReceptionist = async (req, res) => {
       email,
       mobile,
       address,
-      clinicIds,
+      address,
+      // Isolation Logic:
+      // If Admin: Use provided clinicIds (or empty)
+      // If Clinic Admin: Force [req.user.clinicId]
+      clinicIds: req.user.role === 'admin' ? clinicIds : [req.user.clinicId],
       status,
       password: hashedPassword,
       passwordPlain: plainPassword, // 🔑 store plain for resend
@@ -72,7 +76,34 @@ exports.addReceptionist = async (req, res) => {
 // ------------------------------------------------------------
 exports.getReceptionists = async (req, res) => {
   try {
-    const receptionist = await Receptionist.find()
+    let currentUser = null;
+    let safeClinicId = null;
+
+    if (req.user.role === 'admin') {
+      currentUser = await require("../models/Admin").findById(req.user.id);
+    } else {
+      currentUser = await require("../models/User").findById(req.user.id);
+    }
+
+    if (currentUser) {
+      safeClinicId = currentUser.clinicId;
+    } else {
+      safeClinicId = req.user.clinicId || null;
+    }
+
+    const effectiveRole = currentUser ? currentUser.role : req.user.role;
+    const query = {};
+
+    if (effectiveRole === "admin") {
+      // Global View
+    } else if (safeClinicId) {
+      // Receptionist has clinicIds array. Matches if array contains safeClinicId.
+      query.clinicIds = safeClinicId;
+    } else {
+      return res.json({ data: [] });
+    }
+
+    const receptionist = await Receptionist.find(query)
       .populate("clinicIds", "name")
       .sort({ createdAt: -1 });
 

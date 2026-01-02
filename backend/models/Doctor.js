@@ -4,13 +4,19 @@ const DoctorSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   email: String,
-  clinic: String,
+  clinic: String, // Legacy string field
+  clinicId: { type: mongoose.Schema.Types.ObjectId, ref: "Clinic" }, // New Multi-Tenant ID
   phone: String,
   dob: String,
   specialization: String,
   experience: String,
   gender: String,
   status: String,
+  approvalStatus: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "approved"  // Admins create doctors as approved, self-signup = pending
+  },
   address: String,
   city: String,
   country: String,
@@ -34,7 +40,7 @@ const DoctorSchema = new mongoose.Schema({
 
 // Database Indexes for improved query performance
 DoctorSchema.index({ email: 1 });
-DoctorSchema.index({ clinic: 1 });
+DoctorSchema.index({ clinicId: 1 });
 DoctorSchema.index({ status: 1 });
 
 const DoctorModel = mongoose.model("Doctor", DoctorSchema);

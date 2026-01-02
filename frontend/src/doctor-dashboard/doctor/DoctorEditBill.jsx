@@ -52,10 +52,10 @@ const EditBill = () => {
 
         setDoctors(Array.isArray(docRes.data) ? docRes.data : docRes.data.data || []);
         setPatients(Array.isArray(patRes.data) ? patRes.data : patRes.data.data || []);
-        
-        const cData = Array.isArray(clinicRes.data) 
-            ? clinicRes.data 
-            : clinicRes.data.clinics || [];
+
+        const cData = Array.isArray(clinicRes.data)
+          ? clinicRes.data
+          : clinicRes.data.clinics || [];
         setClinics(cData);
 
         // 2. Fetch The Bill to Edit
@@ -63,24 +63,24 @@ const EditBill = () => {
         const bill = billRes.data;
 
         if (bill) {
-            // 3. Format Data for Form
-            setForm({
-                ...bill,
-                // Ensure date is YYYY-MM-DD for input type="date"
-                date: bill.date ? new Date(bill.date).toISOString().split("T")[0] : "",
-                // Convert array ["Xray", "Consult"] -> String "Xray, Consult"
-                services: Array.isArray(bill.services) ? bill.services.join(", ") : bill.services || "",
-                // Ensure IDs are present (sometimes mongo returns object, ensure string)
-                patientId: bill.patientId || "",
-                doctorId: bill.doctorId || "",
-                clinicId: bill.clinicId || "",
-                encounterId: bill.encounterId || ""
-            });
+          // 3. Format Data for Form
+          setForm({
+            ...bill,
+            // Ensure date is YYYY-MM-DD for input type="date"
+            date: bill.date ? new Date(bill.date).toISOString().split("T")[0] : "",
+            // Convert array ["Xray", "Consult"] -> String "Xray, Consult"
+            services: Array.isArray(bill.services) ? bill.services.join(", ") : bill.services || "",
+            // Ensure IDs are present (sometimes mongo returns object, ensure string)
+            patientId: bill.patientId || "",
+            doctorId: bill.doctorId || "",
+            clinicId: bill.clinicId || "",
+            encounterId: bill.encounterId || ""
+          });
 
-            // 4. Fetch Encounters for this patient immediately
-            if (bill.patientId) {
-                fetchEncounters(bill.patientId);
-            }
+          // 4. Fetch Encounters for this patient immediately
+          if (bill.patientId) {
+            fetchEncounters(bill.patientId);
+          }
         }
 
       } catch (err) {
@@ -96,11 +96,11 @@ const EditBill = () => {
   // Helper to fetch encounters
   const fetchEncounters = (patientId) => {
     axios.get(`${BASE}/encounters?patientId=${patientId}`)
-    .then((res) => {
+      .then((res) => {
         const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
         setEncounters(data);
-    })
-    .catch(() => setEncounters([]));
+      })
+      .catch(() => setEncounters([]));
   };
 
   // --- 3. Change Handlers ---
@@ -118,7 +118,7 @@ const EditBill = () => {
   const handlePatientChange = (e) => {
     const selectedId = e.target.value;
     const selectedObj = patients.find(p => p._id === selectedId);
-    
+
     // Fetch new encounters when patient changes
     fetchEncounters(selectedId);
 
@@ -133,20 +133,20 @@ const EditBill = () => {
   const handleClinicChange = (e) => {
     const selectedId = e.target.value;
     const selectedObj = clinics.find(c => c._id === selectedId);
-    
+
     if (selectedObj) {
-        setForm(prev => ({
-            ...prev,
-            clinicId: selectedId,
-            clinicName: selectedObj.name || selectedObj.clinicName || "" 
-        }));
+      setForm(prev => ({
+        ...prev,
+        clinicId: selectedId,
+        clinicName: selectedObj.name || selectedObj.clinicName || ""
+      }));
     } else {
-        setForm(prev => ({ ...prev, clinicId: "", clinicName: "" }));
+      setForm(prev => ({ ...prev, clinicId: "", clinicName: "" }));
     }
   };
 
   const handleManualClinicChange = (e) => {
-      setForm(prev => ({ ...prev, clinicName: e.target.value }));
+    setForm(prev => ({ ...prev, clinicName: e.target.value }));
   };
 
   const handleGenericChange = (e) => {
@@ -173,8 +173,8 @@ const EditBill = () => {
       const payload = {
         ...form,
         // Convert string "A, B" -> Array ["A", "B"]
-        services: form.services.split(",").map(s => s.trim()), 
-        clinicId: form.clinicId || null 
+        services: form.services.split(",").map(s => s.trim()),
+        clinicId: form.clinicId || null
       };
 
       await axios.put(`${BASE}/bills/${id}`, payload);
@@ -189,11 +189,11 @@ const EditBill = () => {
   };
 
   if (loading) {
-      return (
-        <AdminLayout>
-            <div className="text-center p-5">Loading Bill Details...</div>
-        </AdminLayout>
-      )
+    return (
+      <AdminLayout>
+        <div className="text-center p-5">Loading Bill Details...</div>
+      </AdminLayout>
+    )
   }
 
   return (
@@ -204,7 +204,7 @@ const EditBill = () => {
         <div className="card shadow-sm p-4">
           <form onSubmit={handleSubmit}>
             <div className="row">
-              
+
               {/* Doctor */}
               <div className="col-md-6 mb-3">
                 <label className="form-label">Doctor Name <span className="text-danger">*</span></label>
@@ -247,27 +247,27 @@ const EditBill = () => {
               <div className="col-md-6 mb-3">
                 <label className="form-label">Clinic Name <span className="text-danger">*</span></label>
                 {clinics.length > 0 ? (
-                    <select 
-                        name="clinicId"
-                        className="form-select" 
-                        value={form.clinicId} 
-                        onChange={handleClinicChange} 
-                        required
-                    >
-                        <option value="">-- Select Clinic --</option>
-                        {clinics.map((c) => (
-                            <option key={c._id} value={c._id}>{c.name || c.clinicName}</option>
-                        ))}
-                    </select>
+                  <select
+                    name="clinicId"
+                    className="form-select"
+                    value={form.clinicId}
+                    onChange={handleClinicChange}
+                    required
+                  >
+                    <option value="">-- Select Clinic --</option>
+                    {clinics.map((c) => (
+                      <option key={c._id} value={c._id}>{c.name || c.clinicName}</option>
+                    ))}
+                  </select>
                 ) : (
-                    <input
-                      name="clinicName"
-                      className="form-control"
-                      value={form.clinicName}
-                      onChange={handleManualClinicChange}
-                      placeholder="Enter Clinic Name"
-                      required
-                    />
+                  <input
+                    name="clinicName"
+                    className="form-control"
+                    value={form.clinicName}
+                    onChange={handleManualClinicChange}
+                    placeholder="Enter Clinic Name"
+                    required
+                  />
                 )}
               </div>
 
@@ -283,8 +283,8 @@ const EditBill = () => {
                 >
                   <option value="">-- Select Encounter --</option>
                   {encounters.map((enc) => (
-                    <option key={enc._id} value={enc.encounterId || enc._id}>
-                      {new Date(enc.date).toLocaleDateString()} (ID: {enc.encounterId || "Pending"})
+                    <option key={enc._id} value={enc._id}>
+                      {new Date(enc.date).toLocaleDateString()} (ID: {enc.encounterId || enc._id})
                     </option>
                   ))}
                 </select>

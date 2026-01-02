@@ -384,20 +384,20 @@ export default function SharedEncounterList({ role, doctorId }) {
                   <tr key={enc._id}>
                     <td><input type="checkbox" /></td>
                     
-                    <td className="fw-bold text-primary" style={{fontFamily:'monospace'}}>
+                    <td data label="ID" className="fw-bold text-primary" style={{fontFamily:'monospace'}}>
                         {enc.encounterId || "Pending"}
                     </td>
                     
-                    <td>{enc.doctor || enc.doctorName}</td>
-                    <td>{enc.clinic}</td>
-                    <td>{enc.patient || enc.patientName}</td>
-                    <td>{new Date(enc.date).toLocaleDateString()}</td>
-                    <td>
+                    <td data-label="Doctor Name">{enc.doctor || enc.doctorName}</td>
+                    <td data-label="Clinic Name">{enc.clinic}</td>
+                    <td data-label="Patient Name">{enc.patient || enc.patientName}</td>
+                    <td data-label="Date">{new Date(enc.date).toLocaleDateString()}</td>
+                    <td data-label="Status">
                       <span className={`badge ${enc.status === 'active' ? 'bg-success' : 'bg-secondary'}`}>
                         {enc.status}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Action">
                       <div className="d-flex gap-2">
                         <button className="btn btn-sm btn-outline-primary" title="Edit" onClick={() => handleEdit(enc)}><FaEdit /></button>
                         <button className="btn btn-sm btn-outline-info" title="Details" onClick={() => handleDashboard(enc._id)}><FaColumns /></button>

@@ -108,7 +108,7 @@ export default function PatientNavbar({ toggleSidebar }) {
               {letter}
             </div>
           )}
-          <span className="text-white ms-2 fw-semibold">{profileData.name}</span>
+          <span className="text-white ms-2 fw-semibold username">{profileData.name}</span>
         </div>
 
         {open && (

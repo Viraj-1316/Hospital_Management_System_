@@ -5,6 +5,7 @@ const ServiceSchema = new mongoose.Schema(
   {
     serviceId: { type: String, default: "" },
     name: { type: String, required: true },
+    clinicId: { type: mongoose.Schema.Types.ObjectId, ref: "Clinic" },
     clinicName: { type: String, default: "" },
     doctor: { type: String, default: "" },
 

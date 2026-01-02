@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
 import API_BASE from "../config";
 
 const ChangePasswordForm = () => {
@@ -16,6 +16,23 @@ const ChangePasswordForm = () => {
     confirm: false,
   });
   const [loading, setLoading] = useState(false);
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
+
+  // Check if user is a Google login user
+  useEffect(() => {
+    const authUserStr = localStorage.getItem("authUser");
+    if (authUserStr) {
+      try {
+        const authUser = JSON.parse(authUserStr);
+        // Check for googleId indicator in stored user data
+        if (authUser.googleId) {
+          setIsGoogleUser(true);
+        }
+      } catch {
+        // Error parsing, continue as regular user
+      }
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -84,16 +101,26 @@ const ChangePasswordForm = () => {
         return;
       }
 
+      // Get auth token for authenticated requests
+      const token = localStorage.getItem("token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
+      // Use different endpoint for Google users
+      if (isGoogleUser) {
+        const res = await axios.post(`${API_BASE}/set-password`, {
+          email,
+          newPassword,
+        }, { headers: authHeaders });
+        toast.success(res.data.message);
+      } else {
+        const res = await axios.post(`${API_BASE}/change-password`, {
+          email,
+          oldPassword,
+          newPassword,
+        });
+        toast.success(res.data.message);
+      }
 
-// ... inside component
-      const res = await axios.post(`${API_BASE}/change-password`, {
-        email,
-        oldPassword,
-        newPassword,
-      });
-
-      toast.success(res.data.message);
       setFormData({ oldPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err) {
       console.error(err);
@@ -105,29 +132,43 @@ const ChangePasswordForm = () => {
 
   return (
     <div className="card shadow-sm border-0 p-4" style={{ maxWidth: "500px", margin: "0 auto" }}>
-      <h4 className="mb-4 fw-bold text-primary">Change Password</h4>
-      <form onSubmit={handleSubmit}>
-        {/* Old Password */}
-        <div className="mb-3">
-          <label className="form-label fw-semibold">Current Password</label>
-          <div className="input-group">
-            <input
-              type={showPassword.old ? "text" : "password"}
-              className="form-control"
-              name="oldPassword"
-              value={formData.oldPassword}
-              onChange={handleChange}
-              required
-            />
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => toggleVisibility("old")}
-            >
-              {showPassword.old ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </div>
+      <h4 className="mb-4 fw-bold text-primary">
+        {isGoogleUser ? "Set Password" : "Change Password"}
+      </h4>
+      
+      {isGoogleUser && (
+        <div className="alert alert-info mb-4 d-flex align-items-center">
+          <FaGoogle className="me-2" />
+          <small>
+            You signed in with Google. Set a password to enable email/password login.
+          </small>
         </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        {/* Old Password - Only show for non-Google users */}
+        {!isGoogleUser && (
+          <div className="mb-3">
+            <label className="form-label fw-semibold">Current Password</label>
+            <div className="input-group">
+              <input
+                type={showPassword.old ? "text" : "password"}
+                className="form-control"
+                name="oldPassword"
+                value={formData.oldPassword}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => toggleVisibility("old")}
+              >
+                {showPassword.old ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* New Password */}
         <div className="mb-3">
@@ -178,7 +219,7 @@ const ChangePasswordForm = () => {
           className="btn btn-primary w-100 py-2 fw-bold"
           disabled={loading}
         >
-          {loading ? "Updating..." : "Update Password"}
+          {loading ? "Updating..." : (isGoogleUser ? "Set Password" : "Update Password")}
         </button>
       </form>
     </div>
