@@ -1,0 +1,43 @@
+/* ... existing styles ... */
+
+  /* --- ADD THIS BLOCK FOR MOBILE RESPONSIVENESS --- */
+  @media (max-width: 768px) {
+    .services-scope .custom-table { min-width: 0 !important; }
+    .services-scope .custom-table thead { display: none; }
+    .services-scope .custom-table tbody, 
+    .services-scope .custom-table tr, 
+    .services-scope .custom-table td { display: block; width: 100%; }
+    
+    .services-scope .custom-table tr {
+      margin-bottom: 1rem;
+      border: 1px solid #dee2e6;
+      border-radius: 0.5rem;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .services-scope .custom-table td {
+      text-align: right;
+      padding: 0.75rem;
+      position: relative;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .services-scope .custom-table td:last-child { border-bottom: 0; }
+    
+    /* This injects the column header name before the value */
+    .services-scope .custom-table td::before {
+      content: attr(data-label);
+      font-weight: 700;
+      color: #6c757d;
+      font-size: 0.85rem;
+      text-align: left;
+      margin-right: 1rem;
+    }
+
+    /* Hide the checkbox column on mobile to save space */
+    .services-scope .custom-table td:first-child { display: none; }
+  }

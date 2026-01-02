@@ -267,7 +267,7 @@ export default function DoctorSessions() {
               color: #6c757d; 
               font-size: 0.85rem;
            }
-           .mobile-table td[data-label="Action"] { justify-content: flex-end; }
+           .mobile-table td[data-label="Action"] { justify-content: space-between; }
            
            /* Hide the filter row in table header on mobile */
            .filter-row { display: none !important; }
@@ -275,24 +275,43 @@ export default function DoctorSessions() {
       `}</style>
       <Toaster position="top-right" />
 
-      <div className="table-card">
-          
-        {/* Header - Flex wrapped for mobile */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-            <div className="d-flex align-items-center gap-2">
-                <h5 className="mb-0 fw-bold text-dark">Doctor Sessions</h5>
-                <FaQuestionCircle className="text-secondary opacity-50" size={14} />
-            </div>
-            <div className="d-flex gap-2 w-100 w-md-auto">
-                <button className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-2 px-3 flex-grow-1 flex-md-grow-0" onClick={() => setShowImport(true)}>
-                    <FaFileImport /> Import
-                </button>
-                <button className="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2 px-3 flex-grow-1 flex-md-grow-0" onClick={toggleForm}>
-                    {showForm ? <><FaTimes /> Close</> : <><FaPlus /> Add Session</>}
-                </button>
-            </div>
+{/* --- Doctor Sessions Header (Blue Style) --- */}
+      <div className="services-topbar services-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div className="d-flex align-items-center gap-2">
+          {/* Changed text-dark to text-white */}
+          <h5 className="mb-0 fw-bold text-white">Doctor Sessions</h5>
+          <FaQuestionCircle className="text-white opacity-75" size={14} style={{ cursor: 'pointer' }} />
         </div>
-
+        
+        <div className="d-flex gap-2">
+          {/* Import Button: Outline White */}
+          <button 
+            className="btn btn-outline-light btn-sm d-flex align-items-center gap-2" 
+            onClick={() => setShowImport(true)}
+          >
+            <FaFileImport /> 
+            <span className="d-none d-md-inline">Import</span>
+          </button>
+          
+          {/* Add Session Button: White Background */}
+          <button 
+            className="btn btn-light btn-sm d-flex align-items-center gap-2" 
+            onClick={toggleForm}
+          >
+            {showForm ? (
+              <>
+                <FaTimes /> 
+                <span className="d-none d-md-inline">Close</span>
+              </>
+            ) : (
+              <>
+                <FaPlus /> 
+                <span className="d-none d-md-inline">Add Session</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
         {/* Form */}
         {showForm && (
             <div className="bg-light p-4 mb-4 rounded border slide-down">
@@ -450,7 +469,7 @@ export default function DoctorSessions() {
                 </div>
             </div>
         )}
-      </div>
+      
 
       {/* Delete Modal */}
       {showDeleteModal && (
