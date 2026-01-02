@@ -9,6 +9,11 @@ import ConfirmationModal from "../ConfirmationModal";
 
 import API_BASE from "../../config";
 
+// Import the appointments CSS for collapsible panels styling
+import "../../admin-dashboard/styles/appointments.css";
+// Import admin-shared CSS for the blue header bar (services-topbar) styling
+import "../../admin-dashboard/styles/admin-shared.css";
+
 const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -464,7 +469,7 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
-      
+
       // Create blob URL and open in new tab
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
@@ -524,7 +529,7 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
         <div className="services-topbar services-card d-flex justify-content-between align-items-center mb-3">
           <h5 className="fw-bold text-white mb-0">Appointments</h5>
           <div className="d-flex gap-2 appointments-header-actions">
-            <button className="btn btn-light-toggle btn-sm" onClick={openAddForm}>
+            <button className={`btn btn-filter-toggle btn-sm ${panelOpen && !editId ? "active" : ""}`} onClick={openAddForm}>
               {panelOpen && !editId ? "Close form" : "Add Appointment"}
             </button>
             <button className={`btn btn-filter-toggle btn-sm ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen((s) => !s)}>
