@@ -1,9 +1,9 @@
-// src/doctor/Doctor-dashboard.jsx
 import React, { useEffect, useState, useRef } from "react";
 import DoctorLayout from "../layouts/DoctorLayout";
 import "../styles/DoctorDashboard.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
+// FullCalendar Imports
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -23,7 +23,7 @@ export default function DoctorDashboard() {
   const navigate = useNavigate();
   const calendarRef = useRef(null);
 
-  // ---------- STATS ----------
+  // ---------- STATE ----------
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalAppointments: 0,
@@ -32,53 +32,29 @@ export default function DoctorDashboard() {
   });
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // ---------- CALENDAR ----------
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [error, setError] = useState(null);
 
-  // -----------------------------
-  // 1) MAP ONE APPOINTMENT → EVENT
-  // -----------------------------
-  // Keep it VERY simple: use only "date" from your appointment.
-  // Example appointment from your logs:
-  // { _id: '...', patientName: 'Patient', doctorName: 'viraj ...', clinic: 'Valley Clinic', date: '2025-11-20', ... }
+  // ---------- DATA MAPPING ----------
   const mapAppointmentToEvent = (a) => {
     const id = a._id || a.id;
-    // || Math.random().toString(36).slice(2);
-
-    // 1) Get a safe title
     const patientName =
       a.patientName ||
       a.patient?.name ||
       (a.patient && `${a.patient.firstName} ${a.patient.lastName}`) ||
       "Patient";
-
-    const doctorName = a.doctorName || "Doctor";
     const serviceName = a.serviceName || a.service || "Appointment";
 
-    // 2) Build start date (full-day event)
-    if (!a.date) {
-      console.warn("DoctorDashboard: appointment has NO date, skip:", a);
-      return null;
-    }
-
-    // a.date should be like "2025-11-20"
+    if (!a.date) return null;
     const startDate = new Date(a.date);
+    if (isNaN(startDate.getTime())) return null;
 
-    if (isNaN(startDate.getTime())) {
-      console.warn("DoctorDashboard: INVALID date, skip:", a.date, a);
-      return null;
-    }
-
-    // 3) Return FullCalendar event object
     return {
       id,
-      title: `${patientName} — ${serviceName} — ${doctorName}`,
-      start: startDate, // pass Date object
-      allDay: true, // full day event
-      backgroundColor: "#1560ff",
-      borderColor: "#1560ff",
+      title: `${patientName} — ${serviceName}`,
+      start: startDate,
+      allDay: true,
       extendedProps: { raw: a },
     };
   };
@@ -88,26 +64,20 @@ export default function DoctorDashboard() {
     navigate(`/doctor/appointments/${ev.id}`);
   };
 
-  // -----------------------------
-  // 2) FETCH STATS FROM BACKEND
-  // -----------------------------
+  const handleDateSelect = (selectInfo) => {
+    const d = selectInfo.startStr;
+    navigate(`/doctor/appointments?date=${encodeURIComponent(d)}`);
+  };
+
+  // ---------- API CALLS ----------
   useEffect(() => {
     let mounted = true;
-
     const fetchStats = async () => {
       setLoadingStats(true);
       try {
         const res = await axios.get(`${API_BASE}/dashboard-stats`);
-
-        // ✅ now we read all 3 values from backend
-        const {
-          totalPatients,
-          totalAppointments,
-          todayAppointments,
-          totalServices,
-        } = res.data || {};
-
         if (mounted) {
+          const { totalPatients, totalAppointments, todayAppointments, totalServices } = res.data || {};
           setStats({
             totalPatients: totalPatients || 0,
             totalAppointments: totalAppointments || 0,
@@ -116,39 +86,20 @@ export default function DoctorDashboard() {
           });
         }
       } catch (err) {
-        console.error("DoctorDashboard: failed to fetch stats", err);
-        if (mounted) {
-          setStats({
-            totalPatients: 0,
-            totalAppointments: 0,
-            todayAppointments: 0,
-            totalServices: 0,
-          });
-        }
+        console.error("Stats Error", err);
       } finally {
         if (mounted) setLoadingStats(false);
       }
     };
-
     fetchStats();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-
-  // -----------------------------
-  // 3) FETCH APPOINTMENTS → EVENTS
-  // -----------------------------
   useEffect(() => {
     let mounted = true;
-
     const fetchEvents = async () => {
       setLoadingEvents(true);
-      setError(null);
-
       try {
-        // Get doctor ID from localStorage
         const doctorStr = localStorage.getItem("doctor");
         let doctorId = null;
         if (doctorStr) {
@@ -156,166 +107,98 @@ export default function DoctorDashboard() {
           doctorId = doctor._id || doctor.id;
         }
 
-        // Build URL with doctorId parameter
         let url = `${API_BASE}/appointments`;
-        if (doctorId) {
-          url += `?doctorId=${doctorId}`;
-        }
+        if (doctorId) url += `?doctorId=${doctorId}`;
 
         const res = await axios.get(url);
-
-        const appointments = Array.isArray(res.data)
-          ? res.data
-          : res.data.data ?? [];
-
-        const mapped = appointments
-          .map(mapAppointmentToEvent)
-          .filter(Boolean); // remove null
+        const appointments = Array.isArray(res.data) ? res.data : res.data.data ?? [];
+        const mapped = appointments.map(mapAppointmentToEvent).filter(Boolean);
 
         if (mounted) setEvents(mapped);
       } catch (err) {
-        console.error("DoctorDashboard: failed to fetch appointments", err);
-        if (mounted) {
-          setError("Failed to load calendar events");
-          setEvents([]);
-        }
+        console.error("Events Error", err);
+        if (mounted) setError("Could not load appointments.");
       } finally {
         if (mounted) setLoadingEvents(false);
       }
     };
-
     fetchEvents();
-    return () => {
-      mounted = false;
-    };
-  }, []); // run once on mount
+    return () => { mounted = false; };
+  }, []);
 
-  // -----------------------------
-  // 4) CALENDAR INTERACTIONS
-  // -----------------------------
-  const handleDateSelect = (selectInfo) => {
-    const d = selectInfo.startStr;
-    navigate(`/doctor/appointments?date=${encodeURIComponent(d)}`);
-    selectInfo.view.calendar.unselect();
-  };
-
-  // -----------------------------
-  // 5) RENDER
-  // -----------------------------
+  // ---------- RENDER ----------
   return (
     <DoctorLayout>
-      <div className="container-fluid py-4">
-        <h3 className="fw-bold text-primary mb-3">Doctor Dashboard</h3>
+      <div className="dashboard-container">
+        
+        {/* HEADER */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h3 className="fw-bold text-primary m-0">Doctor Dashboard</h3>
+        </div>
 
-        {/* Widgets Row */}
-        <div className="row g-4">
-          {/* Total Patients */}
-          <div className="col-md-3">
-            <div
-              className="card shadow-sm border-0 p-3 text-center clickable"
-              style={{ cursor: "pointer" }}
-              onClick={() => navigate("/doctor/patients")}
-            >
-              <div className="d-flex justify-content-center align-items-center gap-3">
-                <div className="bg-danger bg-opacity-10 text-danger rounded-circle p-3">
-                  <FaUserInjured size={30} />
-                </div>
-                <div className="text-start">
-                  <h6 className="text-muted mb-1">Total Patients</h6>
-                  <h3 className="fw-bold mb-0">
-                    {loadingStats ? "…" : stats.totalPatients}
-                  </h3>
-                </div>
+        {/* STATS WIDGETS */}
+        <div className="row g-4 mb-4">
+          <div className="col-xl-3 col-md-6 col-12">
+            <div className="stat-card clickable" onClick={() => navigate("/doctor/patients")}>
+              <div className="stat-icon patients"><FaUserInjured /></div>
+              <div className="stat-content">
+                <h6>Total Patients</h6>
+                <h3>{loadingStats ? "-" : stats.totalPatients}</h3>
               </div>
             </div>
           </div>
-
-          {/* Total Appointments */}
-          <div className="col-md-3">
-            <div
-              className="card shadow-sm border-0 p-3 text-center clickable"
-              style={{ cursor: "pointer" }}
-              onClick={() => navigate("/doctor/appointments")}
-            >
-              <div className="d-flex justify-content-center align-items-center gap-3">
-                <div className="bg-primary bg-opacity-10 text-primary rounded-circle p-3">
-                  <FaCalendarAlt size={30} />
-                </div>
-                <div className="text-start">
-                  <h6 className="text-muted mb-1">Total Appointments</h6>
-                  <h3 className="fw-bold mb-0">
-                    {loadingStats ? "…" : stats.totalAppointments}
-                  </h3>
-                </div>
+          <div className="col-xl-3 col-md-6 col-12">
+            <div className="stat-card clickable" onClick={() => navigate("/doctor/appointments")}>
+              <div className="stat-icon appointments"><FaCalendarAlt /></div>
+              <div className="stat-content">
+                <h6>Total Appointments</h6>
+                <h3>{loadingStats ? "-" : stats.totalAppointments}</h3>
               </div>
             </div>
           </div>
-
-          {/* Today's Appointments (we'll calculate later if needed) */}
-          <div className="col-md-3">
-            <div
-              className="card shadow-sm border-0 p-3 text-center clickable"
-              style={{ cursor: "pointer" }}
-              onClick={() => navigate("/doctor/appointments")}
-            >
-              <div className="d-flex justify-content-center align-items-center gap-3">
-                <div className="bg-success bg-opacity-10 text-success rounded-circle p-3">
-                  <FaCalendarCheck size={30} />
-                </div>
-                <div className="text-start">
-                  <h6 className="text-muted mb-1">Today's Appointments</h6>
-                  <h3 className="fw-bold mb-0">
-                    {loadingStats ? "…" : stats.todayAppointments}
-                  </h3>
-                </div>
+          <div className="col-xl-3 col-md-6 col-12">
+            <div className="stat-card clickable" onClick={() => navigate("/doctor/appointments")}>
+              <div className="stat-icon today"><FaCalendarCheck /></div>
+              <div className="stat-content">
+                <h6>Today's Appointments</h6>
+                <h3>{loadingStats ? "-" : stats.todayAppointments}</h3>
               </div>
             </div>
           </div>
-
-          {/* Total Services */}
-          <div className="col-md-3">
-            <div
-              className="card shadow-sm border-0 p-3 text-center clickable"
-              style={{ cursor: "pointer" }}
-              onClick={() => navigate("/doctor/services")}
-            >
-              <div className="d-flex justify-content-center align-items-center gap-3">
-                <div className="bg-warning bg-opacity-10 text-warning rounded-circle p-3">
-                  <FaListAlt size={30} />
-                </div>
-                <div className="text-start">
-                  <h6 className="text-muted mb-1">Total Services</h6>
-                  <h3 className="fw-bold mb-0">
-                    {loadingStats ? "…" : stats.totalServices}
-                  </h3>
-                </div>
+          <div className="col-xl-3 col-md-6 col-12">
+            <div className="stat-card clickable" onClick={() => navigate("/doctor/services")}>
+              <div className="stat-icon services"><FaListAlt /></div>
+              <div className="stat-content">
+                <h6>Total Services</h6>
+                <h3>{loadingStats ? "-" : stats.totalServices}</h3>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Calendar */}
-        <div className="row mt-4">
+        {/* CALENDAR SECTION */}
+        <div className="row">
           <div className="col-12">
-            <div className="card shadow-sm p-3">
+            <div className="calendar-card">
+              
+              {/* Custom Header: Title Left, Filters/Count Right */}
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="m-0">Appointment</h5>
-                <div>
-                  <button className="btn btn-sm btn-outline-secondary me-2">
+                <h5 className="m-0 text-dark" style={{ fontSize: '1.2rem', fontWeight: '400' }}>
+                  Appointment
+                </h5>
+                <div className="d-flex align-items-center gap-2">
+                  <button className="btn btn-outline-secondary btn-sm" style={{fontSize: '0.85rem'}}>
                     Apply filters
                   </button>
-                  <span className="text-muted small">
-                    {loadingEvents
-                      ? "Loading events…"
-                      : events.length === 0
-                        ? "No appointments found"
-                        : `${events.length} events`}
+                  <span className="badge bg-white text-secondary border">
+                    {events.length} events
                   </span>
                 </div>
               </div>
 
-              {error && <div className="alert alert-warning">{error}</div>}
+              {error && <div className="alert alert-danger py-2 small">{error}</div>}
 
+              {/* Calendar Component */}
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -323,7 +206,7 @@ export default function DoctorDashboard() {
                 headerToolbar={{
                   left: "prev,next today",
                   center: "title",
-                  right: "dayGridMonth,timeGridWeek,timeGridDay",
+                  right: "dayGridMonth,timeGridWeek,timeGridDay"
                 }}
                 selectable={true}
                 selectMirror={true}
@@ -331,11 +214,14 @@ export default function DoctorDashboard() {
                 events={events}
                 eventClick={handleEventClick}
                 height="auto"
+                contentHeight="auto"
+                aspectRatio={1.5}
                 dayMaxEvents={3}
               />
             </div>
           </div>
         </div>
+
       </div>
     </DoctorLayout>
   );
