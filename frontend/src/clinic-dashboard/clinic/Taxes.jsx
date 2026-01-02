@@ -16,6 +16,10 @@ const fadeInKeyframes = `
 `;
 
 function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
+  // Get clinic info from localStorage for auto-detecting clinic
+  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
+  const clinicName = authUser?.clinicName || "";
+
   const [taxes, setTaxes] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +40,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
   const [form, setForm] = useState({
     name: "",
     taxRate: "",
-    clinicName: "",
+    clinicName: clinicName, // Auto-fill clinic
     doctor: "",
     serviceName: "",
     active: true,
@@ -70,8 +74,19 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
         setClinics(clinicRes.data.clinics || []);
       }
 
-      setDoctors(doctorRes.data || []);
-      setServices(serviceRes.data?.rows || []);
+      // Filter doctors by clinic if clinicName is available
+      const allDoctors = doctorRes.data || [];
+      const filteredDoctors = clinicName 
+        ? allDoctors.filter(d => (d.clinic || "").toLowerCase() === clinicName.toLowerCase())
+        : allDoctors;
+      setDoctors(filteredDoctors);
+
+      // Filter services by clinic if clinicName is available
+      const allServices = serviceRes.data?.rows || [];
+      const filteredServices = clinicName 
+        ? allServices.filter(s => (s.clinicName || "").toLowerCase() === clinicName.toLowerCase())
+        : allServices;
+      setServices(filteredServices);
 
     } catch (err) {
       console.error("Error fetching dropdown data:", err);
@@ -88,7 +103,12 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
     try {
       setLoading(true);
       const res = await axios.get(`${API_BASE}/taxes`);
-      setTaxes(res.data || []);
+      // Filter taxes by clinic if clinicName is available
+      const allTaxes = res.data || [];
+      const filteredTaxes = clinicName 
+        ? allTaxes.filter(t => (t.clinicName || "").toLowerCase() === clinicName.toLowerCase())
+        : allTaxes;
+      setTaxes(filteredTaxes);
     } catch (err) {
       console.error("Error fetching taxes:", err);
       setTaxes([]);
@@ -152,7 +172,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
     setForm({
       name: "",
       taxRate: "",
-      clinicName: "",
+      clinicName: clinicName, // Auto-fill clinic
       doctor: "",
       serviceName: "",
       active: true,
@@ -706,20 +726,29 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
                       </div>
 
                       <div className="col-md-6">
-                        <label className="form-label">Clinic Name</label>
-                        <select
-                          className="form-select"
-                          name="clinicName"
-                          value={form.clinicName}
-                          onChange={handleFormChange}
-                        >
-                          <option value="">Select Clinic</option>
-                          {clinics.map((c) => (
-                            <option key={c._id} value={c.name || c.clinicName}>
-                              {c.name || c.clinicName}
-                            </option>
-                          ))}
-                        </select>
+                        <label className="form-label">Clinic Name {clinicName ? "(Auto-detected)" : ""}</label>
+                        {clinicName ? (
+                          <input
+                            className="form-control bg-light"
+                            name="clinicName"
+                            value={form.clinicName}
+                            readOnly
+                          />
+                        ) : (
+                          <select
+                            className="form-select"
+                            name="clinicName"
+                            value={form.clinicName}
+                            onChange={handleFormChange}
+                          >
+                            <option value="">Select Clinic</option>
+                            {clinics.map((c) => (
+                              <option key={c._id} value={c.name || c.clinicName}>
+                                {c.name || c.clinicName}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                       <div className="col-md-6">
                         <label className="form-label">Doctor</label>
