@@ -67,6 +67,7 @@ export default function DoctorNavbar({ onToggle }) {
         <button className="btn btn-outline-light border-0" onClick={onToggle}>
           <FaBars size={22} />
         </button>
+        {/* On mobile, you might want to show a shorter title or hide it if needed, currently keeps full text */}
         <h4 className="text-white fw-bold mb-0">One Care Doctor</h4>
       </div>
 
@@ -99,7 +100,13 @@ export default function DoctorNavbar({ onToggle }) {
             </div>
           )}
 
-          <span className="text-white ms-2 fw-semibold">{profileData.name}</span>
+          {/* UPDATED: Added 'd-none d-md-block' class.
+             - d-none: Hides the name by default (mobile view).
+             - d-md-block: Shows the name on medium screens and up (desktop view).
+          */}
+          <span className="text-white ms-2 fw-semibold d-none d-md-block">
+            {profileData.name}
+          </span>
         </div>
 
         {dropdownOpen && (

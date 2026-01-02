@@ -15,8 +15,12 @@ api.interceptors.request.use((config) => {
 const billsStyles = `
   .bills-scope .table-card { background: white; border: 1px solid #e9ecef; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
   .bills-scope .search-bar-container { padding: 15px; border-bottom: 1px solid #f1f3f5; }
-  .bills-scope .custom-table { font-size: 0.85rem; width: 100%; min-width: 1200px; }
-  .bills-scope .custom-table th { background-color: #f8f9fa; color: #495057; padding: 12px; font-weight: 700; }
+  
+  /* Desktop Table Styles */
+  .bills-scope .custom-table { font-size: 0.85rem; width: 100%; border-collapse: collapse; }
+  .bills-scope .custom-table th { background-color: #f8f9fa; color: #495057; padding: 12px; font-weight: 700; border-bottom: 2px solid #dee2e6; text-align: left; }
+  .bills-scope .custom-table td { padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: middle; }
+  
   .bills-scope .filter-input { font-size: 0.75rem; padding: 4px; border-radius: 4px; border: 1px solid #ced4da; width: 100%; }
   
   /* ID Highlight */
@@ -26,6 +30,55 @@ const billsStyles = `
   }
   .bills-scope .status-paid { background-color: #d1e7dd; color: #0f5132; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.7rem; }
   .bills-scope .status-unpaid { background-color: #f8d7da; color: #842029; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.7rem; }
+
+  /* --- MOBILE CARD VIEW CSS --- */
+  @media (max-width: 768px) {
+      .bills-scope .table-responsive { overflow: visible; }
+      
+      /* Hide the Table Header */
+      .bills-scope .custom-table thead { display: none; }
+      
+      /* Make rows display as blocks (cards) */
+      .bills-scope .custom-table tr { 
+          display: block; 
+          margin-bottom: 1rem; 
+          border: 1px solid #dee2e6; 
+          border-radius: 8px; 
+          padding: 15px; 
+          background: #fff; 
+          box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
+      }
+      
+      /* Make cells display flex (row inside card) */
+      .bills-scope .custom-table td { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center; 
+          border: none; 
+          padding: 8px 0; 
+          border-bottom: 1px solid #f0f0f0; 
+          text-align: right; 
+      }
+      .bills-scope .custom-table td:last-child { border-bottom: none; }
+      
+      /* Add Labels via data-label */
+      .bills-scope .custom-table td::before { 
+          content: attr(data-label); 
+          font-weight: 700; 
+          color: #6c757d; 
+          font-size: 0.85rem; 
+          text-transform: uppercase;
+          margin-right: 15px;
+          text-align: left;
+          min-width: 100px;
+      }
+      
+      /* Action button alignment */
+      .bills-scope .custom-table td[data-label="Action"] { 
+          justify-content: flex-end; 
+          margin-top: 5px; 
+      }
+  }
 `;
 
 export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
@@ -59,7 +112,6 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
         const patientId = localStorage.getItem("patientId");
 
         // 1. Fetch BOTH Bills (Filtered) and Encounters
-        // Security Fix: Fetch only this patient's bills
         const [billsRes, encRes] = await Promise.all([
           api.get(`/bills?patientId=${patientId}`),
           api.get("/encounters")
@@ -153,8 +205,8 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
           </div>
 
           {/* Table */}
-          <div className="table-responsive">
-            <table className="table table-hover mb-0 custom-table">
+          <div className="table-responsive bg-transparent border-0">
+            <table className="table mb-0 custom-table">
               <thead>
                 <tr>
                   <th style={{ width: '50px' }}>ID</th>
@@ -171,50 +223,46 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
                   <th>Status</th>
                   <th>Action</th>
                 </tr>
+                {/* Filter Row - Hidden on Mobile via CSS */}
                 <tr className="bg-light">
                   <td className="p-2"></td>
                   <td className="p-2"><input className="filter-input" placeholder="Enc ID" onChange={e => handleFilter('encounterId', e.target.value)} /></td>
                   <td className="p-2"><input className="filter-input" placeholder="Doctor" onChange={e => handleFilter('doctor', e.target.value)} /></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
+                  <td className="p-2" colSpan={10}></td>
                 </tr>
               </thead>
               <tbody>
-                {loading ? <tr><td colSpan="13" className="text-center py-5">Loading...</td></tr> :
-                  rows.length === 0 ? <tr><td colSpan="13" className="text-center py-5 text-muted">No Data Found</td></tr> :
-                    rows.map((row, i) => (
-                      <tr key={i}>
-                        <td>{(page - 1) * limit + i + 1}</td>
-                        <td><span className="enc-id-text">{lookupCustomId(row)}</span></td>
-                        <td>{row.doctorName}</td>
-                        <td>{row.clinicName}</td>
-                        <td>{row.patientName}</td>
-                        <td>{Array.isArray(row.services) ? row.services.map(s => (typeof s === 'string' ? s : s.name)).join(", ") : row.services}</td>
-                        <td>{row.taxAmount || row.tax || 0}</td>
-                        <td>{row.totalAmount}</td>
-                        <td>{row.discount}</td>
-                        <td>{row.amountDue}</td>
-                        <td>{formatDate(row.date)}</td>
-                        <td>{getStatusBadge(row.status)}</td>
-                        <td>
-                          <button
-                            className="btn btn-sm btn-outline-dark"
-                            onClick={() => handlePdf(row._id)}
-                            title="Print PDF"
-                          >
-                            <FiPrinter />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                {loading ? (
+                  <tr><td colSpan="13" className="text-center py-5">Loading...</td></tr>
+                ) : rows.length === 0 ? (
+                  <tr><td colSpan="13" className="text-center py-5 text-muted">No Data Found</td></tr>
+                ) : (
+                  rows.map((row, i) => (
+                    <tr key={i} className="bg-white">
+                      <td data-label="ID">{(page - 1) * limit + i + 1}</td>
+                      <td data-label="Encounter ID"><span className="enc-id-text">{lookupCustomId(row)}</span></td>
+                      <td data-label="Doctor">{row.doctorName}</td>
+                      <td data-label="Clinic">{row.clinicName}</td>
+                      <td data-label="Patient">{row.patientName}</td>
+                      <td data-label="Services">{Array.isArray(row.services) ? row.services.map(s => (typeof s === 'string' ? s : s.name)).join(", ") : row.services}</td>
+                      <td data-label="Tax">{row.taxAmount || row.tax || 0}</td>
+                      <td data-label="Total">{row.totalAmount}</td>
+                      <td data-label="Disc">{row.discount}</td>
+                      <td data-label="Due">{row.amountDue}</td>
+                      <td data-label="Date">{formatDate(row.date)}</td>
+                      <td data-label="Status">{getStatusBadge(row.status)}</td>
+                      <td data-label="Action">
+                        <button
+                          className="btn btn-sm btn-outline-dark"
+                          onClick={() => handlePdf(row._id)}
+                          title="Print PDF"
+                        >
+                          <FiPrinter /> Print PDF
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -184,3 +184,50 @@
 .action-buttons-group .btn:hover {
   z-index: 1;
 }
+/* --- MOBILE RESPONSIVE TABLE STYLES --- */
+@media (max-width: 768px) {
+  /* 1. Hide the table header row */
+  .table thead { display: none; }
+
+  /* 2. Turn each row into a Card */
+  .table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  /* 3. Make cells flexible (Label on left, Data on right) */
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: right;
+  }
+  
+  /* Remove border from the last item in the card */
+  .table td:last-child { border-bottom: none; }
+
+  /* 4. Inject the Label using the 'data-label' attribute */
+  .table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #6c757d;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    text-align: left;
+    margin-right: 15px;
+  }
+
+  /* 5. Hide the checkbox column on mobile */
+  .table td:first-child { display: none; } 
+  
+  /* 6. Fix alignment for Action Buttons */
+  .table td:last-child { justify-content: space-between; }
+}

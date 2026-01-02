@@ -1,24 +1,31 @@
-/* doctor sidebar base (keeps admin-like theme) */
+/* =========================================
+   1. DESKTOP / BASE STYLES 
+   ========================================= */
 .doctor-sidebar {
   width: 250px;
+  background: #fff;
   transition: width 200ms ease, padding 200ms ease;
   box-sizing: border-box;
-  background: #fff;
+  border-right: 1px solid #ddd; /* Added border for clean look */
+  height: 100vh; /* Ensure full height */
+  overflow-y: auto; /* Scrollable content */
+  overflow-x: hidden;
 }
 
+/* Collapsed State (Desktop only) */
 .doctor-sidebar.closed {
   width: 72px;
   padding-left: 8px !important;
   padding-right: 8px !important;
 }
 
-/* nav links */
+/* Nav Links */
 .doctor-sidebar .nav-link {
   color: #1560ff !important;
   font-weight: 500;
   border-radius: 8px;
-  border-radius: 8px;
   padding: 0.5rem 1rem;
+  margin-bottom: 4px; /* Slight gap between items */
 }
 
 .doctor-sidebar .nav-link.active {
@@ -27,24 +34,25 @@
   box-shadow: 0 3px 10px rgba(21, 96, 255, 0.12);
 }
 
-/* center icons when closed */
-.doctor-sidebar.closed .nav-link {
-  justify-content: center;
-}
-
-/* remove label text visually when closed (we also conditionally don't render) */
-.doctor-sidebar.closed .nav-link span,
-.doctor-sidebar.closed .nav-link .ms-2 {
-  display: none;
-}
-
-/* hover */
+/* Hover Effects */
 .doctor-sidebar .nav-link:hover {
   background: #f3f6ff !important;
   color: #1560ff !important;
 }
 
-/* encounter submenu */
+/* Center icons when closed */
+.doctor-sidebar.closed .nav-link {
+  justify-content: center;
+}
+
+/* Hide text when closed */
+.doctor-sidebar.closed .nav-link span,
+.doctor-sidebar.closed .nav-link .ms-2,
+.doctor-sidebar.closed h4 {
+  display: none;
+}
+
+/* Encounter Submenu */
 .encounter-submenu {
   max-height: 0;
   overflow: hidden;
@@ -71,24 +79,61 @@
   color: #1560ff;
 }
 
-/* ensure nav fills height so settings sticks bottom */
-.doctor-sidebar .nav {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+/* =========================================
+   2. MOBILE DRAWER WRAPPER
+   (This controls the sliding animation)
+   ========================================= */
+.sidebar-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 1050;
+  background: white;
+  transition: transform 0.3s ease;
+  
+  /* On Desktop: No transform, let sidebar define width */
+  transform: none;
+  width: auto;
+  box-shadow: none;
 }
 
-/* responsive overlay on small screens */
-@media (max-width: 900px) {
-  .doctor-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 200;
-    height: 100vh;
+/* =========================================
+   3. MOBILE RESPONSIVENESS (Max-width: 768px)
+   ========================================= */
+@media (max-width: 768px) {
+  
+  /* HIDE the drawer off-screen by default */
+  .sidebar-drawer {
+    transform: translateX(-100%);
+    width: 260px; /* Fixed width for drawer */
+    box-shadow: 4px 0 15px rgba(0,0,0,0.1); /* Shadow for depth */
+  }
+
+  /* SLIDE IN when the 'open' class is added (via React) */
+  .sidebar-drawer.open {
     transform: translateX(0);
   }
+
+  /* Force inner sidebar content to fill the drawer */
+  .doctor-sidebar {
+    width: 100% !important;
+    border-right: none; /* Remove border on mobile since drawer has shadow */
+  }
+
+  /* Ensure closed state doesn't shrink width on mobile */
   .doctor-sidebar.closed {
-    transform: translateX(-260px);
+    width: 100% !important;
+    padding: 1rem !important; /* Reset padding */
+  }
+
+  /* Force text to show on mobile even if technically "closed" state */
+  .doctor-sidebar.closed .nav-link {
+    justify-content: flex-start;
+  }
+  
+  .doctor-sidebar.closed .nav-link span, 
+  .doctor-sidebar.closed h4 {
+    display: inline-block;
   }
 }

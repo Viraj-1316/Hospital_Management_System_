@@ -17,7 +17,7 @@ import { NavLink } from "react-router-dom";
 
 export default function DoctorSidebar({ open = true }) {
   const expandedWidth = 250;
-  const collapsedWidth = 64;
+  const collapsedWidth = 72;
 
   const [isEncountersOpen, setIsEncountersOpen] = useState(false);
 
@@ -41,18 +41,14 @@ export default function DoctorSidebar({ open = true }) {
       </style>
 
       <div
-        className="d-flex flex-column vh-100 p-3"
+        className="d-flex flex-column p-3 doctor-sidebar"
         style={{
           width: open ? expandedWidth : collapsedWidth,
+          height: "100%", 
           backgroundColor: "#fff",
           borderRight: "1px solid #ddd",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          transition: "width 180ms ease",
           overflow: "hidden",
-          zIndex: 1000
+          transition: "width 180ms ease",
         }}
       >
         {/* Logo */}
