@@ -518,7 +518,7 @@ const handleExport = (type) => {
              
              /* Fix alignment for the Action buttons */
              .mobile-table td[data-label="Action"] { 
-                justify-content: flex-end; 
+                justify-content: space-between; 
                 margin-top: 5px; 
              }
              
@@ -528,28 +528,33 @@ const handleExport = (type) => {
         `}
       </style>
 
-      {/* --- Header --- */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+{/* --- Holiday List Header (Blue Style) --- */}
+      <div className="services-topbar services-card d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div className="d-flex align-items-center gap-2">
-          <h5 className="mb-0 fw-bold text-dark">Holiday List</h5>
-          <FaQuestionCircle className="text-secondary opacity-75" size={14} style={{ cursor: "pointer" }} />
+          {/* Title changed to White */}
+          <h5 className="mb-0 fw-bold text-white">Holiday List</h5>
+          <FaQuestionCircle className="text-white opacity-75" size={14} style={{ cursor: "pointer" }} />
         </div>
 
-        <button
-          className={`btn ${showForm ? "btn-secondary" : "btn-primary"} d-flex align-items-center gap-2 px-3 fw-medium`}
-          style={{ fontSize: "0.9rem" }}
-          onClick={toggleForm}
-        >
-          {showForm ? (
-            <>
-              <FaTimes size={12} /> Close form
-            </>
-          ) : (
-            <>
-              <FaPlus size={10} /> Add holiday
-            </>
-          )}
-        </button>
+        <div>
+          {/* Button changed to btn-light (White background) */}
+          <button
+            className="btn btn-light btn-sm d-flex align-items-center gap-2"
+            onClick={toggleForm}
+          >
+            {showForm ? (
+              <>
+                <FaTimes />
+                <span className="d-none d-md-inline">Close form</span>
+              </>
+            ) : (
+              <>
+                <FaPlus />
+                <span className="d-none d-md-inline">Add holiday</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* --- FORM SECTION (Roll Down) --- */}

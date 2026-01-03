@@ -384,7 +384,7 @@ export default function SharedEncounterList({ role, doctorId }) {
                   <tr key={enc._id}>
                     <td><input type="checkbox" /></td>
                     
-                    <td data label="ID" className="fw-bold text-primary" style={{fontFamily:'monospace'}}>
+                    <td data-label="ID" className="fw-bold text-primary" style={{fontFamily:'monospace'}}>
                         {enc.encounterId || "Pending"}
                     </td>
                     

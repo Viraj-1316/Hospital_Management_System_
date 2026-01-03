@@ -78,8 +78,84 @@ const servicesStyles = `
   .services-scope .duration-column::-webkit-scrollbar-track { background:#f1f1f1; }
   .services-scope .duration-column::-webkit-scrollbar-thumb { background:#ccc;border-radius:2px; }
 
-  /* keep toasts on top */
-  .react-hot-toast { z-index: 2147483647 !important; }
+ /* --- MOBILE CARD VIEW (Professional Look) --- */
+  @media (max-width: 768px) {
+    /* 1. Stop forcing wide width */
+    .services-scope .custom-table {
+      min-width: 100% !important; 
+    }
+
+    /* 2. Hide Table Header */
+    .services-scope .custom-table thead {
+      display: none;
+    }
+
+    /* 3. Hide the inline Filter Row on mobile (it looks messy in card view) */
+    .services-scope .custom-table tbody tr:first-child {
+      display: none;
+    }
+
+    /* 4. Turn Rows into Cards */
+    .services-scope .custom-table tbody tr {
+      display: block;
+      background: #fff;
+      margin-bottom: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      padding: 8px;
+    }
+
+    /* 5. Make Cells look like list items */
+    .services-scope .custom-table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 8px;
+      border-bottom: 1px solid #f5f5f5;
+      text-align: right;
+      font-size: 0.9rem;
+    }
+
+    /* Remove border from last cell in card */
+    .services-scope .custom-table tbody td:last-child {
+      border-bottom: none;
+    }
+
+    /* 6. Inject Column Names using data-label */
+    .services-scope .custom-table tbody td::before {
+      content: attr(data-label);
+      font-weight: 700;
+      color: #6c757d;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+      margin-right: auto; /* Pushes value to the right */
+    }
+
+    /* 7. Hide the checkbox pseudo-label and justify start */
+    .services-scope .custom-table tbody td:first-child {
+      justify-content: flex-start;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .services-scope .custom-table tbody td:first-child::before {
+      display: none;
+    }
+
+    /* 8. Fix Action Buttons alignment */
+    .services-scope .action-btn {
+        width: 32px; height: 32px;
+    }
+    
+    /* 9. Header & Pagination adjustments */
+    .services-scope .header-actions {
+      width: 100%; flex-direction: column; gap: 8px; margin-top: 10px;
+    }
+    .services-scope .header-actions .btn { width: 100%; }
+    .services-scope .pagination-container { flex-direction: column; gap: 15px; }
+  }
 `;
 
 /* ---------- Helper Components ---------- */
@@ -90,7 +166,11 @@ function StatusToggle({ active, onClick }) {
         role="button"
         tabIndex={0}
         className={`status-toggle-track ${active ? "active" : ""}`}
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClick(!active); }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClick(!active);
+        }}
       >
         <div className="status-toggle-thumb" />
       </div>
@@ -105,12 +185,17 @@ function DurationPicker({ value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
   const [hh, mm] = (value || "00:00").split(":");
-  const hours = Array.from({ length: 13 }, (_, i) => i.toString().padStart(2, "0"));
-  const minutes = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+  
+  // FIX: Ensure hours go up to a reasonable number for services (e.g. 24h or more) if needed
+  const hours = Array.from({ length: 13 }, (_, i) =>
+    i.toString().padStart(2, "0")
+  );
+  const minutes = ["00","05","10","15","20","25","30","35","40","45","50","55"];
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) setIsOpen(false);
+      if (containerRef.current && !containerRef.current.contains(event.target))
+        setIsOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -137,13 +222,28 @@ function DurationPicker({ value, onChange }) {
           <div className="duration-column">
             <div className="duration-header">HH</div>
             {hours.map((h) => (
-              <div key={h} className={`duration-item ${hh === h ? "selected" : ""}`} onClick={() => handleSelect("h", h)}>{h}</div>
+              <div
+                key={h}
+                className={`duration-item ${hh === h ? "selected" : ""}`}
+                onClick={() => handleSelect("h", h)}
+              >
+                {h}
+              </div>
             ))}
           </div>
           <div className="duration-column">
             <div className="duration-header">mm</div>
             {minutes.map((m) => (
-              <div key={m} className={`duration-item ${mm === m ? "selected" : ""}`} onClick={() => { handleSelect("m", m); setIsOpen(false); }}>{m}</div>
+              <div
+                key={m}
+                className={`duration-item ${mm === m ? "selected" : ""}`}
+                onClick={() => {
+                  handleSelect("m", m);
+                  setIsOpen(false);
+                }}
+              >
+                {m}
+              </div>
             ))}
           </div>
         </div>
@@ -188,13 +288,23 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
       active: true,
       allowMulti: "Yes",
       imageFile: null,
-      imagePreview: ""
+      imagePreview: "",
     }
   );
 
   useEffect(() => {
-    if (initial && initial.imageUrl) setForm((prev) => ({ ...prev, imagePreview: initial.imageUrl }));
+    if (initial && initial.imageUrl)
+      setForm((prev) => ({ ...prev, imagePreview: initial.imageUrl }));
   }, [initial]);
+
+  // FIX: Clean up object URL to prevent memory leaks when form unmounts
+  useEffect(() => {
+    return () => {
+        if (form.imagePreview && form.imagePreview.startsWith('blob:')) {
+            URL.revokeObjectURL(form.imagePreview);
+        }
+    }
+  }, [form.imagePreview]);
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -203,13 +313,21 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
         try {
           setLoadingOptions(true);
           const clinicRes = await api.get("/api/clinics");
-          const clinicData = Array.isArray(clinicRes.data) ? clinicRes.data : (clinicRes.data?.data || clinicRes.data?.clinics || []);
+          const clinicData = Array.isArray(clinicRes.data)
+            ? clinicRes.data
+            : clinicRes.data?.data || clinicRes.data?.clinics || [];
           const doctorRes = await api.get("/doctors");
-          const doctorData = Array.isArray(doctorRes.data) ? doctorRes.data : (doctorRes.data?.data || doctorRes.data?.doctors || []);
-          setClinics(clinicData); setDoctors(doctorData);
+          const doctorData = Array.isArray(doctorRes.data)
+            ? doctorRes.data
+            : doctorRes.data?.data || doctorRes.data?.doctors || [];
+          setClinics(clinicData);
+          setDoctors(doctorData);
         } catch (err) {
-          if (err.code === "ERR_NETWORK") toast.error("Cannot connect to server.");
-        } finally { setLoadingOptions(false); }
+          if (err.code === "ERR_NETWORK")
+            toast.error("Cannot connect to server.");
+        } finally {
+          setLoadingOptions(false);
+        }
       } else {
         setLoadingOptions(false);
       }
@@ -219,12 +337,14 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
 
   // Filter doctors by clinic (for clinic or admin)
   const filteredDoctors = form.clinicName
-    ? doctors.filter(d => (d.clinic || "").toLowerCase() === form.clinicName.toLowerCase())
+    ? doctors.filter(
+        (d) => (d.clinic || "").toLowerCase() === form.clinicName.toLowerCase()
+      )
     : doctors;
 
   const change = (k) => (e) => {
     const val = e.target.value;
-    setForm(prev => {
+    setForm((prev) => {
       const updates = { ...prev, [k]: val };
       if (!isDoctor && !isClinic && k === "clinicName") updates.doctor = "";
       return updates;
@@ -232,7 +352,8 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
   };
 
   const changeDuration = (val) => setForm({ ...form, duration: val });
-  const changeBool = (k) => (e) => setForm({ ...form, [k]: e.target.value === "ACTIVE" });
+  const changeBool = (k) => (e) =>
+    setForm({ ...form, [k]: e.target.value === "ACTIVE" });
 
   const onPickImage = (e) => {
     const file = e.target.files?.[0];
@@ -244,10 +365,11 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
   const submit = async (e) => {
     e.preventDefault();
     const fd = new FormData();
-    Object.keys(form).forEach(k => {
+    Object.keys(form).forEach((k) => {
       if (k === "imageFile" || k === "imagePreview") return;
       if (k === "active") fd.append(k, form[k]);
-      else if (k === "isTelemed" || k === "allowMulti") fd.append(k, form[k] === "Yes");
+      else if (k === "isTelemed" || k === "allowMulti")
+        fd.append(k, form[k] === "Yes");
       else fd.append(k, form[k]);
     });
 
@@ -258,45 +380,111 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
     }
 
     if (form.imageFile) fd.append("image", form.imageFile);
-    try { await onSave(fd); } catch { toast.error("Failed to save service"); }
+    try {
+      await onSave(fd);
+    } catch {
+      toast.error("Failed to save service");
+    }
   };
 
   return (
     <div className="modal fade show d-block custom-modal-overlay" tabIndex="-1">
-      <div className="modal-dialog modal-xl">
+      <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <form className="modal-content" onSubmit={submit}>
           <div className="modal-header">
-            <h5 className="modal-title">{initial ? (isDoctor ? "Edit My Service" : "Edit Service") : (isDoctor ? "Add My Service" : "Add Service")}</h5>
-            <button type="button" className="btn-close" onClick={onClose} aria-label="Close"></button>
+            <h5 className="modal-title">
+              {initial
+                ? isDoctor
+                  ? "Edit My Service"
+                  : "Edit Service"
+                : isDoctor
+                ? "Add My Service"
+                : "Add Service"}
+            </h5>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={onClose}
+              aria-label="Close"
+            ></button>
           </div>
           <div className="modal-body">
-            <div className="row g-3">
+            <div className="row g-3 flex-column-reverse flex-lg-row">
               <div className="col-lg-9">
                 <div className="row g-3">
-
                   {/* --- Dynamic Category Dropdown --- */}
                   <div className="col-md-6">
                     <label className="form-label">Category*</label>
-                    <select className="form-select" value={form.category} onChange={change("category")} required>
+                    <select
+                      className="form-select"
+                      value={form.category}
+                      onChange={change("category")}
+                      required
+                    >
                       <option value="">Select Category</option>
-                      {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                      {availableCategories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
                     </select>
-                    {availableCategories.length === 0 && <small className="text-danger">No categories in settings</small>}
+                    {availableCategories.length === 0 && (
+                      <small className="text-danger">
+                        No categories in settings
+                      </small>
+                    )}
                   </div>
 
-                  <div className="col-md-6"><label className="form-label">Name*</label><input className="form-control" value={form.name} onChange={change("name")} required /></div>
-                  <div className="col-md-6"><label className="form-label">Charges*</label><input className="form-control" type="number" min="0" step="0.01" value={form.charges} onChange={change("charges")} required /></div>
-                  <div className="col-md-6"><label className="form-label">Telemed?*</label><select className="form-select" value={form.isTelemed} onChange={change("isTelemed")}><option>No</option><option>Yes</option></select></div>
+                  <div className="col-md-6">
+                    <label className="form-label">Name*</label>
+                    <input
+                      className="form-control"
+                      value={form.name}
+                      onChange={change("name")}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Charges*</label>
+                    <input
+                      className="form-control"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.charges}
+                      onChange={change("charges")}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Telemed?*</label>
+                    <select
+                      className="form-select"
+                      value={form.isTelemed}
+                      onChange={change("isTelemed")}
+                    >
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </div>
 
                   {isDoctor ? (
                     <>
                       <div className="col-md-6">
                         <label className="form-label">Clinic (Locked)</label>
-                        <input className="form-control bg-light" value={form.clinicName} readOnly />
+                        <input
+                          className="form-control bg-light"
+                          value={form.clinicName}
+                          readOnly
+                        />
                       </div>
                       <div className="col-md-6">
                         <label className="form-label">Doctor (Locked)</label>
-                        <input className="form-control bg-light" value={form.doctor} readOnly />
+                        <input
+                          className="form-control bg-light"
+                          value={form.doctor}
+                          readOnly
+                        />
                       </div>
                     </>
                   ) : isClinic ? (
@@ -320,45 +508,128 @@ function ServiceForm({ initial, onClose, onSave, availableCategories, isDoctor, 
                     <>
                       <div className="col-md-6">
                         <label className="form-label">Clinic*</label>
-                        <select className="form-select" value={form.clinicName} onChange={change("clinicName")} required>
+                        <select
+                          className="form-select"
+                          value={form.clinicName}
+                          onChange={change("clinicName")}
+                          required
+                        >
                           <option value="">Select Clinic</option>
-                          {loadingOptions ? <option disabled>Loading...</option> : clinics.map((c, i) => {
-                            const cName = c.name || c.clinicName || c.title || `Clinic ${i + 1}`;
-                            return <option key={c._id || i} value={cName}>{cName}</option>;
-                          })}
+                          {loadingOptions ? (
+                            <option disabled>Loading...</option>
+                          ) : (
+                            clinics.map((c, i) => {
+                              const cName =
+                                c.name ||
+                                c.clinicName ||
+                                c.title ||
+                                `Clinic ${i + 1}`;
+                              return (
+                                <option key={c._id || i} value={cName}>
+                                  {cName}
+                                </option>
+                              );
+                            })
+                          )}
                         </select>
                       </div>
                       <div className="col-md-6">
                         <label className="form-label">Doctor*</label>
-                        <select className="form-select" value={form.doctor} onChange={change("doctor")} required disabled={!form.clinicName}>
-                          <option value="">{form.clinicName ? "Select Doctor" : "Select Clinic First"}</option>
-                          {filteredDoctors.map(d => {
-                            const dName = d.firstName ? `${d.firstName} ${d.lastName} ${d.specialization ? `(${d.specialization})` : ""}` : d.name;
-                            return <option key={d._id} value={dName}>{dName}</option>;
+                        <select
+                          className="form-select"
+                          value={form.doctor}
+                          onChange={change("doctor")}
+                          required
+                          disabled={!form.clinicName}
+                        >
+                          <option value="">
+                            {form.clinicName
+                              ? "Select Doctor"
+                              : "Select Clinic First"}
+                          </option>
+                          {filteredDoctors.map((d) => {
+                            const dName = d.firstName
+                              ? `${d.firstName} ${d.lastName} ${
+                                  d.specialization
+                                    ? `(${d.specialization})`
+                                    : ""
+                                }`
+                              : d.name;
+                            return (
+                              <option key={d._id} value={dName}>
+                                {dName}
+                              </option>
+                            );
                           })}
                         </select>
                       </div>
                     </>
                   )}
 
-                  <div className="col-md-6"><label className="form-label">Duration</label><DurationPicker value={form.duration} onChange={changeDuration} /></div>
-                  <div className="col-md-6"><label className="form-label">Status*</label><select className="form-select" value={form.active ? "ACTIVE" : "INACTIVE"} onChange={changeBool("active")}><option>ACTIVE</option><option>INACTIVE</option></select></div>
-                  <div className="col-md-6"><label className="form-label">Multi?*</label><select className="form-select" value={form.allowMulti} onChange={change("allowMulti")}><option>Yes</option><option>No</option></select></div>
+                  <div className="col-md-6">
+                    <label className="form-label">Duration</label>
+                    <DurationPicker
+                      value={form.duration}
+                      onChange={changeDuration}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Status*</label>
+                    <select
+                      className="form-select"
+                      value={form.active ? "ACTIVE" : "INACTIVE"}
+                      onChange={changeBool("active")}
+                    >
+                      <option>ACTIVE</option>
+                      <option>INACTIVE</option>
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Multi?*</label>
+                    <select
+                      className="form-select"
+                      value={form.allowMulti}
+                      onChange={change("allowMulti")}
+                    >
+                      <option>Yes</option>
+                      <option>No</option>
+                    </select>
+                  </div>
                 </div>
               </div>
               <div className="col-lg-3 d-flex flex-column align-items-center">
                 <div className="image-upload-wrapper">
                   <div className="image-preview-circle">
-                    {form.imagePreview ? <img src={form.imagePreview} className="image-preview-img" alt="" /> : <span className="image-placeholder-icon">🖼️</span>}
+                    {form.imagePreview ? (
+                      <img
+                        src={form.imagePreview}
+                        className="image-preview-img"
+                        alt=""
+                      />
+                    ) : (
+                      <span className="image-placeholder-icon">🖼️</span>
+                    )}
                   </div>
-                  <label className="image-edit-btn"><input type="file" accept="image/*" hidden onChange={onPickImage} /><FiEdit2 size={14} /></label>
+                  <label className="image-edit-btn">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={onPickImage}
+                    />
+                    <FiEdit2 size={14} />
+                  </label>
                 </div>
               </div>
             </div>
           </div>
           <div className="modal-footer">
-            <button className="btn btn-primary" type="submit">Save{isDoctor ? " Service" : ""}</button>
-            <button type="button" className="btn btn-light" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" type="submit">
+              Save{isDoctor ? " Service" : ""}
+            </button>
+            <button type="button" className="btn btn-light" onClick={onClose}>
+              Cancel
+            </button>
           </div>
         </form>
       </div>
@@ -370,7 +641,11 @@ function ConfirmDelete({ open, onCancel, onConfirm }) {
   if (!open) return null;
   return (
     <>
-      <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,.5)", zIndex: 1070 }}>
+      <div
+        className="modal fade show d-block"
+        tabIndex="-1"
+        style={{ backgroundColor: "rgba(0,0,0,.5)", zIndex: 1070 }}
+      >
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
@@ -378,12 +653,28 @@ function ConfirmDelete({ open, onCancel, onConfirm }) {
               <button type="button" className="btn-close" onClick={onCancel} />
             </div>
             <div className="modal-body">
-              <p className="mb-1">Are you sure you want to delete this service?</p>
-              <small className="text-muted">This action cannot be undone.</small>
+              <p className="mb-1">
+                Are you sure you want to delete this service?
+              </p>
+              <small className="text-muted">
+                This action cannot be undone.
+              </small>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-light" onClick={onCancel}>Cancel</button>
-              <button type="button" className="btn btn-danger" onClick={onConfirm}>Yes, Delete</button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={onCancel}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={onConfirm}
+              >
+                Yes, Delete
+              </button>
             </div>
           </div>
         </div>
@@ -410,27 +701,54 @@ function ImportModal({ open, onClose, onSave }) {
 
   return (
     <>
-      <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,.5)", zIndex: 1070 }}>
+      <div
+        className="modal fade show d-block"
+        tabIndex="-1"
+        style={{ backgroundColor: "rgba(0,0,0,.5)", zIndex: 1070 }}
+      >
         <div className="modal-dialog modal-dialog-centered modal-lg">
           <div className="modal-content">
             <div className="modal-header border-0 pb-0">
-              <h5 className="modal-title fw-bold text-primary">Services Import</h5>
+              <h5 className="modal-title fw-bold text-primary">
+                Services Import
+              </h5>
               <button type="button" className="btn-close" onClick={onClose} />
             </div>
             <div className="modal-body">
               <div className="row g-3 mb-4">
                 <div className="col-md-4">
-                  <label className="form-label small fw-bold text-muted">Select Type</label>
+                  <label className="form-label small fw-bold text-muted">
+                    Select Type
+                  </label>
                   <select className="form-select">
                     <option>CSV</option>
                   </select>
                 </div>
                 <div className="col-md-8">
-                  <label className="form-label small fw-bold text-muted">Upload CSV File</label>
+                  <label className="form-label small fw-bold text-muted">
+                    Upload CSV File
+                  </label>
                   <div className="input-group">
-                    <button className="btn btn-outline-secondary" type="button" onClick={() => fileRef.current.click()}>Choose File</button>
-                    <input type="text" className="form-control bg-white" readOnly value={file ? file.name : "No file chosen"} />
-                    <input type="file" ref={fileRef} hidden accept=".csv" onChange={handleFileChange} />
+                    <button
+                      className="btn btn-outline-secondary"
+                      type="button"
+                      onClick={() => fileRef.current.click()}
+                    >
+                      Choose File
+                    </button>
+                    <input
+                      type="text"
+                      className="form-control bg-white"
+                      readOnly
+                      value={file ? file.name : "No file chosen"}
+                    />
+                    <input
+                      type="file"
+                      ref={fileRef}
+                      hidden
+                      accept=".csv"
+                      onChange={handleFileChange}
+                    />
                   </div>
                 </div>
               </div>
@@ -448,8 +766,21 @@ function ImportModal({ open, onClose, onSave }) {
               </div>
             </div>
             <div className="modal-footer border-0 pt-0">
-              <button type="button" className="btn btn-light px-4" onClick={onClose}>Cancel</button>
-              <button type="button" className="btn btn-primary px-4" onClick={() => onSave(file)} disabled={!file}>Save</button>
+              <button
+                type="button"
+                className="btn btn-light px-4"
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary px-4"
+                onClick={() => onSave(file)}
+                disabled={!file}
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
@@ -466,14 +797,22 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ serviceId: "", name: "", clinicName: "", doctor: "", charges: "", duration: "", category: "", status: "" });
+  const [filters, setFilters] = useState({
+    serviceId: "",
+    name: "",
+    clinicName: "",
+    doctor: "",
+    charges: "",
+    duration: "",
+    category: "",
+    status: "",
+  });
 
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const fileInputRef = useRef(null);
-
+  
   // delete modal state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
@@ -486,7 +825,9 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
     const fetchCategories = async () => {
       try {
         const res = await api.get("/listings?type=Service type&status=Active");
-        const catNames = res.data.map(item => item.name);
+        // FIX: Added optional chaining to prevent crash if data structure differs
+        const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        const catNames = data.map((item) => item.name);
         setCategories(catNames);
       } catch (err) {
         console.error("Error fetching categories:", err);
@@ -495,7 +836,10 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
     fetchCategories();
   }, []);
 
-  const handleFilterChange = (key, value) => { setFilters(prev => ({ ...prev, [key]: value })); setPage(1); };
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -504,7 +848,8 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
 
       // If doctor, force doctor filter
       if (isDoctor && doctorInfo) {
-        const doctorName = `${doctorInfo.firstName} ${doctorInfo.lastName}`.trim();
+        const doctorName =
+          `${doctorInfo.firstName} ${doctorInfo.lastName}`.trim();
         params.doctor = doctorName;
       }
 
@@ -514,9 +859,17 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
       }
 
       const { data } = await api.get(SERVICES_BASE, { params });
-      if (Array.isArray(data)) { setRows(data); setTotal(data.length); }
-      else { setRows(data.rows || []); setTotal(data.total || 0); }
-    } catch (e) { console.error(e); }
+      if (Array.isArray(data)) {
+        setRows(data);
+        setTotal(data.length);
+      } else {
+        setRows(data.rows || []);
+        setTotal(data.total || 0);
+      }
+    } catch (e) {
+      console.error(e);
+      // Optional: setRows([]) on error to clear stale data
+    }
     setLoading(false);
   };
 
@@ -531,6 +884,7 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
     }
   }, [page, limit, isDoctor, doctorInfo, isClinic, clinicInfo]);
 
+  // Debounced search effect
   useEffect(() => {
     const t = setTimeout(() => {
       setPage(1);
@@ -540,10 +894,19 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
     return () => clearTimeout(t);
   }, [search, filters, isDoctor, doctorInfo, isClinic, clinicInfo]);
 
-  const onAdd = () => { setEditing(null); setModalOpen(true); };
-  const onEdit = (r) => { setEditing(r); setModalOpen(true); };
+  const onAdd = () => {
+    setEditing(null);
+    setModalOpen(true);
+  };
+  const onEdit = (r) => {
+    setEditing(r);
+    setModalOpen(true);
+  };
 
-  const askDelete = (id) => { setPendingDeleteId(id); setConfirmOpen(true); };
+  const askDelete = (id) => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
+  };
 
   const confirmDelete = async () => {
     const id = pendingDeleteId;
@@ -561,60 +924,124 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
 
   const save = async (fd) => {
     try {
-      if (editing) await api.put(`${SERVICES_BASE}/${editing._id}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
-      else await api.post(SERVICES_BASE, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      if (editing)
+        await api.put(`${SERVICES_BASE}/${editing._id}`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      else
+        await api.post(SERVICES_BASE, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
       toast.success(editing ? "Service updated" : "Service created");
       setModalOpen(false);
       load();
-    } catch (e) { toast.error("Operation failed."); }
+    } catch (e) {
+      toast.error("Operation failed.");
+    }
   };
 
   const toggleActive = async (r, val) => {
-    setRows(p => p.map(x => x._id === r._id ? { ...x, active: val } : x));
-    try { await api.put(`${SERVICES_BASE}/${r._id}`, { active: val }); toast.success(`Service ${val ? "active" : "inactive"}`); }
-    catch { load(); toast.error("Update failed"); }
+    setRows((p) => p.map((x) => (x._id === r._id ? { ...x, active: val } : x)));
+    try {
+      await api.put(`${SERVICES_BASE}/${r._id}`, { active: val });
+      toast.success(`Service ${val ? "active" : "inactive"}`);
+    } catch {
+      load(); // revert UI if api fails
+      toast.error("Update failed");
+    }
   };
 
-  const handleImportClick = () => { setImportModalOpen(true); };
+  const handleImportClick = () => {
+    setImportModalOpen(true);
+  };
   const handleImportSubmit = async (file) => {
     if (!file) return;
-    const formData = new FormData(); formData.append("file", file);
+    const formData = new FormData();
+    formData.append("file", file);
     try {
       setLoading(true);
-      await toast.promise(api.post(`${SERVICES_BASE}/import`, formData, { headers: { "Content-Type": "multipart/form-data" } }), { loading: "Importing...", success: "Import successful!", error: "Import failed" });
+      await toast.promise(
+        api.post(`${SERVICES_BASE}/import`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        }),
+        {
+          loading: "Importing...",
+          success: "Import successful!",
+          error: "Import failed",
+        }
+      );
       setImportModalOpen(false);
       load();
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="services-scope" onKeyDown={(e) => { if (e.key === "Enter" && (e.target.tagName !== "TEXTAREA")) e.stopPropagation(); }}>
+    <div
+      className="services-scope"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target.tagName !== "TEXTAREA")
+          e.stopPropagation();
+      }}
+    >
+      {/* Inject Scoped Styles */}
       <style>{servicesStyles}</style>
 
-      <Toaster position="top-right" reverseOrder={false} containerStyle={{ zIndex: 2147483647 }} />
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        containerStyle={{ zIndex: 2147483647 }}
+      />
 
-      <div className="container-fluid py-3">
-        <div className="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm border">
-          <h5 className="mb-0 fw-bold text-primary">{isDoctor ? "My Services" : "Service List"}</h5>
-          <div className="d-flex gap-2">
+      <div className="container-fluid py-2">
+        <div className="d-flex flex-wrap justify-content-between align-items-center mb- 2bg-white p-2  gap-2">
+          <h4 className="mb-0 fw-bold text-primary">
+            {isDoctor ? "My Services" : "Service List"}
+          </h4>
+          <div className="d-flex gap-2 header-actions">
             {!isDoctor && (
               <>
-                <button type="button" className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleImportClick(); }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleImportClick();
+                  }}
+                >
                   <FiUpload className="me-1" /> Import data
                 </button>
               </>
             )}
-            <button type="button" className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd(); }}>
-              <FiPlus className="me-1" /> {isDoctor ? "Add Service" : "Add Service"}
+            <button
+              type="button"
+              className="btn btn-primary btn-sm px-3 fw-bold btn-primary-custom"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAdd();
+              }}
+            >
+              <FiPlus className="me-1" />{" "}
+              {isDoctor ? "Add Service" : "Add Service"}
             </button>
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded shadow-sm border mb-3">
+        <div className="bg-white p-2 rounded shadow-sm border mb-2">
           <div className="d-flex gap-3 align-items-center">
             <div className="input-group">
-              <span className="input-group-text bg-white border-end-0 text-muted"><FiSearch /></span>
-              <input className="form-control border-start-0 ps-0 search-input" placeholder={isDoctor ? "Search my services..." : "Search..."} value={search} onChange={e => setSearch(e.target.value)} />
+              <span className="input-group-text bg-white border-end-0 text-muted">
+                <FiSearch />
+              </span>
+              <input
+                className="form-control border-start-0 ps-0 search-input"
+                placeholder={isDoctor ? "Search my services..." : "Search..."}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
           </div>
         </div>
@@ -624,37 +1051,144 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
             <table className="table table-hover align-middle mb-0 custom-table">
               <thead className="bg-light text-secondary">
                 <tr>
-                  <th className="py-3 ps-3" style={{ width: '40px' }}><input type="checkbox" className="form-check-input" /></th>
-                  <th className="py-3" style={{ width: '60px' }}>ID <FaSort className="ms-1 small text-muted" /></th>
-                  {!isDoctor && <th className="py-3" style={{ width: '100px' }}>Service ID <FaSort className="ms-1 small text-muted" /></th>}
-                  <th className="py-3">Name <FaSort className="ms-1 small text-muted" /></th>
-                  {!isDoctor && <th className="py-3">Clinic Name <FaSort className="ms-1 small text-muted" /></th>}
-                  {!isDoctor && <th className="py-3">Doctor <FaSort className="ms-1 small text-muted" /></th>}
-                  <th className="py-3">Charges <FaSort className="ms-1 small text-muted" /></th>
-                  <th className="py-3">Duration <FaSort className="ms-1 small text-muted" /></th>
-                  <th className="py-3">Category <FaSort className="ms-1 small text-muted" /></th>
-                  <th className="py-3">Status <FaSort className="ms-1 small text-muted" /></th>
-                  <th className="text-end pe-3" style={{ width: '80px' }}>Action <FaSort className="ms-1 small text-muted" /></th>
+                  <th className="py-3 ps-3" style={{ width: "40px" }}>
+                    <input type="checkbox" className="form-check-input" />
+                  </th>
+                  <th className="py-2" style={{ width: "60px" }}>
+                    ID <FaSort className="ms-1 small text-muted" />
+                  </th>
+                  {!isDoctor && (
+                    <th className="py-2" style={{ width: "100px" }}>
+                      Service ID <FaSort className="ms-1 small text-muted" />
+                    </th>
+                  )}
+                  <th className="py-2">
+                    Name <FaSort className="ms-1 small text-muted" />
+                  </th>
+                  {!isDoctor && (
+                    <th className="py-2">
+                      Clinic Name <FaSort className="ms-1 small text-muted" />
+                    </th>
+                  )}
+                  {!isDoctor && (
+                    <th className="py-2">
+                      Doctor <FaSort className="ms-1 small text-muted" />
+                    </th>
+                  )}
+                  <th className="py-2">
+                    Charges <FaSort className="ms-1 small text-muted" />
+                  </th>
+                  <th className="py-2">
+                    Duration <FaSort className="ms-1 small text-muted" />
+                  </th>
+                  <th className="py-2">
+                    Category <FaSort className="ms-1 small text-muted" />
+                  </th>
+                  <th className="py-2">
+                    Status <FaSort className="ms-1 small text-muted" />
+                  </th>
+                  <th className="text-end pe-3" style={{ width: "80px" }}>
+                    Action <FaSort className="ms-1 small text-muted" />
+                  </th>
                 </tr>
                 <tr className="bg-white align-middle">
                   <td className="ps-3 border-bottom"></td>
-                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" disabled /></td>
-                  {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Service ID" value={filters.serviceId} onChange={(e) => handleFilterChange("serviceId", e.target.value)} /></td>}
-                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Name" value={filters.name} onChange={(e) => handleFilterChange("name", e.target.value)} /></td>
-                  {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Clinic" value={filters.clinicName} onChange={(e) => handleFilterChange("clinicName", e.target.value)} /></td>}
-                  {!isDoctor && <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter doctor" value={filters.doctor} onChange={(e) => handleFilterChange("doctor", e.target.value)} /></td>}
-                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="Filter Charge" value={filters.charges} onChange={(e) => handleFilterChange("charges", e.target.value)} /></td>
-                  <td className="border-bottom p-1"><input className="form-control form-control-sm table-filter-input" placeholder="HH:mm" value={filters.duration} onChange={(e) => handleFilterChange("duration", e.target.value)} /></td>
                   <td className="border-bottom p-1">
-                    <select className="form-select form-select-sm table-filter-input" value={filters.category} onChange={(e) => handleFilterChange("category", e.target.value)}>
+                    <input
+                      className="form-control form-control-sm table-filter-input"
+                      disabled
+                    />
+                  </td>
+                  {!isDoctor && (
+                    <td className="border-bottom p-1">
+                      <input
+                        className="form-control form-control-sm table-filter-input"
+                        placeholder="Service ID"
+                        value={filters.serviceId}
+                        onChange={(e) =>
+                          handleFilterChange("serviceId", e.target.value)
+                        }
+                      />
+                    </td>
+                  )}
+                  <td className="border-bottom p-1">
+                    <input
+                      className="form-control form-control-sm table-filter-input"
+                      placeholder="Filter Name"
+                      value={filters.name}
+                      onChange={(e) =>
+                        handleFilterChange("name", e.target.value)
+                      }
+                    />
+                  </td>
+                  {!isDoctor && (
+                    <td className="border-bottom p-1">
+                      <input
+                        className="form-control form-control-sm table-filter-input"
+                        placeholder="Filter Clinic"
+                        value={filters.clinicName}
+                        onChange={(e) =>
+                          handleFilterChange("clinicName", e.target.value)
+                        }
+                      />
+                    </td>
+                  )}
+                  {!isDoctor && (
+                    <td className="border-bottom p-1">
+                      <input
+                        className="form-control form-control-sm table-filter-input"
+                        placeholder="Filter doctor"
+                        value={filters.doctor}
+                        onChange={(e) =>
+                          handleFilterChange("doctor", e.target.value)
+                        }
+                      />
+                    </td>
+                  )}
+                  <td className="border-bottom p-1">
+                    <input
+                      className="form-control form-control-sm table-filter-input"
+                      placeholder="Filter Charge"
+                      value={filters.charges}
+                      onChange={(e) =>
+                        handleFilterChange("charges", e.target.value)
+                      }
+                    />
+                  </td>
+                  <td className="border-bottom p-1">
+                    <input
+                      className="form-control form-control-sm table-filter-input"
+                      placeholder="HH:mm"
+                      value={filters.duration}
+                      onChange={(e) =>
+                        handleFilterChange("duration", e.target.value)
+                      }
+                    />
+                  </td>
+                  <td className="border-bottom p-1">
+                    <select
+                      className="form-select form-select-sm table-filter-input"
+                      value={filters.category}
+                      onChange={(e) =>
+                        handleFilterChange("category", e.target.value)
+                      }
+                    >
                       <option value="">Filter Category</option>
-                      {categories.map(c => (
-                        <option key={c} value={c}>{c}</option>
+                      {categories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
                       ))}
                     </select>
                   </td>
                   <td className="border-bottom p-1">
-                    <select className="form-select form-select-sm table-filter-input" value={filters.status} onChange={(e) => handleFilterChange("status", e.target.value)}>
+                    <select
+                      className="form-select form-select-sm table-filter-input"
+                      value={filters.status}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
+                    >
                       <option value="">Filter status</option>
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
@@ -665,40 +1199,106 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={isDoctor ? 8 : 11} className="text-center py-5">Loading...</td></tr>
+                  <tr>
+                    <td
+                      colSpan={isDoctor ? 8 : 11}
+                      className="text-center py-5"
+                    >
+                      Loading...
+                    </td>
+                  </tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={isDoctor ? 8 : 11} className="text-center py-5">No services found.</td></tr>
+                  <tr>
+                    <td
+                      colSpan={isDoctor ? 8 : 11}
+                      className="text-center py-5"
+                    >
+                      No services found.
+                    </td>
+                  </tr>
                 ) : (
                   rows.map((r, i) => {
-                    const displayName = r.name || (r.isTelemed ? "Telemed" : "Service");
+                    const displayName =
+                      r.name || (r.isTelemed ? "Telemed" : "Service");
                     const displayInitial = displayName.charAt(0);
                     return (
                       <tr key={r._id}>
-                        <td className="ps-3"><input type="checkbox" className="form-check-input" /></td>
-                        <td className="fw-bold text-secondary">{total - ((page - 1) * limit) - i}</td>
-                        {!isDoctor && <td className="text-muted">{r.serviceId || (i + 1)}</td>}
-                        <td>
+                        <td className="ps-3">
+                          <input type="checkbox" className="form-check-input" />
+                        </td>
+
+                        <td data-label="ID" className="fw-bold text-secondary">
+                          {(page - 1) * limit + i + 1}
+                        </td>
+
+                        {!isDoctor && (
+                          <td data-label="Service ID" className="text-muted">
+                            {r.serviceId || i + 1}
+                          </td>
+                        )}
+
+                        <td data-label="Name">
                           <div className="d-flex align-items-center gap-2">
                             <div className="service-avatar-circle">
-                              {r.imageUrl ? <img src={r.imageUrl} alt="" className="service-avatar-img" /> : displayInitial}
+                              {r.imageUrl ? (
+                                <img
+                                  src={r.imageUrl}
+                                  alt=""
+                                  className="service-avatar-img"
+                                />
+                              ) : (
+                                displayInitial
+                              )}
                             </div>
-                            <span className="fw-semibold text-dark">{displayName}</span>
+                            <span className="fw-semibold text-dark">
+                              {displayName}
+                            </span>
                           </div>
                         </td>
-                        {!isDoctor && <td>{r.clinicName}</td>}
-                        {!isDoctor && <td>{r.doctor}</td>}
-                        <td>{r.charges}</td>
-                        <td>{r.duration || "-"}</td>
-                        <td><span className="badge bg-light text-dark border fw-normal">{r.category}</span></td>
-                        <td><StatusToggle active={r.active} onClick={(val) => toggleActive(r, val)} /></td>
-                        <td className="text-end pe-3">
+
+                        {!isDoctor && (<td data-label="Clinic">{r.clinicName}</td>)}
+                        {!isDoctor && <td data-label="Doctor">{r.doctor}</td>}
+
+                        <td data-label="Charges">{r.charges}</td>
+                        <td data-label="Duration">{r.duration || "-"}</td>
+
+                        <td data-label="Category">
+                          <span className="badge bg-light text-dark border fw-normal">
+                            {r.category}
+                          </span>
+                        </td>
+
+                        <td data-label="Status">
+                          <div className="d-flex justify-content-end">
+                            <StatusToggle
+                              active={r.active}
+                              onClick={(val) => toggleActive(r, val)}
+                            />
+                          </div>
+                        </td>
+
+                        <td data-label="Actions" className="text-end pe-3">
                           <div className="d-flex justify-content-end gap-1">
-                            <button type="button" className="btn btn-outline-primary btn-sm rounded-1 action-btn"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(r); }}>
+                            <button
+                              type="button"
+                              className="btn btn-outline-primary btn-sm rounded-1 action-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onEdit(r);
+                              }}
+                            >
                               <FiEdit2 size={12} />
                             </button>
-                            <button type="button" className="btn btn-outline-danger btn-sm rounded-1 action-btn"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); askDelete(r._id); }}>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger btn-sm rounded-1 action-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                askDelete(r._id);
+                              }}
+                            >
                               <FiTrash2 size={12} />
                             </button>
                           </div>
@@ -711,11 +1311,17 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
             </table>
           </div>
 
-          <div className="d-flex justify-content-between align-items-center p-3 border-top bg-light text-secondary">
+          <div className="d-flex flex-wrap justify-content-between align-items-center p-3 border-top bg-light text-secondary gap-3 pagination-container">
             <div className="d-flex align-items-center gap-2 small">
               <span>Rows per page:</span>
-              <select className="form-select form-select-sm pagination-select" value={limit} onChange={e => setLimit(Number(e.target.value))}>
-                <option value={5}>5</option><option value={10}>10</option><option value={20}>20</option>
+              <select
+                className="form-select form-select-sm pagination-select"
+                value={limit}
+                onChange={(e) => setLimit(Number(e.target.value))}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
               </select>
             </div>
             <div className="d-flex align-items-center gap-2 small">
@@ -723,8 +1329,22 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
               <div className="border bg-white px-2 py-1 rounded">{page}</div>
               <span>of {Math.ceil(total / limit) || 1}</span>
               <div className="btn-group">
-                <button type="button" className="btn btn-sm btn-link text-decoration-none text-secondary" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><FiChevronLeft /> Prev</button>
-                <button type="button" className="btn btn-sm btn-link text-decoration-none text-secondary" disabled={page * limit >= total} onClick={() => setPage(p => p + 1)}>Next <FiChevronRight /></button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-link text-decoration-none text-secondary"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <FiChevronLeft /> Prev
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-link text-decoration-none text-secondary"
+                  disabled={page * limit >= total}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next <FiChevronRight />
+                </button>
               </div>
             </div>
           </div>
@@ -742,7 +1362,10 @@ export default function SharedServices({ isDoctor = false, doctorInfo = null, is
 
         <ConfirmDelete
           open={confirmOpen}
-          onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+          onCancel={() => {
+            setConfirmOpen(false);
+            setPendingDeleteId(null);
+          }}
           onConfirm={confirmDelete}
         />
       </div>

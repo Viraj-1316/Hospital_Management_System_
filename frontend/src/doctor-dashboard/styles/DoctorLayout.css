@@ -1,26 +1,46 @@
-/* main layout */
+/* =========================================
+   1. MAIN LAYOUT (Force Side-by-Side)
+   ========================================= */
 .doctor-layout {
-  display: flex;
+  display: flex !important;
+  flex-direction: row !important; /* Forces Sidebar Left, Content Right */
   min-height: 100vh;
   background: #f5f7fb;
   font-family: Inter, system-ui, Arial;
+  width: 100%;
+  overflow: hidden;
 }
 
-/* main content right side */
+/* =========================================
+   2. SIDEBAR WRAPPER
+   ========================================= */
+.sidebar-drawer {
+  position: sticky; 
+  top: 0;
+  height: 100vh;
+  z-index: 1050; /* Above the backdrop */
+  background: #fff;
+  border-right: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+/* =========================================
+   3. MAIN CONTENT (Right Side)
+   ========================================= */
 .doctor-main {
-  margin-left: 250px;
-  flex: 1;
+  /* CRITICAL FIX: Margin is 0 because Flexbox handles the spacing */
+  margin-left: 0 !important; 
+  
+  flex: 1; /* Grow to fill ALL remaining space */
   display: flex;
   flex-direction: column;
-  transition: margin-left 180ms ease;
-  min-height: 100vh;
+  height: 100vh;
+  min-width: 0;
 }
 
-.doctor-main.closed {
-  margin-left: 64px;
-}
-
-/* navbar */
+/* =========================================
+   4. NAVBAR
+   ========================================= */
 .doctor-navbar {
   height: 56px;
   display: flex;
@@ -30,105 +50,68 @@
   background: linear-gradient(90deg, #1e66ff, #2b7bff);
   color: #fff;
   box-shadow: 0 2px 6px rgba(16,24,40,0.06);
+  flex-shrink: 0;
+  width: 100%;
 }
 
-.doctor-nav-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.doctor-hamburger {
-  border: none;
-  background: rgba(255,255,255,0.12);
-  color: white;
-  padding: 6px 9px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 18px;
-}
-
-.doctor-title {
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.doctor-nav-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.doctor-profile {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.doctor-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.doctor-name {
-  font-weight: 600;
-}
-
-/* page content */
+/* =========================================
+   5. PAGE CONTENT
+   ========================================= */
 .doctor-content {
-  padding: 20px;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
 }
 
-/* mobile sidebar */
+/* =========================================
+   6. MOBILE RESPONSIVENESS & BACKDROP
+   ========================================= */
+.backdrop {
+  position: fixed;
+  top: 0; left: 0; 
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Dark Overlay */
+  z-index: 1040; /* Below sidebar, above content */
+  display: none;
+}
+
+.backdrop.show { 
+  display: block; 
+}
+
 @media (max-width: 900px) {
-  .doctor-main,
-  .doctor-main.closed {
-    margin-left: 0;
+  /* On mobile, Sidebar becomes a Drawer */
+  .sidebar-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+  }
+
+  .sidebar-drawer.open {
+    transform: translateX(0);
+  }
+
+  .doctor-main {
+    width: 100%;
+    flex: 1;
   }
 }
 
-/* dropdown for profile menu */
-.doctor-dropdown {
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  overflow: hidden;
-  position: absolute;
-  z-index: 2000;
-}
+/* UTILITIES */
+.doctor-nav-left { display: flex; align-items: center; gap: 12px; }
+.doctor-hamburger { border: none; background: rgba(255,255,255,0.12); color: white; padding: 6px 9px; border-radius: 6px; cursor: pointer; font-size: 18px; }
+.doctor-title { font-weight: 600; font-size: 16px; }
+.doctor-nav-right { display: flex; align-items: center; gap: 12px; }
+.doctor-profile { display: flex; gap: 10px; align-items: center; }
+.doctor-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.doctor-name { font-weight: 600; }
 
-.doctor-dropdown .dropdown-item {
-  color: #333 !important;
-  font-size: 14px;
-  padding: 12px 15px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-}
-
-.doctor-dropdown .dropdown-item:hover {
-  background: #f5f5f5;
-}
-
-/* dropdown icons */
-.doctor-dropdown .dropdown-item i {
-  font-size: 16px;
-  color: #333;
-}
-
-/* logout red */
-.doctor-dropdown .dropdown-item.text-danger {
-  color: red !important;
-  font-weight: 600;
-}
-
-.doctor-dropdown .dropdown-item.text-danger i {
-  color: red !important;
-}
+/* Dropdown */
+.doctor-dropdown { background: #fff; border-radius: 8px; padding: 6px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; position: absolute; z-index: 2000; }
+.doctor-dropdown .dropdown-item { color: #333 !important; font-size: 14px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; border: none; background: none; width: 100%; text-align: left; }
+.doctor-dropdown .dropdown-item:hover { background: #f5f5f5; }
+.doctor-dropdown .dropdown-item i { font-size: 16px; color: #333; }
+.doctor-dropdown .dropdown-item.text-danger { color: red !important; font-weight: 600; }
+.doctor-dropdown .dropdown-item.text-danger i { color: red !important; }
