@@ -8,7 +8,7 @@ import toast, { Toaster } from "react-hot-toast";
 
 import API_BASE from "../../config";
 
-const AddPatient = () => {
+const AddPatient = ({ sidebarCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
 
   // State for fetched clinics
@@ -99,7 +99,7 @@ const AddPatient = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <Toaster position="top-right" />
 
       <div className="container bg-white p-4 rounded shadow-sm">

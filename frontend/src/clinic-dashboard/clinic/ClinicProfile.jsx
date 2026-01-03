@@ -48,17 +48,35 @@ function AdminProfile() {
       }
 
       const data = await res.json();
+
+      // Check if profile fields are empty and we have a clinicId
+      let clinicData = null;
+      if (data.clinicId && (!data.phone || !data.gender || !data.dob || !data.addressLine1)) {
+        try {
+          const clinicRes = await fetch(`${API_BASE}/api/clinics/${data.clinicId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (clinicRes.ok) {
+            const clinicJson = await clinicRes.json();
+            clinicData = clinicJson.clinic;
+          }
+        } catch {
+          // Silently ignore clinic fetch errors, use User data only
+        }
+      }
+
       setForm({
         name: data.name || "",
         email: data.email || "",
         avatar: data.avatar || "",
-        phone: data.phone || "",
-        gender: data.gender || "",
-        dob: data.dob || "",
-        addressLine1: data.addressLine1 || "",
+        // Use User data first, fallback to Clinic data for empty fields
+        phone: data.phone || clinicData?.admin?.contact || clinicData?.contact || "",
+        gender: data.gender || clinicData?.admin?.gender || "",
+        dob: data.dob || clinicData?.admin?.dob || "",
+        addressLine1: data.addressLine1 || clinicData?.address?.full || "",
         addressLine2: data.addressLine2 || "",
-        city: data.city || "",
-        postalCode: data.postalCode || "",
+        city: data.city || clinicData?.address?.city || "",
+        postalCode: data.postalCode || clinicData?.address?.postalCode || "",
       });
       setAvatarPreview(data.avatar || "");
       setLoading(false);
@@ -67,6 +85,7 @@ function AdminProfile() {
       setLoading(false);
     }
   };
+
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });

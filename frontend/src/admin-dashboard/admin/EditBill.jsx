@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import API_BASE from "../../config";
 
-const EditBill = () => {
+const EditBill = ({ sidebarCollapsed, toggleSidebar }) => {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -34,7 +34,7 @@ const EditBill = () => {
       try {
         const token = localStorage.getItem("token");
         const config = { headers: { Authorization: `Bearer ${token}` } };
-        
+
         const [docRes, patRes, billRes] = await Promise.all([
           axios.get(`${API_BASE}/doctors`, config),
           axios.get(`${API_BASE}/patients`, config),
@@ -49,7 +49,7 @@ const EditBill = () => {
         // Handle services - can be array of strings or array of objects
         let servicesStr = "";
         if (Array.isArray(bill.services)) {
-          servicesStr = bill.services.map(svc => 
+          servicesStr = bill.services.map(svc =>
             typeof svc === 'string' ? svc : (svc.name || '')
           ).filter(Boolean).join(", ");
         } else if (typeof bill.services === 'string') {
@@ -136,7 +136,7 @@ const EditBill = () => {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
         <div className="container-fluid text-center p-5">
           <h4>Loading Bill...</h4>
         </div>
@@ -145,7 +145,7 @@ const EditBill = () => {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="container-fluid">
         <h4 className="fw-bold text-primary mb-4">Edit Bill</h4>
 

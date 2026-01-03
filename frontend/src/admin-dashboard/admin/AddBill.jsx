@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 import API_BASE from "../../config";
 
-const AddBill = () => {
+const AddBill = ({ sidebarCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
 
   // --- 1. Form State ---
@@ -172,7 +172,7 @@ const AddBill = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="container-fluid">
         <h4 className="fw-bold text-primary mb-4">Add New Bill</h4>
 

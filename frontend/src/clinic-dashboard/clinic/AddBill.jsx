@@ -48,26 +48,21 @@ const AddBill = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = localStorage.getItem("token");
+        const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
         const [docRes, patRes, clinicRes] = await Promise.all([
-          axios.get(`${API_BASE}/doctors`),
-          axios.get(`${API_BASE}/patients`),
-          axios.get(`${API_BASE}/api/clinics`)
+          axios.get(`${API_BASE}/doctors`, { headers: authHeaders }),
+          axios.get(`${API_BASE}/patients`, { headers: authHeaders }),
+          axios.get(`${API_BASE}/api/clinics`, { headers: authHeaders })
         ]);
 
-        // Normalize Data
+        // For clinic admins, backend already filters doctors and patients by clinicId
         const allDoctors = Array.isArray(docRes.data) ? docRes.data : docRes.data.data || [];
         const allPatients = Array.isArray(patRes.data) ? patRes.data : patRes.data.data || [];
-        
-        // Filter doctors and patients by clinic
-        const filteredDoctors = autoClinicName 
-          ? allDoctors.filter(d => (d.clinic || "").toLowerCase() === autoClinicName.toLowerCase())
-          : allDoctors;
-        const filteredPatients = autoClinicName 
-          ? allPatients.filter(p => (p.clinic || "").toLowerCase() === autoClinicName.toLowerCase())
-          : allPatients;
-        
-        setDoctors(filteredDoctors);
-        setPatients(filteredPatients);
+
+        setDoctors(allDoctors);
+        setPatients(allPatients);
 
         // Handle Clinic Response
         const cData = Array.isArray(clinicRes.data)
@@ -75,10 +70,10 @@ const AddBill = () => {
           : clinicRes.data.clinics || [];
 
         setClinics(cData);
-        
+
         // Find and set clinic ID for auto-detected clinic
         if (autoClinicName) {
-          const matchedClinic = cData.find(c => 
+          const matchedClinic = cData.find(c =>
             (c.name || c.clinicName || "").toLowerCase() === autoClinicName.toLowerCase()
           );
           if (matchedClinic) {

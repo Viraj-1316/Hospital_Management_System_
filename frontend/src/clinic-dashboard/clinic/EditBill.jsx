@@ -41,41 +41,56 @@ const EditBill = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        const token = localStorage.getItem("token");
+        const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
         const [docRes, patRes, billRes] = await Promise.all([
-          axios.get(`${API_BASE}/doctors`),
-          axios.get(`${API_BASE}/patients`),
-          axios.get(`${API_BASE}/api/bills/${id}`),
+          axios.get(`${API_BASE}/doctors`, { headers: authHeaders }),
+          axios.get(`${API_BASE}/patients`, { headers: authHeaders }),
+          axios.get(`${API_BASE}/bills/${id}`, { headers: authHeaders }),
         ]);
 
-        // Filter doctors and patients by clinic
+        // For clinic admins, backend already filters doctors and patients by clinicId
         const allDoctors = docRes.data || [];
         const allPatients = patRes.data || [];
-        
-        const filteredDoctors = autoClinicName 
-          ? allDoctors.filter(d => (d.clinic || "").toLowerCase() === autoClinicName.toLowerCase())
-          : allDoctors;
-        const filteredPatients = autoClinicName 
-          ? allPatients.filter(p => (p.clinic || "").toLowerCase() === autoClinicName.toLowerCase())
-          : allPatients;
-        
-        setDoctors(filteredDoctors);
-        setPatients(filteredPatients);
+
+        setDoctors(allDoctors);
+        setPatients(allPatients);
 
         const bill = billRes.data;
+
+        // Handle services - can be array of strings, array of objects, or string
+        let servicesString = "";
+        if (Array.isArray(bill.services)) {
+          servicesString = bill.services.map(s => {
+            if (typeof s === "string") return s;
+            if (typeof s === "object" && s.name) return s.name;
+            return "";
+          }).filter(Boolean).join(", ");
+        } else if (typeof bill.services === "string") {
+          servicesString = bill.services;
+        }
+
+        // Format date for HTML date input (YYYY-MM-DD)
+        let formattedDate = "";
+        if (bill.date) {
+          const dateObj = new Date(bill.date);
+          if (!isNaN(dateObj.getTime())) {
+            formattedDate = dateObj.toISOString().split("T")[0];
+          }
+        }
 
         setForm({
           doctorName: bill.doctorName || "",
           clinicName: bill.clinicName || autoClinicName,
           patientName: bill.patientName || "",
-          services: Array.isArray(bill.services)
-            ? bill.services.join(", ")
-            : bill.services,
-          totalAmount: bill.totalAmount,
-          discount: bill.discount,
-          amountDue: bill.amountDue,
-          date: bill.date,
-          status: bill.status,
-          notes: bill.notes,
+          services: servicesString,
+          totalAmount: bill.totalAmount || "",
+          discount: bill.discount || "0",
+          amountDue: bill.amountDue || "",
+          date: formattedDate,
+          status: bill.status || "unpaid",
+          notes: bill.notes || "",
         });
 
         setLoading(false);
@@ -123,7 +138,9 @@ const EditBill = () => {
 
     try {
       setSaving(true);
-      await axios.put(`${API_BASE}/api/bills/${id}`, payload);
+      const token = localStorage.getItem("token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.put(`${API_BASE}/bills/${id}`, payload, { headers: authHeaders });
       alert("Bill updated successfully!");
       navigate("/clinic-dashboard/BillingRecords");
     } catch (err) {
@@ -163,11 +180,14 @@ const EditBill = () => {
                   onChange={handleChange}
                 >
                   <option value="">-- Select Doctor --</option>
-                  {doctors.map((doc) => (
-                    <option key={doc._id} value={doc.name}>
-                      {doc.name}
-                    </option>
-                  ))}
+                  {doctors.map((doc) => {
+                    const fullName = `${doc.firstName || ""} ${doc.lastName || ""}`.trim() || doc.name || "";
+                    return (
+                      <option key={doc._id} value={fullName}>
+                        {fullName}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -181,11 +201,14 @@ const EditBill = () => {
                   onChange={handleChange}
                 >
                   <option value="">-- Select Patient --</option>
-                  {patients.map((p) => (
-                    <option key={p._id} value={p.name}>
-                      {p.name}
-                    </option>
-                  ))}
+                  {patients.map((p) => {
+                    const fullName = `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || "";
+                    return (
+                      <option key={p._id} value={fullName}>
+                        {fullName}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

@@ -133,9 +133,16 @@ exports.createClinic = async (req, res) => {
           email: targetEmail,
           password: hashedPassword,
           role: "clinic_admin", // Using a specific role
-          name: `${adminFirstName} ${adminLastName}`,
+          name: `${adminFirstName || ""} ${adminLastName || ""}`.trim() || "Admin",
           clinicId: clinic._id,
           profileCompleted: true,
+          // Sync profile fields from clinic admin data
+          phone: adminContact || contact || "",
+          gender: gender || "",
+          dob: dob || "",
+          addressLine1: address || "",
+          city: city || "",
+          postalCode: postalCode || "",
         });
         await user.save();
       } else {
@@ -334,8 +341,16 @@ exports.resendCredentials = async (req, res) => {
         email: adminEmail,
         password: hashedPassword,
         role: "clinic_admin",
-        name: `${clinic.admin?.firstName || "Clinic"} ${clinic.admin?.lastName || "Admin"}`,
+        name: `${clinic.admin?.firstName || "Clinic"} ${clinic.admin?.lastName || "Admin"}`.trim(),
+        clinicId: clinic._id,
         profileCompleted: true,
+        // Sync profile fields from clinic data
+        phone: clinic.admin?.contact || clinic.contact || "",
+        gender: clinic.admin?.gender || "",
+        dob: clinic.admin?.dob || "",
+        addressLine1: clinic.address?.full || "",
+        city: clinic.address?.city || "",
+        postalCode: clinic.address?.postalCode || "",
       });
       await user.save();
     }

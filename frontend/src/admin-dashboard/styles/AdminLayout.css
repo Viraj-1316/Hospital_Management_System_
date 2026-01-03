@@ -15,7 +15,8 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  background: rgba(0, 0, 0, 0.5);
+  /* Semi-transparent black */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -24,7 +25,8 @@
 
 .backdrop.show {
   opacity: 1;
-  pointer-events: auto; /* Enable clicking to close */
+  pointer-events: auto;
+  /* Enable clicking to close */
 }
 
 /* --- NAVBAR --- */
@@ -36,7 +38,8 @@
 .content-container {
   min-height: 100vh;
   background: #f6f7fb;
-  padding-top: 60px; /* Space for navbar */
+  padding-top: 60px;
+  /* Space for navbar */
   transition: margin-left 0.3s ease;
 }
 
@@ -44,41 +47,54 @@
    DESKTOP STYLES (Min-width: 769px) 
    ========================================= */
 @media (min-width: 769px) {
+
   /* Sidebar is always visible on desktop */
   .sidebar-drawer {
-    transform: none; 
-    width: auto; /* Let the Sidebar component decide width (expanded/collapsed) */
+    transform: none;
+    width: auto;
+    /* Let the Sidebar component decide width (expanded/collapsed) */
   }
 
   /* Adjust content to make room for fixed sidebar */
   /* If you have logic to collapse sidebar on desktop, you can adjust this margin via JS/Class */
-  .content-container {
-    margin-left: 250px; /* Default expanded width */
-  }
+  /* .content-container {
+    margin-left: 250px;
+  } */
+
+  /* FIXED: Navbar should also start after the sidebar */
+  /* .modern-navbar {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+  } */
 }
 
 /* =========================================
    MOBILE STYLES (Max-width: 768px) 
    ========================================= */
 @media (max-width: 768px) {
-  
+
   /* 1. HIDE SIDEBAR BY DEFAULT */
   .sidebar-drawer {
-    transform: translateX(-100%); /* Completely hidden off-screen */
-    width: 260px; /* Full width drawer when opened */
+    transform: translateX(-100%);
+    /* Completely hidden off-screen */
+    width: 260px;
+    /* Full width drawer when opened */
   }
 
   /* 2. SHOW SIDEBAR WHEN OPEN CLASS IS PRESENT */
   .sidebar-drawer.open {
-    transform: translateX(0); /* Slide in */
-    box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+    transform: translateX(0);
+    /* Slide in */
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
   }
 
   /* 3. RESET CONTENT MARGIN */
   .content-container {
-    margin-left: 0 !important; /* Content takes full width */
+    margin-left: 0 !important;
+    /* Content takes full width */
     padding: 15px;
-    padding-top: 75px; /* Extra top padding for mobile navbar */
+    padding-top: 75px;
+    /* Extra top padding for mobile navbar */
   }
 
   /* 4. NAVBAR TWEAKS */
@@ -86,7 +102,7 @@
     padding: 0 15px;
     height: 60px;
   }
-  
+
   .navbar h4 {
     font-size: 16px;
   }

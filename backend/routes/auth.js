@@ -279,7 +279,7 @@ router.post("/login", loginValidation, async (req, res) => {
       });
     }
 
-    // 4) If not receptionist or doctor, check User collection (patients)
+    // 4) If not receptionist or doctor, check User collection (patients, clinic_admin)
     console.log("Checking User collection for:", email);
     const user = await User.findOne({ email });
 
@@ -290,6 +290,22 @@ router.post("/login", loginValidation, async (req, res) => {
 
       if (!match) {
         return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Fetch clinic details for clinic_admin users
+      const Clinic = require("../models/Clinic");
+      let clinicName = "";
+      let clinicLogo = "";
+      let clinicId = user.clinicId;
+
+      if (user.role === "clinic_admin") {
+        // For clinic_admin, find clinic by admin.email matching user's email
+        const clinic = await Clinic.findOne({ "admin.email": user.email });
+        if (clinic) {
+          clinicName = clinic.name || "";
+          clinicLogo = clinic.clinicLogo || "";
+          clinicId = clinic._id; // Use clinic's _id as clinicId
+        }
       }
 
       const userPayload = {
@@ -303,7 +319,9 @@ router.post("/login", loginValidation, async (req, res) => {
           typeof user.mustChangePassword === "boolean"
             ? user.mustChangePassword
             : false,
-        clinicId: user.clinicId,
+        clinicId: clinicId,
+        clinicName: clinicName, // Include clinic name for sidebar
+        clinicLogo: clinicLogo, // Include clinic logo for sidebar
       };
 
       const token = generateToken(userPayload);

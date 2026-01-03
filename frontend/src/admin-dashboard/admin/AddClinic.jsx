@@ -9,7 +9,7 @@ import "../styles/AddClinic.css"; // Ensure you have this or remove if using inl
 
 import API_BASE from "../../config";
 
-export default function AddClinic() {
+export default function AddClinic({ sidebarCollapsed, toggleSidebar }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -221,7 +221,7 @@ export default function AddClinic() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <Toaster position="top-right" />
       <div className="container-fluid p-4"> {/* Replaced custom CSS class with bootstrap container for safety */}
 

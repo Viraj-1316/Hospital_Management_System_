@@ -1,7 +1,7 @@
 // src/clinic-dashboard/components/Sidebar.jsx
 import React, { useState } from "react";
 import { Collapse } from "react-bootstrap";
-import logo from "../images/Logo.png";
+import defaultLogo from "../images/Logo.png";
 import { IoMdSettings } from "react-icons/io";
 import {
   FaTachometerAlt,
@@ -27,7 +27,13 @@ export default function Sidebar({ collapsed = false }) {
   const linkClass = ({ isActive }) =>
     `clinic-nav-link ${isActive ? "active" : ""}`;
 
-  const clinicName = JSON.parse(localStorage.getItem('authUser'))?.clinicName || "Clinic Dashboard";
+  const authUser = JSON.parse(localStorage.getItem('authUser')) || {};
+  const clinicName = authUser.clinicName || "Clinic Dashboard";
+  const clinicLogo = authUser.clinicLogo;
+
+  // Construct the clinic logo URL from uploads folder if available
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const logoSrc = clinicLogo ? `${API_BASE}/uploads/${clinicLogo}` : defaultLogo;
 
   return (
     <div
@@ -45,7 +51,7 @@ export default function Sidebar({ collapsed = false }) {
     >
       {/* Logo / title */}
       <div className="clinic-sidebar-logo">
-        <img src={logo} alt="Logo" style={{ borderRadius: 10 }} />
+        <img src={logoSrc} alt="Clinic Logo" style={{ borderRadius: 10 }} />
         {!collapsed && <h4>{clinicName}</h4>}
       </div>
 

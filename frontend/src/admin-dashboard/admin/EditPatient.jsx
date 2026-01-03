@@ -8,7 +8,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import API_BASE from "../../config.js";
 
-const EditPatient = () => {
+const EditPatient = ({ sidebarCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
@@ -103,7 +103,7 @@ const EditPatient = () => {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
         <div className="container bg-white p-4 rounded shadow-sm text-center">
           <div className="spinner-border text-primary" role="status"></div>
           <p className="mt-2">Loading patient details...</p>
@@ -113,7 +113,7 @@ const EditPatient = () => {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="container bg-white p-4 rounded shadow-sm">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">

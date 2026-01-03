@@ -8,7 +8,7 @@ import AdminLayout from "../layouts/AdminLayout";
 
 import API_BASE from "../../config";
 
-const AddDoctor = () => {
+const AddDoctor = ({ sidebarCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const qualificationRef = useRef(null);
@@ -208,7 +208,7 @@ const AddDoctor = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="container bg-white p-4 rounded shadow-sm">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">

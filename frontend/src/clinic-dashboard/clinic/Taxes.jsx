@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import "../styles/admin-shared.css"; 
+import "../styles/admin-shared.css";
 import { FaEdit, FaTrash, FaUpload, FaPlus } from "react-icons/fa";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
@@ -69,29 +69,26 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
   // --- FETCH DROPDOWN DATA ---
   const fetchDropdownData = async () => {
     try {
+      const token = localStorage.getItem("token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
       const [clinicRes, doctorRes, serviceRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/clinics`),
-        axios.get(`${API_BASE}/doctors`),
-        axios.get(`${API_BASE}/services?limit=1000`) // Fetch enough services
+        axios.get(`${API_BASE}/api/clinics`, { headers: authHeaders }),
+        axios.get(`${API_BASE}/doctors`, { headers: authHeaders }),
+        axios.get(`${API_BASE}/services?limit=1000`, { headers: authHeaders }) // Fetch enough services
       ]);
 
       if (clinicRes.data?.success) {
         setClinics(clinicRes.data.clinics || []);
       }
 
-      // Filter doctors by clinic if clinicName is available
+      // For clinic admins, backend already filters doctors by clinicId, no need for client-side filtering
       const allDoctors = doctorRes.data || [];
-      const filteredDoctors = clinicName 
-        ? allDoctors.filter(d => (d.clinic || "").toLowerCase() === clinicName.toLowerCase())
-        : allDoctors;
-      setDoctors(filteredDoctors);
+      setDoctors(allDoctors);
 
-      // Filter services by clinic if clinicName is available
+      // For clinic admins, backend already filters services by clinicId
       const allServices = serviceRes.data?.rows || [];
-      const filteredServices = clinicName 
-        ? allServices.filter(s => (s.clinicName || "").toLowerCase() === clinicName.toLowerCase())
-        : allServices;
-      setServices(filteredServices);
+      setServices(allServices);
 
     } catch (err) {
       console.error("Error fetching dropdown data:", err);
@@ -110,7 +107,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
       const res = await axios.get(`${API_BASE}/taxes`);
       // Filter taxes by clinic if clinicName is available
       const allTaxes = res.data || [];
-      const filteredTaxes = clinicName 
+      const filteredTaxes = clinicName
         ? allTaxes.filter(t => (t.clinicName || "").toLowerCase() === clinicName.toLowerCase())
         : allTaxes;
       setTaxes(filteredTaxes);
@@ -129,11 +126,9 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
   // ---------- FILTERING ----------
   const filtered = useMemo(() => {
     return taxes.filter((t) => {
-      const text = `${t.name || ""} ${t.serviceName || ""} ${
-        t.taxRate ?? ""
-      } ${t.clinicName || ""} ${t.doctor || ""} ${
-        t.active ? "active" : "inactive"
-      }`.toLowerCase();
+      const text = `${t.name || ""} ${t.serviceName || ""} ${t.taxRate ?? ""
+        } ${t.clinicName || ""} ${t.doctor || ""} ${t.active ? "active" : "inactive"
+        }`.toLowerCase();
 
       if (searchTerm && !text.includes(searchTerm.toLowerCase())) return false;
       if (filterName && !(t.name || "").toLowerCase().includes(filterName.toLowerCase())) return false;
@@ -171,7 +166,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
     filterStatus,
   ]);
 
-  
+
   const openNewTax = () => {
     setEditingTax(null);
     setForm({
@@ -237,7 +232,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
       fetchTaxes();
     } catch (err) {
       console.error("Save tax error:", err);
-      toast.error("Error saving tax.");    
+      toast.error("Error saving tax.");
     }
   };
 
@@ -477,9 +472,9 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
                       </tr>
                     ) : (
                       filtered.map((t, index) => (
-                        <tr 
-                          key={t._id} 
-                          style={{ 
+                        <tr
+                          key={t._id}
+                          style={{
                             animation: "fadeIn 0.5s ease-out forwards",
                             animationDelay: `${index * 0.05}s`,
                             opacity: 0 // Start invisible for animation

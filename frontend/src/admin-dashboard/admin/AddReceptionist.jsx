@@ -13,7 +13,7 @@ import "../styles/AddReceptionist.css";
 
 import API_BASE from "../../config";
 
-export default function AddReceptionist() {
+export default function AddReceptionist({ sidebarCollapsed, toggleSidebar }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const receptionistId = params.get("receptionistId");
@@ -143,7 +143,7 @@ export default function AddReceptionist() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <Toaster position="top-right" />
 
       <div className="container-fluid py-4">
@@ -278,7 +278,7 @@ export default function AddReceptionist() {
                 </select>
               </div>
 
-            
+
             </div>
 
             {/* Other details */}
