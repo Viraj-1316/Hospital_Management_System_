@@ -1,5 +1,5 @@
 /* =========================================
-   Main Layout
+   Main Layout & Card Base
    ========================================= */
 .encounters-main-content {
   background-color: #f8f9fa;
@@ -7,22 +7,29 @@
 }
 
 .encounters-card {
-  background-color: white;
+  background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e9ecef;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   overflow: hidden;
+  border: 1px solid #eaeaea;
 }
 
+/* =========================================
+   Header Section
+   ========================================= */
 .encounters-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e9ecef;
+  padding: 16px;
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .encounters-title {
-  color: #3b7ddd;
-  font-weight: 700;
   margin: 0;
+  font-weight: 700;
+  color: #2c6bd6;
   font-size: 1.1rem;
 }
 
@@ -30,8 +37,13 @@
    Search Bar
    ========================================= */
 .encounters-search-container {
-  padding: 1rem 1.5rem;
-  background-color: white;
+  padding: 12px 16px;
+  background: #fcfcfc;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.encounters-search-group {
+  max-width: 400px;
 }
 
 .encounters-search-group .input-group-text {
@@ -60,27 +72,30 @@
 .table-encounters {
   margin-bottom: 0;
   font-size: 0.85rem;
-  min-width: 1000px;
   width: 100%;
-  table-layout: fixed;
+  border-collapse: collapse; /* Essential for removing gaps */
+  border-spacing: 0;
 }
 
-.table-encounters thead th {
-  background-color: #f1f3f5;
-  color: #495057;
+.table-encounters th {
+  background-color: #f8f9fa;
   font-weight: 600;
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  padding: 12px 8px;
   border-bottom: 1px solid #dee2e6;
   white-space: nowrap;
-  vertical-align: middle;
 }
 
-.table-encounters tbody td {
+.table-encounters td {
+  font-size: 0.9rem;
   vertical-align: middle;
+  padding: 10px 8px;
   border-bottom: 1px solid #f1f1f1;
-  padding: 0.75rem 0.5rem;
 }
 
-/* Column Widths */
+/* Column Specifics (Desktop) */
 .col-checkbox { width: 40px; }
 .col-id { width: 80px; }
 .col-doctor { width: 20%; }
@@ -89,71 +104,24 @@
 .col-status { width: 120px; }
 .col-action { width: 80px; }
 
-/* Filter Inputs */
+/* Filter Row Inputs */
 .filter-row td {
   background-color: #f8f9fa;
   padding: 0.5rem;
 }
 
-.filter-input-sm {
+.form-control-sm {
   font-size: 0.75rem;
   height: 30px;
   border-radius: 4px;
 }
 
-.date-filter-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.date-clear-btn {
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  font-weight: bold;
-  color: #495057;
-  margin-left: 5px;
-  cursor: pointer;
-}
-
 /* =========================================
-   Status & Empty State
-   ========================================= */
-.no-data-row {
-  text-align: center;
-  padding: 2rem;
-  color: #6c757d;
-  font-weight: 500;
-  background-color: white;
-}
-
-.status-badge-active {
-  background-color: #d1e7dd;
-  color: #0f5132;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-}
-
-.status-badge-inactive {
-  background-color: #e9ecef;
-  color: #6c757d;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-}
-
-/* =========================================
-   Pagination & Footer
+   Footer & Pagination
    ========================================= */
 .encounters-footer {
-  padding: 1rem 1.5rem;
-  background-color: #f8f9fa;
+  padding: 12px 16px;
+  background: #f8f9fa;
   border-top: 1px solid #e9ecef;
   display: flex;
   justify-content: space-between;
@@ -162,34 +130,101 @@
   color: #6c757d;
 }
 
-.page-display-box {
-  background: white;
-  border: 1px solid #dee2e6;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: #495057;
-  font-weight: 500;
-}
+/* =========================================
+   MOBILE RESPONSIVE STYLES (Card View)
+   ========================================= */
+@media (max-width: 768px) {
+  /* 1. Header Layout */
+  .encounters-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .encounters-search-container, 
+  .encounters-search-group {
+    width: 100%;
+    max-width: 100%;
+  }
 
-.btn-nav {
-  border: none;
-  background: transparent;
-  color: #6c757d;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
+  /* 2. Hide Table Headers & Filter Row */
+  .table-encounters thead,
+  .filter-row {
+    display: none !important;
+  }
 
-.btn-nav:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  /* 3. Zero out table margins/padding to prevent gaps */
+  .table-encounters {
+    display: block;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent;
+  }
 
-.copyright-text {
-  font-size: 0.75rem;
-  color: #3b7ddd;
-  margin-top: 1rem;
-  padding-left: 1rem;
+  /* 4. Card Configuration (The Rows) */
+  .table-encounters tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .table-encounters tbody tr {
+    display: block;
+    /* Controls the vertical gap between cards */
+    margin-bottom: 8px !important; 
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+    /* Padding inside the card itself */
+    padding: 10px 12px !important; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  
+  /* Remove margin from the last card */
+  .table-encounters tbody tr:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  /* 5. Row Configuration inside Card (The Cells) */
+  .table-encounters tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    /* Vertical spacing between lines inside card */
+    padding: 4px 0 !important; 
+    text-align: right;
+    border-bottom: 1px solid #f9f9f9; /* Light divider */
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .table-encounters tbody td:last-child {
+    border-bottom: none;
+    padding-top: 8px !important;
+    margin-top: 4px;
+  }
+
+  /* 6. Labels (Left side text) */
+  .table-encounters tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #6c757d;
+    text-align: left;
+    margin-right: auto;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    display: inline-block;
+  }
+
+  /* 7. Hide Checkbox Column */
+  .col-checkbox {
+    display: none !important; 
+  }
+  
+  /* 8. Fix Modal Width */
+  .modal-dialog {
+    width: 95% !important;
+    margin: 10px auto;
+  }
 }
