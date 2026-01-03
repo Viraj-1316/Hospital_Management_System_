@@ -153,14 +153,32 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
   // --- 2. Filter Doctors when Clinic Changes ---
   useEffect(() => {
     if (form.clinic) {
-      const filtered = allDoctors.filter(d =>
-        (d.clinic || "").toLowerCase() === form.clinic.toLowerCase()
+      // Find the selected clinic object to get its ID
+      const selectedClinic = clinics.find(c =>
+        (c.name || c.clinicName || "").toLowerCase() === form.clinic.toLowerCase()
       );
+      const selectedClinicId = selectedClinic?._id || selectedClinic?.id;
+
+      const filtered = allDoctors.filter(d => {
+        // Match by Name (Legacy)
+        const nameMatch = (d.clinic || "").toLowerCase() === form.clinic.toLowerCase();
+
+        // Match by ID (New)
+        const idMatch = selectedClinicId && (
+          String(d.clinicId) === String(selectedClinicId) ||
+          d.clinicId === selectedClinicId
+        );
+
+        // If backend already filtered doctors (typical for patients), 
+        // they might not have a clinic name or ID set in the doctor object yet.
+        // In that case, if we only have doctors for one clinic, they should show up.
+        return nameMatch || idMatch || (!d.clinic && !d.clinicId);
+      });
       setAvailableDoctors(filtered);
     } else {
       setAvailableDoctors([]);
     }
-  }, [form.clinic, allDoctors]);
+  }, [form.clinic, allDoctors, clinics]);
 
   // --- 3. Handle Slots & Services when Doctor/Date Changes ---
   useEffect(() => {

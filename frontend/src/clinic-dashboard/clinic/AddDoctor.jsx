@@ -31,6 +31,7 @@ const AddDoctor = () => {
     lastName: "",
     email: "",
     clinic: autoClinicName, // Auto-fill with clinic name
+    clinicId: authUser?.clinicId || "", // Auto-fill with clinic ID
     phone: "",
     dob: "",
     specialization: "",
@@ -123,6 +124,16 @@ const AddDoctor = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleClinicChange = (e) => {
+    const selectedClinicName = e.target.value;
+    const selectedClinic = clinics.find(c => c.name === selectedClinicName);
+    setFormData((prev) => ({
+      ...prev,
+      clinic: selectedClinicName,
+      clinicId: selectedClinic ? selectedClinic._id : ""
+    }));
   };
 
   const handleQualificationChange = (e) => {
@@ -232,7 +243,7 @@ const AddDoctor = () => {
           </button>
         </div>
 
-        {/* Form */}  
+        {/* Form */}
         <form onSubmit={handleSubmit}>
           {/* Basic Details */}
           <h6 className="text-primary fw-bold mb-3">Basic Details</h6>
@@ -290,7 +301,7 @@ const AddDoctor = () => {
                   name="clinic"
                   className="form-select"
                   value={formData.clinic}
-                  onChange={handleChange}
+                  onChange={handleClinicChange}
                   required
                   disabled={clinicsLoading || !!clinicsError}
                 >
