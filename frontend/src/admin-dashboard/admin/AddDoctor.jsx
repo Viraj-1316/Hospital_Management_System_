@@ -22,6 +22,7 @@ const AddDoctor = ({ sidebarCollapsed, toggleSidebar }) => {
     lastName: "",
     email: "",
     clinic: "",
+    clinicId: "",
     phone: "",
     dob: "",
     specialization: "",
@@ -114,6 +115,16 @@ const AddDoctor = ({ sidebarCollapsed, toggleSidebar }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleClinicChange = (e) => {
+    const selectedClinicName = e.target.value;
+    const selectedClinic = clinics.find(c => c.name === selectedClinicName);
+    setFormData((prev) => ({
+      ...prev,
+      clinic: selectedClinicName,
+      clinicId: selectedClinic ? selectedClinic._id : ""
+    }));
   };
 
   const handleQualificationChange = (e) => {
@@ -274,7 +285,7 @@ const AddDoctor = ({ sidebarCollapsed, toggleSidebar }) => {
                 name="clinic"
                 className="form-select"
                 value={formData.clinic}
-                onChange={handleChange}
+                onChange={handleClinicChange}
                 required
                 disabled={clinicsLoading || !!clinicsError}
               >

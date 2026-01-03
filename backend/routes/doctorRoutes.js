@@ -34,13 +34,22 @@ router.post("/", verifyToken, async (req, res) => {
     const randomPassword = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
+    let clinicId = req.user.role === 'admin' ? (req.body.clinicId || null) : req.user.clinicId;
+
+    // If clinicId is still null but clinic (name) is provided, resolve it
+    if (!clinicId && req.body.clinic) {
+      const ClinicModel = require("../models/Clinic");
+      const clinic = await ClinicModel.findOne({ name: req.body.clinic });
+      if (clinic) {
+        clinicId = clinic._id;
+      }
+    }
+
     const doctorData = {
       ...req.body,
       password: hashedPassword,
       mustChangePassword: true,
-      // For Admin: Use body.clinicId (allow assigning to any clinic)
-      // For Clinic Admin: Force req.user.clinicId
-      clinicId: req.user.role === 'admin' ? (req.body.clinicId || null) : req.user.clinicId
+      clinicId: clinicId
     };
 
     const doctor = await DoctorModel.create(doctorData);
@@ -88,26 +97,50 @@ router.get("/", verifyToken, async (req, res) => {
     }
 
     const effectiveRole = currentUser ? currentUser.role : req.user.role;
-
-    // Initialize query if not present (although it was present above in original code, I should keep it or replace including it)
-    // Looking at file content, const query = {}; is at line 75. 
-    // And I am replacing from line 73. 
-    // So I MUST include const query = {};
-
     const query = {};
 
     if (effectiveRole === "admin") {
-      // Global View
+      // Global View - No filter
     } else if (safeClinicId) {
-      query.clinicId = safeClinicId;
+      const mongoose = require("mongoose");
+      const ClinicModel = require("../models/Clinic");
+
+      // 1. Resolve safeClinicId to a real ObjectId if it's a string hospitalId
+      let resolvedClinicId = safeClinicId;
+      let clinicNameFallback = null;
+
+      if (!mongoose.Types.ObjectId.isValid(safeClinicId)) {
+        const clinic = await ClinicModel.findOne({ hospitalId: safeClinicId });
+        if (clinic) {
+          resolvedClinicId = clinic._id;
+          clinicNameFallback = clinic.name;
+        }
+      } else {
+        // Even if it is an ObjectId, let's get the name for fallback search
+        const clinic = await ClinicModel.findById(safeClinicId);
+        if (clinic) {
+          clinicNameFallback = clinic.name;
+        }
+      }
+
+      // 2. Query doctors by either clinicId (ObjectId) OR legacy clinic (String name)
+      if (clinicNameFallback) {
+        query.$or = [
+          { clinicId: resolvedClinicId },
+          { clinic: clinicNameFallback }
+        ];
+      } else {
+        query.clinicId = resolvedClinicId;
+      }
     } else {
-      // Fallback
+      // No clinic associated with user, return empty list for non-admins
       return res.json([]);
     }
 
     const doctors = await DoctorModel.find(query);
     res.json(doctors);
   } catch (err) {
+    console.error("Error fetching doctors:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
