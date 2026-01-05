@@ -198,19 +198,28 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
 
   useEffect(() => {
     if (form.doctor && form.service) {
-      const rule = taxes.find(t =>
+      // Use filter instead of find to get ALL matching tax rules (e.g., CGST + SGST)
+      const matchingTaxes = taxes.filter(t =>
         t.active &&
         (t.doctor === form.doctor) &&
         (t.serviceName === form.service)
       );
 
-      if (rule) {
+      if (matchingTaxes.length > 0) {
         const price = parseFloat(form.servicesDetail) || 0;
-        const taxAmt = (price * rule.taxRate) / 100;
+        let totalTaxAmt = 0;
+        const taxLabels = [];
+
+        matchingTaxes.forEach(rule => {
+          const taxAmt = (price * rule.taxRate) / 100;
+          totalTaxAmt += taxAmt;
+          taxLabels.push(`${rule.name} (${rule.taxRate}%) - ₹${taxAmt.toFixed(2)}`);
+        });
+
         setForm(p => ({
           ...p,
-          tax: `${rule.name} (${rule.taxRate}%) - ₹${taxAmt.toFixed(2)}`,
-          taxAmount: taxAmt
+          tax: taxLabels.join(' | '), // Show all taxes separated by |
+          taxAmount: totalTaxAmt
         }));
       } else {
         setForm(p => ({ ...p, tax: "", taxAmount: 0 }));
