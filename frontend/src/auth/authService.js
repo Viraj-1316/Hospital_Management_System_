@@ -267,6 +267,8 @@ export function saveDoctorData(doctorDoc) {
         email: doctorDoc.email || '',
         phone: doctorDoc.phone || '',
         clinic: doctorDoc.clinic || '',
+        clinicId: doctorDoc.clinicId || null,
+        clinicName: doctorDoc.clinicName || doctorDoc.clinic || '',
         specialization: doctorDoc.specialization || '',
     };
 

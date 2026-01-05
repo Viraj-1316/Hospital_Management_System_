@@ -13,7 +13,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default function PatientBookAppointment() {
+export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -367,7 +367,7 @@ export default function PatientBookAppointment() {
   };
 
   return (
-    <PatientLayout>
+    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
       <div className="container-fluid py-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div>

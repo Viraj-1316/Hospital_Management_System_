@@ -223,7 +223,7 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
               <thead>
                 <tr>
                   <th className="ps-3 col-checkbox"><input type="checkbox" className="form-check-input" /></th>
-                  <th className="col-id" style={{width:'50px'}}>#</th>
+                  <th className="col-id" style={{width:'50px'}}>ID</th>
                   <th className="col-id">Enc ID</th>
                   <th className="col-doctor">Doctor Name</th>
                   <th className="col-clinic">Clinic Name</th>
@@ -232,8 +232,8 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
                   <th className="text-end pe-3 col-action">Action</th>
                 </tr>
                 
-                {/* Filter Row */}
-                <tr className="filter-row">
+                {/* Filter Row - Hidden on Mobile */}
+                <tr className="filter-row d-none d-md-table-row">
                   <td className="ps-3"></td>
                   <td></td> 
                   <td><input className="form-control form-control-sm" placeholder="ID" value={filters.encounterId} onChange={(e) => handleFilterChange("encounterId", e.target.value)} /></td>
@@ -262,31 +262,41 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
                 ) : (
                   paged.map((row, index) => (
                     <tr key={row._id || row.id}>
-                      <td className="ps-3"><input type="checkbox" className="form-check-input" /></td>
-                      <td className="fw-bold text-secondary">{(page - 1) * limit + index + 1}</td>
-                      <td className="fw-bold text-primary" style={{fontFamily:'monospace'}}>
+                      <td className="ps-3 col-checkbox"><input type="checkbox" className="form-check-input" /></td>
+                      
+                      <td data-label="ID" className="fw-bold text-secondary">
+                        {(page - 1) * limit + index + 1}
+                      </td>
+                      
+                      <td data-label="Enc ID" className="fw-bold text-primary" style={{fontFamily:'monospace'}}>
                           {row.encounterId || "Pending..."}
                       </td>
-                      <td>{getDoctorName(row)}</td>
-                      <td>{getClinicName(row)}</td>
-                      <td>{formatDate(row.date)}</td>
-                      <td><span className={`badge rounded-pill ${row.status === "active" ? "bg-success bg-opacity-10 text-success" : "bg-secondary bg-opacity-10 text-secondary"}`}>{row.status || "Unknown"}</span></td>
-                      <td className="text-end pe-3">
+                      
+                      <td data-label="Doctor Name">{getDoctorName(row)}</td>
+                      
+                      <td data-label="Clinic Name">{getClinicName(row)}</td>
+                      
+                      <td data-label="Date">{formatDate(row.date)}</td>
+                      
+                      <td data-label="Status">
+                        <span className={`badge rounded-pill ${row.status === "active" ? "bg-success bg-opacity-10 text-success" : "bg-secondary bg-opacity-10 text-secondary"}`}>
+                          {row.status || "Unknown"}
+                        </span>
+                      </td>
+                      
+                      <td data-label="Action" className="text-end pe-3">
                         <div className="d-flex justify-content-end gap-2">
                            <button 
                                 type="button"
-                                className="btn btn-sm p-0 d-flex align-items-center justify-content-center" 
-                                style={{ 
-                                  width: "28px", height: "28px", borderRadius: "6px", 
-                                  border: "1px solid #cfe2ff", background: "#e7f1ff",
-                                }}
+                                className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center" 
+                                style={{ width: "32px", height: "32px" }}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedEncounter(row); 
                                 }}
                                 title="View Details"
                             >
-                                <Eye size={13} className="text-primary"/>
+                                <Eye size={16} />
                             </button>
                         </div>
                       </td>
@@ -311,7 +321,7 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
         </div>
       </div>
 
-      {/* --- ✅ UPDATED POPUP MODAL --- */}
+      {/* --- POPUP MODAL (Same as before) --- */}
       {selectedEncounter && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -396,8 +406,8 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
                        <div className="d-flex align-items-start mb-2">
                           <Calendar className="text-muted me-2 mt-1" size={16} />
                           <div>
-                              <small className="text-muted d-block" style={{fontSize:'0.8rem'}}>Date</small>
-                              <strong>{formatDate(selectedEncounter.date)}</strong>
+                             <small className="text-muted d-block" style={{fontSize:'0.8rem'}}>Date</small>
+                             <strong>{formatDate(selectedEncounter.date)}</strong>
                           </div>
                        </div>
                      </div>

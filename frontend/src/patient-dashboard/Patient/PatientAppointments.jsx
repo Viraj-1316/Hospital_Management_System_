@@ -447,32 +447,7 @@ export default function PatientAppointments({ sidebarCollapsed, toggleSidebar })
                               {status.toUpperCase()}
                             </span>
                           </div>
-
-                          {/* calendar placeholders */}
-                          <div className="d-flex gap-1 flex-wrap">
-                            <button
-                              className="btn btn-sm btn-outline-light btn-sm"
-                              title="Add to Google calendar"
-                              onClick={() => window.open("#google")}
-                            >
-                              Google
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-light"
-                              title="Add to Outlook"
-                              onClick={() => window.open("#outlook")}
-                            >
-                              Outlook
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-light"
-                              title="Apple"
-                              onClick={() => window.open("#apple")}
-                            >
-                              Apple
-                            </button>
-                          </div>
-
+                          
                           {/* action buttons */}
                           <div className="d-flex gap-2 flex-wrap">
                             <button
