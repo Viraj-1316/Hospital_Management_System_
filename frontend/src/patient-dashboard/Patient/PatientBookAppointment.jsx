@@ -3,6 +3,7 @@ import axios from "axios";
 import PatientLayout from "../layouts/PatientLayout";
 import { useNavigate, useLocation } from "react-router-dom";
 import API_BASE from "../../config.js";
+import { trackAppointmentBooked } from "../../utils/gtm";
 
 // --- API Setup with Auth Interceptor ---
 const api = axios.create({ baseURL: API_BASE });
@@ -344,6 +345,16 @@ export default function PatientBookAppointment() {
       };
 
       await api.post(`/appointments`, payload);
+      
+      // GTM: Track appointment booking
+      trackAppointmentBooked({
+        doctorId: form.doctor,
+        doctorName: form.doctorLabel,
+        serviceType: servicesNames,
+        date: form.date,
+        amount: totalAmount + totalTaxAmount,
+      });
+      
       alert("Appointment booked successfully!");
       navigate("/patient/appointments");
     } catch (err) {

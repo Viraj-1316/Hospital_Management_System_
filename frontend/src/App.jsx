@@ -1,8 +1,9 @@
- import React, { useState, useEffect, Suspense, lazy } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from "react-hot-toast";
 import { setFavicon } from "./utils/setFavicon.js";
+import { trackPageView } from "./utils/gtm";
 import 'react-phone-input-2/lib/style.css';
 
 // Loading fallback for lazy-loaded components
@@ -165,6 +166,9 @@ function App() {
 
     document.title = title;
     setFavicon(icon);
+    
+    // GTM: Track SPA page views
+    trackPageView(location.pathname, title);
   }, [location.pathname]);
 
   return (

@@ -19,7 +19,7 @@ const SettingsSidebar = () => {
   ];
 
   return (
-    <div className="card shadow-sm border-0 h-100">
+    <div className="card shadow-sm border-0 h-20 ms-3">
       <div className="card-body p-0">
         <div className="list-group list-group-flush">
           {menuItems.map((item, index) => (

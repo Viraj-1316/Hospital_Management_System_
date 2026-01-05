@@ -15,6 +15,7 @@ import {
   googleLogin,
 } from './authService';
 import { useGoogleLogin } from '@react-oauth/google';
+import { trackLogin } from '../utils/gtm';
 import './OneCareAuth.css';
 
 /**
@@ -156,6 +157,7 @@ function Login() {
 
     // Redirect based on role
     toast.success('Login successful');
+    trackLogin(authUser.role); // GTM: Track login event
     redirectUser(authUser);
 
     setIsSubmitting(false);
@@ -185,6 +187,7 @@ function Login() {
         }
 
         toast.success('Login successful');
+        trackLogin(authUser.role); // GTM: Track Google login event
         redirectUser(authUser);
       }
       setIsSubmitting(false);
