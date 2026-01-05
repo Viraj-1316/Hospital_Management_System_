@@ -12,7 +12,7 @@ const AppointmentSchema = new mongoose.Schema({
   clinicId: { type: mongoose.Schema.Types.ObjectId, ref: "Clinic" },
   date: { type: Date },
   time: String,
-  services: String,
+  services: { type: [String], default: [] },
   servicesDetail: String,
   charges: Number,
   paymentMode: String,

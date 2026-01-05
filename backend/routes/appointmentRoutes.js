@@ -15,13 +15,24 @@ const { appointmentBookedTemplate } = require("../utils/emailTemplates");
 const { sendWhatsAppMessage } = require("../utils/whatsappService");
 const upload = require("../middleware/upload");
 const logger = require("../utils/logger");
-const { emitToRole, emitToUser, emitToAdmin } = require("../utils/socketServer");
+const {
+  emitToRole,
+  emitToUser,
+  emitToAdmin,
+} = require("../utils/socketServer");
 const {
   patientPopulate,
   doctorPopulate,
-  normalizeDocuments
+  normalizeDocuments,
 } = require("../utils/populateHelper");
 const { verifyToken } = require("../middleware/auth");
+
+const allowUrlToken = (req, res, next) => {
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+};
 
 // --- HELPER: Generate Time Slots ---
 const generateTimeSlots = (startStr, endStr, intervalMins) => {
@@ -30,7 +41,11 @@ const generateTimeSlots = (startStr, endStr, intervalMins) => {
   const end = new Date(`2000-01-01T${endStr}`);
 
   while (current < end) {
-    const timeString = current.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const timeString = current.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
     slots.push(timeString);
     current.setMinutes(current.getMinutes() + intervalMins);
   }
@@ -45,21 +60,23 @@ router.get("/slots", verifyToken, async (req, res) => {
     const { doctorId, date } = req.query;
 
     if (!doctorId || !date) {
-      return res.status(400).json({ message: "Doctor ID and Date are required" });
+      return res
+        .status(400)
+        .json({ message: "Doctor ID and Date are required" });
     }
 
     const requestDate = new Date(date);
     const holiday = await HolidayModel.findOne({
       doctorId: doctorId,
       fromDate: { $lte: requestDate },
-      toDate: { $gte: requestDate }
+      toDate: { $gte: requestDate },
     });
 
     if (holiday) {
       return res.json({
         message: "Doctor is on holiday",
         slots: [],
-        isHoliday: true
+        isHoliday: true,
       });
     }
 
@@ -67,11 +84,13 @@ router.get("/slots", verifyToken, async (req, res) => {
     const bookedAppointments = await AppointmentModel.find({
       doctorId: doctorId,
       date: date,
-      status: { $ne: "cancelled" }
+      status: { $ne: "cancelled" },
     }).select("time");
 
-    const bookedTimes = bookedAppointments.map(a => a.time);
-    const availableSlots = allSlots.filter(time => !bookedTimes.includes(time));
+    const bookedTimes = bookedAppointments.map((a) => a.time);
+    const availableSlots = allSlots.filter(
+      (time) => !bookedTimes.includes(time)
+    );
 
     res.json({ slots: availableSlots, isHoliday: false });
   } catch (err) {
@@ -91,12 +110,16 @@ router.post("/", verifyToken, async (req, res) => {
       const onHoliday = await HolidayModel.findOne({
         doctorId: req.body.doctorId,
         fromDate: { $lte: apptDate },
-        toDate: { $gte: apptDate }
+        toDate: { $gte: apptDate },
       });
 
       if (onHoliday) {
         return res.status(400).json({
-          message: `Doctor is on holiday from ${new Date(onHoliday.fromDate).toLocaleDateString()} to ${new Date(onHoliday.toDate).toLocaleDateString()}. Please choose another date.`
+          message: `Doctor is on holiday from ${new Date(
+            onHoliday.fromDate
+          ).toLocaleDateString()} to ${new Date(
+            onHoliday.toDate
+          ).toLocaleDateString()}. Please choose another date.`,
         });
       }
     }
@@ -109,7 +132,10 @@ router.post("/", verifyToken, async (req, res) => {
       doctorId: req.body.doctorId || null,
       doctorName: req.body.doctorName || req.body.doctor || "",
       // Strict Isolation: Only Admins can manually set clinicId
-      clinicId: req.user.role === 'admin' ? (req.body.clinicId || req.user.clinicId) : req.user.clinicId,
+      clinicId:
+        req.user.role === "admin"
+          ? req.body.clinicId || req.user.clinicId
+          : req.user.clinicId,
 
       clinic: req.body.clinic || "",
       date: req.body.date || "",
@@ -136,16 +162,23 @@ router.post("/", verifyToken, async (req, res) => {
           if (!targetPhone) targetPhone = patientDoc.phone || patientDoc.mobile;
         }
       } catch (e) {
-        logger.debug("Could not fetch patient contact info for notification", { patientId: payload.patientId, error: e.message });
+        logger.debug("Could not fetch patient contact info for notification", {
+          patientId: payload.patientId,
+          error: e.message,
+        });
       }
     }
 
     // Send notifications
     let formattedDate = payload.date;
     try {
-      if (payload.date) formattedDate = new Date(payload.date).toLocaleDateString("en-GB");
+      if (payload.date)
+        formattedDate = new Date(payload.date).toLocaleDateString("en-GB");
     } catch (e) {
-      logger.debug("Could not format appointment date", { date: payload.date, error: e.message });
+      logger.debug("Could not format appointment date", {
+        date: payload.date,
+        error: e.message,
+      });
     }
 
     if (targetEmail) {
@@ -181,16 +214,11 @@ router.post("/", verifyToken, async (req, res) => {
     return res.status(201).json(created);
   } catch (err) {
     logger.error("Error creating appointment", { error: err.message });
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
   }
 });
-
-// ==========================================
-// LIST APPOINTMENTS
-// ==========================================
-// ==========================================
-// LIST APPOINTMENTS (Cursor-based Pagination)
-// ==========================================
 router.get("/", verifyToken, async (req, res) => {
   try {
     const {
@@ -200,14 +228,16 @@ router.get("/", verifyToken, async (req, res) => {
       status,
       limit = 20,
       cursor,
-      search
+      search,
     } = req.query;
 
     let query = {};
 
     // Standard filters
-    if (doctorId && mongoose.Types.ObjectId.isValid(doctorId)) query.doctorId = doctorId;
-    if (patientId && mongoose.Types.ObjectId.isValid(patientId)) query.patientId = patientId;
+    if (doctorId && mongoose.Types.ObjectId.isValid(doctorId))
+      query.doctorId = doctorId;
+    if (patientId && mongoose.Types.ObjectId.isValid(patientId))
+      query.patientId = patientId;
     if (status) query.status = status;
 
     // Multi-tenant filtering (strict)
@@ -215,7 +245,7 @@ router.get("/", verifyToken, async (req, res) => {
     let currentUser = null;
     let safeClinicId = null;
 
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       currentUser = await require("../models/Admin").findById(req.user.id);
     } else {
       currentUser = await require("../models/User").findById(req.user.id);
@@ -241,7 +271,11 @@ router.get("/", verifyToken, async (req, res) => {
         // No patient record found, return empty
         return res.json({
           data: [],
-          pagination: { nextCursor: null, hasMore: false, limit: parseInt(limit) || 20 }
+          pagination: {
+            nextCursor: null,
+            hasMore: false,
+            limit: parseInt(limit) || 20,
+          },
         });
       }
     } else if (safeClinicId) {
@@ -250,7 +284,11 @@ router.get("/", verifyToken, async (req, res) => {
       // Fallback for paginated response
       return res.json({
         data: [],
-        pagination: { nextCursor: null, hasMore: false, limit: parseInt(limit) || 20 }
+        pagination: {
+          nextCursor: null,
+          hasMore: false,
+          limit: parseInt(limit) || 20,
+        },
       });
     }
 
@@ -269,7 +307,7 @@ router.get("/", verifyToken, async (req, res) => {
       query.$or = [
         { patientName: searchRegex },
         { doctorName: searchRegex },
-        { clinic: searchRegex }
+        { clinic: searchRegex },
       ];
     }
 
@@ -283,27 +321,38 @@ router.get("/", verifyToken, async (req, res) => {
     const appointments = await AppointmentModel.find(query)
       .sort({ _id: -1 })
       .limit(pageSize)
-      .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
-      .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
+      .populate({
+        path: "patientId",
+        select: "firstName lastName email phone",
+        model: "Patient",
+      })
+      .populate({
+        path: "doctorId",
+        select: "name clinic firstName lastName",
+        model: "Doctor",
+      })
       .lean();
 
     // Determine next cursor
-    const nextCursor = appointments.length === pageSize
-      ? appointments[appointments.length - 1]._id
-      : null;
+    const nextCursor =
+      appointments.length === pageSize
+        ? appointments[appointments.length - 1]._id
+        : null;
 
     // Normalize functionality (inline to avoid dependency issues if helper changes)
-    const normalized = appointments.map(a => {
+    const normalized = appointments.map((a) => {
       const copy = { ...a };
       if (copy.patientId && typeof copy.patientId === "object") {
         const p = copy.patientId;
-        copy.patientName = copy.patientName || `${p.firstName || ""} ${p.lastName || ""}`.trim();
+        copy.patientName =
+          copy.patientName || `${p.firstName || ""} ${p.lastName || ""}`.trim();
         copy.patientEmail = copy.patientEmail || p.email || "";
         copy.patientPhone = copy.patientPhone || p.phone || "";
       }
       if (copy.doctorId && typeof copy.doctorId === "object") {
         const d = copy.doctorId;
-        const docName = d.name || `${d.firstName || ""} ${d.lastName || ""}`.trim();
+        const docName =
+          d.name || `${d.firstName || ""} ${d.lastName || ""}`.trim();
         copy.doctorName = copy.doctorName || docName;
         copy.clinic = copy.clinic || d.clinic || "";
       }
@@ -315,8 +364,8 @@ router.get("/", verifyToken, async (req, res) => {
       pagination: {
         nextCursor,
         hasMore: !!nextCursor,
-        limit: pageSize
-      }
+        limit: pageSize,
+      },
     });
   } catch (err) {
     console.error("Appointments list error:", err.message);
@@ -331,7 +380,7 @@ router.get("/all", verifyToken, async (req, res) => {
     let currentUser = null;
     let safeClinicId = null;
 
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       currentUser = await require("../models/Admin").findById(req.user.id);
     } else {
       currentUser = await require("../models/User").findById(req.user.id);
@@ -362,8 +411,16 @@ router.get("/all", verifyToken, async (req, res) => {
     }
     const list = await AppointmentModel.find(query)
       .sort({ createdAt: -1 })
-      .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
-      .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
+      .populate({
+        path: "patientId",
+        select: "firstName lastName email phone",
+        model: "Patient",
+      })
+      .populate({
+        path: "doctorId",
+        select: "name clinic firstName lastName",
+        model: "Doctor",
+      })
       .lean();
     res.json(list);
   } catch (err) {
@@ -382,13 +439,13 @@ router.get("/today", verifyToken, async (req, res) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     const query = {
-      date: { $gte: startOfDay, $lte: endOfDay }
+      date: { $gte: startOfDay, $lte: endOfDay },
     };
 
     let currentUser = null;
     let safeClinicId = null;
 
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       currentUser = await require("../models/Admin").findById(req.user.id);
     } else {
       currentUser = await require("../models/User").findById(req.user.id);
@@ -412,8 +469,16 @@ router.get("/today", verifyToken, async (req, res) => {
 
     const list = await AppointmentModel.find(query)
       .sort({ createdAt: -1 })
-      .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
-      .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
+      .populate({
+        path: "patientId",
+        select: "firstName lastName email phone",
+        model: "Patient",
+      })
+      .populate({
+        path: "doctorId",
+        select: "name clinic firstName lastName",
+        model: "Doctor",
+      })
       .lean();
 
     res.json(list);
@@ -439,14 +504,14 @@ router.get("/weekly", verifyToken, async (req, res) => {
       $expr: {
         $and: [
           { $gte: [{ $toDate: "$date" }, startOfPeriod] },
-          { $lte: [{ $toDate: "$date" }, endOfDay] }
-        ]
-      }
+          { $lte: [{ $toDate: "$date" }, endOfDay] },
+        ],
+      },
     };
     let currentUser = null;
     let safeClinicId = null;
 
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       currentUser = await require("../models/Admin").findById(req.user.id);
     } else {
       currentUser = await require("../models/User").findById(req.user.id);
@@ -460,7 +525,7 @@ router.get("/weekly", verifyToken, async (req, res) => {
 
     const effectiveRole = currentUser ? currentUser.role : req.user.role;
 
-    if (effectiveRole === 'admin') {
+    if (effectiveRole === "admin") {
       // Global
     } else if (safeClinicId) {
       matchStage.clinicId = new mongoose.Types.ObjectId(safeClinicId);
@@ -472,15 +537,17 @@ router.get("/weekly", verifyToken, async (req, res) => {
       { $match: matchStage },
       {
         $project: {
-          dateStr: { $dateToString: { format: "%Y-%m-%d", date: { $toDate: "$date" } } }
-        }
+          dateStr: {
+            $dateToString: { format: "%Y-%m-%d", date: { $toDate: "$date" } },
+          },
+        },
       },
       {
         $group: {
           _id: "$dateStr",
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     // Format results to match the last 7 days (including empty days)
@@ -489,9 +556,9 @@ router.get("/weekly", verifyToken, async (req, res) => {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
-      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
 
-      const found = stats.find(s => s._id === dateStr);
+      const found = stats.find((s) => s._id === dateStr);
       result.push({ label: dayName, count: found ? found.count : 0 });
     }
 
@@ -520,14 +587,14 @@ router.get("/monthly", verifyToken, async (req, res) => {
       $expr: {
         $and: [
           { $gte: [{ $toDate: "$date" }, startOfMonth] },
-          { $lte: [{ $toDate: "$date" }, endOfMonth] }
-        ]
-      }
+          { $lte: [{ $toDate: "$date" }, endOfMonth] },
+        ],
+      },
     };
     let currentUser = null;
     let safeClinicId = null;
 
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       currentUser = await require("../models/Admin").findById(req.user.id);
     } else {
       currentUser = await require("../models/User").findById(req.user.id);
@@ -541,7 +608,7 @@ router.get("/monthly", verifyToken, async (req, res) => {
 
     const effectiveRole = currentUser ? currentUser.role : req.user.role;
 
-    if (effectiveRole === 'admin') {
+    if (effectiveRole === "admin") {
       // Global
     } else if (safeClinicId) {
       matchStage.clinicId = new mongoose.Types.ObjectId(safeClinicId);
@@ -555,8 +622,8 @@ router.get("/monthly", verifyToken, async (req, res) => {
         $project: {
           // Calculate week number within the month (simplified approximation matching previous logic)
           // Previous logic: Week 1 (1-7), Week 2 (8-14), Week 3 (15-21), Week 4 (22-end)
-          dayOfMonth: { $dayOfMonth: { $toDate: "$date" } }
-        }
+          dayOfMonth: { $dayOfMonth: { $toDate: "$date" } },
+        },
       },
       {
         $bucket: {
@@ -564,10 +631,10 @@ router.get("/monthly", verifyToken, async (req, res) => {
           boundaries: [1, 8, 15, 22, 32], // 32 to safely cover up to 31st
           default: "Other",
           output: {
-            count: { $sum: 1 }
-          }
-        }
-      }
+            count: { $sum: 1 },
+          },
+        },
+      },
     ]);
 
     // Map buckets to labels
@@ -575,14 +642,14 @@ router.get("/monthly", verifyToken, async (req, res) => {
       1: "Week 1",
       8: "Week 2",
       15: "Week 3",
-      22: "Week 4"
+      22: "Week 4",
     };
 
-    const result = [1, 8, 15, 22].map(boundary => {
-      const found = stats.find(s => s._id === boundary);
+    const result = [1, 8, 15, 22].map((boundary) => {
+      const found = stats.find((s) => s._id === boundary);
       return {
         label: weekMap[boundary],
-        count: found ? found.count : 0
+        count: found ? found.count : 0,
       };
     });
 
@@ -628,11 +695,12 @@ router.post("/import", verifyToken, upload.single("file"), async (req, res) => {
 });
 
 // PDF Generation
-router.get("/:id/pdf", verifyToken, async (req, res) => {
+router.get("/:id/pdf", allowUrlToken, verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const appt = await AppointmentModel.findById(id);
-    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+    if (!appt)
+      return res.status(404).json({ message: "Appointment not found" });
 
     let doctor = null;
     if (appt.doctorName) {
@@ -645,20 +713,40 @@ router.get("/:id/pdf", verifyToken, async (req, res) => {
     const clinicName = appt.clinic || doctor?.clinic || "Valley Clinic";
     const clinicEmail = doctor?.email || "info@medicalcenter.com";
     const clinicPhone = doctor?.phone || "+1 234 567 890";
-    const rawAddress = doctor?.address || "123 Health Street\nMedical District, City, 000000";
+    const rawAddress =
+      doctor?.address || "123 Health Street\nMedical District, City, 000000";
     const addressLines = String(rawAddress).split(/\r?\n/).slice(0, 2);
     const patientName = appt.patientName || "N/A";
 
-    const todayFormatted = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const todayFormatted = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
     const apptDateObj = appt.date ? new Date(appt.date) : null;
-    const apptDateFormatted = apptDateObj ? apptDateObj.toLocaleDateString("en-US", { weekday: 'short', year: "numeric", month: "long", day: "numeric" }) : "N/A";
-    const generatedDate = new Date().toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: '2-digit', minute: '2-digit' });
+    const apptDateFormatted = apptDateObj
+      ? apptDateObj.toLocaleDateString("en-US", {
+          weekday: "short",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "N/A";
+    const generatedDate = new Date().toLocaleString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     const apptId = String(appt._id).substring(0, 8).toUpperCase();
     const apptTime = appt.slot || appt.time || "N/A";
     const apptStatus = (appt.status || "Booked").toUpperCase();
     const paymentMode = appt.paymentMode || "Manual";
-    const serviceText = appt.services || "General Consultation";
+    const serviceText = Array.isArray(appt.services)
+      ? appt.services.join(", ")
+      : appt.services || "General Consultation";
     const totalBill = appt.charges ? `Rs. ${appt.charges}/-` : "Rs. 0/-";
 
     const pdfDoc = await PDFDocument.create();
@@ -682,93 +770,291 @@ router.get("/:id/pdf", verifyToken, async (req, res) => {
         const logoBytes = fs.readFileSync(logoPath);
         const logoImg = await pdfDoc.embedPng(logoBytes);
         const logoDims = logoImg.scale(0.25);
-        page.drawImage(logoImg, { x: margin, y: cursorY - logoDims.height + 10, width: logoDims.width, height: logoDims.height });
+        page.drawImage(logoImg, {
+          x: margin,
+          y: cursorY - logoDims.height + 10,
+          width: logoDims.width,
+          height: logoDims.height,
+        });
       }
     } catch (e) {
       logger.debug("Could not embed logo in PDF", { error: e.message });
     }
 
     const textStartX = 180;
-    page.drawText(clinicName.toUpperCase(), { x: textStartX, y: cursorY, size: 18, font: fontBold, color: primaryColor });
+    page.drawText(clinicName.toUpperCase(), {
+      x: textStartX,
+      y: cursorY,
+      size: 18,
+      font: fontBold,
+      color: primaryColor,
+    });
 
-    page.drawText(`Date: ${todayFormatted}`, { x: width - margin - 130, y: cursorY, size: 10, font: fontRegular, color: black });
-    page.drawText(`Booking ID: #${apptId}`, { x: width - margin - 130, y: cursorY - 15, size: 10, font: fontBold, color: black });
+    page.drawText(`Date: ${todayFormatted}`, {
+      x: width - margin - 130,
+      y: cursorY,
+      size: 10,
+      font: fontRegular,
+      color: black,
+    });
+    page.drawText(`Booking ID: #${apptId}`, {
+      x: width - margin - 130,
+      y: cursorY - 15,
+      size: 10,
+      font: fontBold,
+      color: black,
+    });
 
     let detailsY = cursorY - 18;
-    page.drawText(addressLines.join(", "), { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+    page.drawText(addressLines.join(", "), {
+      x: textStartX,
+      y: detailsY,
+      size: 10,
+      font: fontRegular,
+      color: gray,
+    });
     detailsY -= 12;
-    page.drawText(`Phone: ${clinicPhone}`, { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+    page.drawText(`Phone: ${clinicPhone}`, {
+      x: textStartX,
+      y: detailsY,
+      size: 10,
+      font: fontRegular,
+      color: gray,
+    });
     detailsY -= 12;
-    page.drawText(`Email: ${clinicEmail}`, { x: textStartX, y: detailsY, size: 10, font: fontRegular, color: gray });
+    page.drawText(`Email: ${clinicEmail}`, {
+      x: textStartX,
+      y: detailsY,
+      size: 10,
+      font: fontRegular,
+      color: gray,
+    });
 
     cursorY -= 80;
-    page.drawRectangle({ x: 0, y: cursorY - 10, width: width, height: 30, color: primaryColor });
+    page.drawRectangle({
+      x: 0,
+      y: cursorY - 10,
+      width: width,
+      height: 30,
+      color: primaryColor,
+    });
     const titleText = "APPOINTMENT CONFIRMATION";
     const titleWidth = fontBold.widthOfTextAtSize(titleText, 14);
-    page.drawText(titleText, { x: (width - titleWidth) / 2, y: cursorY, size: 14, font: fontBold, color: rgb(1, 1, 1) });
+    page.drawText(titleText, {
+      x: (width - titleWidth) / 2,
+      y: cursorY,
+      size: 14,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
 
     cursorY -= 50;
     const col1 = margin;
     const col2 = 320;
 
-    page.drawText("PATIENT DETAILS", { x: col1, y: cursorY + 15, size: 10, font: fontBold, color: gray });
+    page.drawText("PATIENT DETAILS", {
+      x: col1,
+      y: cursorY + 15,
+      size: 10,
+      font: fontBold,
+      color: gray,
+    });
     cursorY -= 15;
-    page.drawText(patientName, { x: col1, y: cursorY + 15, size: 14, font: fontBold, color: black });
+    page.drawText(patientName, {
+      x: col1,
+      y: cursorY + 15,
+      size: 14,
+      font: fontBold,
+      color: black,
+    });
 
     const sectionTopY = cursorY + 30;
-    page.drawText("DOCTOR DETAILS", { x: col2, y: sectionTopY, size: 10, font: fontBold, color: gray });
-    page.drawText(`Dr. ${appt.doctorName}`, { x: col2, y: sectionTopY - 15, size: 14, font: fontBold, color: black });
-    page.drawText("General Physician", { x: col2, y: sectionTopY - 30, size: 10, font: fontRegular, color: black });
+    page.drawText("DOCTOR DETAILS", {
+      x: col2,
+      y: sectionTopY,
+      size: 10,
+      font: fontBold,
+      color: gray,
+    });
+    page.drawText(`Dr. ${appt.doctorName}`, {
+      x: col2,
+      y: sectionTopY - 15,
+      size: 14,
+      font: fontBold,
+      color: black,
+    });
+    page.drawText("General Physician", {
+      x: col2,
+      y: sectionTopY - 30,
+      size: 10,
+      font: fontRegular,
+      color: black,
+    });
 
     cursorY -= 40;
-    page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
+    page.drawLine({
+      start: { x: margin, y: cursorY },
+      end: { x: width - margin, y: cursorY },
+      thickness: 1,
+      color: lightGray,
+    });
     cursorY -= 30;
 
-    page.drawText("APPOINTMENT DETAILS", { x: margin, y: cursorY, size: 12, font: fontBold, color: primaryColor });
+    page.drawText("APPOINTMENT DETAILS", {
+      x: margin,
+      y: cursorY,
+      size: 12,
+      font: fontBold,
+      color: primaryColor,
+    });
     cursorY -= 20;
 
     const drawDetailRow = (label, value, xPos, yPos) => {
-      page.drawText(label, { x: xPos, y: yPos, size: 9, font: fontRegular, color: gray });
-      page.drawText(value, { x: xPos, y: yPos - 12, size: 11, font: fontBold, color: black });
+      page.drawText(label, {
+        x: xPos,
+        y: yPos,
+        size: 9,
+        font: fontRegular,
+        color: gray,
+      });
+      page.drawText(value, {
+        x: xPos,
+        y: yPos - 12,
+        size: 11,
+        font: fontBold,
+        color: black,
+      });
     };
 
     drawDetailRow("Date", apptDateFormatted, margin, cursorY);
     drawDetailRow("Time", apptTime, margin + 180, cursorY);
 
     let statusColor = black;
-    if (apptStatus === 'BOOKED' || apptStatus === 'CONFIRMED') statusColor = rgb(0, 0.6, 0);
-    if (apptStatus === 'CANCELLED') statusColor = rgb(0.8, 0, 0);
-    page.drawText("Status", { x: width - margin - 80, y: cursorY, size: 9, font: fontRegular, color: gray });
-    page.drawText(apptStatus, { x: width - margin - 80, y: cursorY - 12, size: 11, font: fontBold, color: statusColor });
+    if (apptStatus === "BOOKED" || apptStatus === "CONFIRMED")
+      statusColor = rgb(0, 0.6, 0);
+    if (apptStatus === "CANCELLED") statusColor = rgb(0.8, 0, 0);
+    page.drawText("Status", {
+      x: width - margin - 80,
+      y: cursorY,
+      size: 9,
+      font: fontRegular,
+      color: gray,
+    });
+    page.drawText(apptStatus, {
+      x: width - margin - 80,
+      y: cursorY - 12,
+      size: 11,
+      font: fontBold,
+      color: statusColor,
+    });
 
     cursorY -= 50;
-    page.drawRectangle({ x: margin, y: cursorY, width: width - (margin * 2), height: 25, color: lightGray });
-    page.drawText("Service / Description", { x: margin + 10, y: cursorY + 7, size: 10, font: fontBold, color: black });
-    page.drawText("Amount", { x: width - margin - 70, y: cursorY + 7, size: 10, font: fontBold, color: black });
+    page.drawRectangle({
+      x: margin,
+      y: cursorY,
+      width: width - margin * 2,
+      height: 25,
+      color: lightGray,
+    });
+    page.drawText("Service / Description", {
+      x: margin + 10,
+      y: cursorY + 7,
+      size: 10,
+      font: fontBold,
+      color: black,
+    });
+    page.drawText("Amount", {
+      x: width - margin - 70,
+      y: cursorY + 7,
+      size: 10,
+      font: fontBold,
+      color: black,
+    });
 
     cursorY -= 25;
-    page.drawText(serviceText, { x: margin + 10, y: cursorY + 8, size: 10, font: fontRegular, color: black });
-    page.drawText(totalBill, { x: width - margin - 70, y: cursorY + 8, size: 10, font: fontRegular, color: black });
-    page.drawLine({ start: { x: margin, y: cursorY }, end: { x: width - margin, y: cursorY }, thickness: 1, color: lightGray });
+    page.drawText(serviceText, {
+      x: margin + 10,
+      y: cursorY + 8,
+      size: 10,
+      font: fontRegular,
+      color: black,
+    });
+    page.drawText(totalBill, {
+      x: width - margin - 70,
+      y: cursorY + 8,
+      size: 10,
+      font: fontRegular,
+      color: black,
+    });
+    page.drawLine({
+      start: { x: margin, y: cursorY },
+      end: { x: width - margin, y: cursorY },
+      thickness: 1,
+      color: lightGray,
+    });
 
     cursorY -= 35;
-    page.drawText("Total Amount:", { x: width - margin - 150, y: cursorY, size: 12, font: fontBold, color: black });
-    page.drawText(totalBill, { x: width - margin - 70, y: cursorY, size: 12, font: fontBold, color: primaryColor });
+    page.drawText("Total Amount:", {
+      x: width - margin - 150,
+      y: cursorY,
+      size: 12,
+      font: fontBold,
+      color: black,
+    });
+    page.drawText(totalBill, {
+      x: width - margin - 70,
+      y: cursorY,
+      size: 12,
+      font: fontBold,
+      color: primaryColor,
+    });
 
     cursorY -= 15;
-    page.drawText(`Payment Mode: ${paymentMode}`, { x: width - margin - 150, y: cursorY, size: 9, font: fontRegular, color: gray });
+    page.drawText(`Payment Mode: ${paymentMode}`, {
+      x: width - margin - 150,
+      y: cursorY,
+      size: 9,
+      font: fontRegular,
+      color: gray,
+    });
 
     const footerY = 50;
-    page.drawText("Note:", { x: margin, y: footerY + 45, size: 9, font: fontBold, color: black });
-    page.drawText("Please arrive 15 minutes prior to your appointment time. If you need to reschedule, contact us 24 hours in advance.", { x: margin, y: footerY + 33, size: 9, font: fontRegular, color: black });
+    page.drawText("Note:", {
+      x: margin,
+      y: footerY + 45,
+      size: 9,
+      font: fontBold,
+      color: black,
+    });
+    page.drawText(
+      "Please arrive 15 minutes prior to your appointment time. If you need to reschedule, contact us 24 hours in advance.",
+      { x: margin, y: footerY + 33, size: 9, font: fontRegular, color: black }
+    );
 
-    page.drawLine({ start: { x: margin, y: footerY + 15 }, end: { x: width - margin, y: footerY + 15 }, thickness: 1, color: lightGray });
-    page.drawText(`Generated on: ${generatedDate}`, { x: margin, y: footerY, size: 8, font: fontRegular, color: gray });
-    page.drawText("This is a computer-generated document. No signature is required.", { x: margin, y: footerY - 10, size: 8, font: fontRegular, color: gray });
+    page.drawLine({
+      start: { x: margin, y: footerY + 15 },
+      end: { x: width - margin, y: footerY + 15 },
+      thickness: 1,
+      color: lightGray,
+    });
+    page.drawText(`Generated on: ${generatedDate}`, {
+      x: margin,
+      y: footerY,
+      size: 8,
+      font: fontRegular,
+      color: gray,
+    });
+    page.drawText(
+      "This is a computer-generated document. No signature is required.",
+      { x: margin, y: footerY - 10, size: 8, font: fontRegular, color: gray }
+    );
 
     const pdfBytes = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename=Appointment_${apptId}.pdf`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=Appointment_${apptId}.pdf`
+    );
     res.send(Buffer.from(pdfBytes));
   } catch (err) {
     console.error("Appointment PDF error:", err.message);
@@ -781,17 +1067,27 @@ router.get("/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const appt = await AppointmentModel.findById(id)
-      .populate({ path: "patientId", select: "firstName lastName email phone", model: "Patient" })
-      .populate({ path: "doctorId", select: "name clinic firstName lastName", model: "Doctor" })
+      .populate({
+        path: "patientId",
+        select: "firstName lastName email phone",
+        model: "Patient",
+      })
+      .populate({
+        path: "doctorId",
+        select: "name clinic firstName lastName",
+        model: "Doctor",
+      })
       .lean();
 
-    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+    if (!appt)
+      return res.status(404).json({ message: "Appointment not found" });
 
     // Normalize patient info
     let patientInfo = { name: "N/A", email: "N/A", phone: "N/A" };
     if (appt.patientId && typeof appt.patientId === "object") {
       const p = appt.patientId;
-      patientInfo.name = `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || "N/A";
+      patientInfo.name =
+        `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || "N/A";
       patientInfo.email = p.email || "N/A";
       patientInfo.phone = p.phone || "N/A";
     } else if (appt.patientName) {
@@ -805,7 +1101,8 @@ router.get("/:id", verifyToken, async (req, res) => {
     let doctorInfo = { name: "N/A", clinic: "N/A" };
     if (appt.doctorId && typeof appt.doctorId === "object") {
       const d = appt.doctorId;
-      doctorInfo.name = d.name || `${d.firstName || ""} ${d.lastName || ""}`.trim() || "N/A";
+      doctorInfo.name =
+        d.name || `${d.firstName || ""} ${d.lastName || ""}`.trim() || "N/A";
       doctorInfo.clinic = d.clinic || appt.clinic || "N/A";
     } else if (appt.doctorName) {
       doctorInfo.name = appt.doctorName;
@@ -816,7 +1113,9 @@ router.get("/:id", verifyToken, async (req, res) => {
     return res.json(appt);
   } catch (err) {
     console.error("Error fetching appointment by id:", err.message);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
   }
 });
 
@@ -828,7 +1127,8 @@ router.put("/:id/cancel", verifyToken, async (req, res) => {
       { status: "cancelled" },
       { new: true }
     );
-    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+    if (!appt)
+      return res.status(404).json({ message: "Appointment not found" });
     res.json({ message: "Appointment cancelled", data: appt });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -843,7 +1143,8 @@ router.put("/:id", verifyToken, async (req, res) => {
       req.body,
       { new: true }
     );
-    if (!updated) return res.status(404).json({ message: "Appointment not found" });
+    if (!updated)
+      return res.status(404).json({ message: "Appointment not found" });
     res.json({ message: "Appointment updated", data: updated });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -854,7 +1155,8 @@ router.put("/:id", verifyToken, async (req, res) => {
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const deleted = await AppointmentModel.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: "Appointment not found" });
+    if (!deleted)
+      return res.status(404).json({ message: "Appointment not found" });
     res.json({ message: "Appointment deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });

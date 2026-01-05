@@ -58,14 +58,8 @@ export default function DoctorAppointmentDetails() {
   }
 
   const a = appointment;
-
-  // --- HELPER: Extract Patient Info Safely ---
-  // Checks normalized data first, then populated object, then root fields
   const getPatientInfo = () => {
-    // 1. Check if backend sent a normalized object (your backend does this as _patientInfo)
     if (a._patientInfo) return a._patientInfo;
-
-    // 2. Check if patientId is a populated object
     if (a.patientId && typeof a.patientId === 'object') {
       return {
         name: `${a.patientId.firstName || ''} ${a.patientId.lastName || ''}`.trim() || a.patientId.name,
