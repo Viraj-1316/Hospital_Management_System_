@@ -2,7 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import { FaPlus, FaSearch, FaEdit, FaTrash, FaFileImport } from "react-icons/fa";
+import {
+  FaPlus,
+  FaSearch,
+  FaEdit,
+  FaTrash,
+  FaFileImport,
+} from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/admin-shared.css";
 import "../styles/appointments.css";
@@ -55,14 +61,14 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
   // Import states
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
-  
-  const [confirmModal, setConfirmModal] = useState({ 
-    show: false, 
-    title: "", 
-    message: "", 
+
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: "",
+    message: "",
     action: null,
     confirmText: "Delete",
-    confirmVariant: "danger"
+    confirmVariant: "danger",
   });
 
   const [form, setForm] = useState({
@@ -84,8 +90,10 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
       const res = await axios.get(`${API_BASE}/doctor-sessions`);
       // Filter sessions by clinic if clinicName is available
       const allSessions = res.data || [];
-      const filteredSessions = clinicName 
-        ? allSessions.filter(s => (s.clinic || "").toLowerCase() === clinicName.toLowerCase())
+      const filteredSessions = clinicName
+        ? allSessions.filter(
+            (s) => (s.clinic || "").toLowerCase() === clinicName.toLowerCase()
+          )
         : allSessions;
       setSessions(filteredSessions);
     } catch (err) {
@@ -98,12 +106,9 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
   const fetchDoctors = async () => {
     try {
       const res = await axios.get(`${API_BASE}/doctors`);
-      const allDoctors = res.data || [];
-      // Filter doctors by clinic if clinicName is available
-      const filteredDoctors = clinicName 
-        ? allDoctors.filter(d => (d.clinic || "").toLowerCase() === clinicName.toLowerCase())
-        : allDoctors;
-      setDoctors(filteredDoctors);
+      // Backend already filters doctors by clinic for clinic users
+      // No additional frontend filtering needed
+      setDoctors(res.data || []);
     } catch (err) {
       console.error("Error fetching doctors:", err);
     }
@@ -186,10 +191,7 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
       }
 
       if (editingId) {
-        await axios.put(
-          `${API_BASE}/doctor-sessions/${editingId}`,
-          payload
-        );
+        await axios.put(`${API_BASE}/doctor-sessions/${editingId}`, payload);
         toast.success("Doctor session updated");
       } else {
         await axios.post(`${API_BASE}/doctor-sessions`, payload);
@@ -198,7 +200,6 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
       closeForm();
       fetchSessions();
-
     } catch (err) {
       console.error(err);
       toast.error("Error saving session");
@@ -212,7 +213,7 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
       message: "Delete this session?",
       action: () => executeDelete(id),
       confirmText: "Delete",
-      confirmVariant: "danger"
+      confirmVariant: "danger",
     });
   };
 
@@ -253,13 +254,17 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
         }
       );
 
-      toast.success(`Successfully imported ${response.data.count} doctor sessions`);
+      toast.success(
+        `Successfully imported ${response.data.count} doctor sessions`
+      );
       setShowImportModal(false);
       setImportFile(null);
       fetchSessions();
     } catch (err) {
       console.error("Import error:", err);
-      toast.error("Import failed: " + (err.response?.data?.message || err.message));
+      toast.error(
+        "Import failed: " + (err.response?.data?.message || err.message)
+      );
     }
   };
 
@@ -269,18 +274,25 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
     return sessions.filter((s) => {
       if (q) {
-        const merged = `${s.doctorName} ${s.clinic} ${(s.days || []).join(", ")}`.toLowerCase();
+        const merged = `${s.doctorName} ${s.clinic} ${(s.days || []).join(
+          ", "
+        )}`.toLowerCase();
         if (!merged.includes(q)) return false;
       }
 
-      if (filterDoctor && !s.doctorName?.toLowerCase().includes(filterDoctor.toLowerCase()))
+      if (
+        filterDoctor &&
+        !s.doctorName?.toLowerCase().includes(filterDoctor.toLowerCase())
+      )
         return false;
 
-      if (filterClinic && !s.clinic?.toLowerCase().includes(filterClinic.toLowerCase()))
+      if (
+        filterClinic &&
+        !s.clinic?.toLowerCase().includes(filterClinic.toLowerCase())
+      )
         return false;
 
-      if (filterDay && !(s.days || []).includes(filterDay))
-        return false;
+      if (filterDay && !(s.days || []).includes(filterDay)) return false;
 
       return true;
     });
@@ -305,7 +317,6 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
 
         {/* PAGE CONTAINER */}
         <div className="container-fluid mt-3">
-
           {/* BLUE HEADER LIKE SERVICES */}
           <div className="services-topbar services-card d-flex justify-content-between">
             <h5 className="fw-bold text-white mb-0">Doctor Sessions</h5>
@@ -404,11 +415,15 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="text-center">Loading…</td>
+                      <td colSpan={8} className="text-center">
+                        Loading…
+                      </td>
                     </tr>
                   ) : filteredSessions.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center text-muted">No data</td>
+                      <td colSpan={8} className="text-center text-muted">
+                        No data
+                      </td>
                     </tr>
                   ) : (
                     filteredSessions.map((s, i) => (
@@ -442,7 +457,6 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
                     ))
                   )}
                 </tbody>
-
               </table>
             </div>
 
@@ -473,7 +487,6 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
                   <form onSubmit={handleSave}>
                     <div className="modal-body">
                       <div className="row g-3">
-
                         <div className="col-md-6">
                           <label className="form-label">Doctor *</label>
                           <select
@@ -493,9 +506,13 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
                         </div>
 
                         <div className="col-md-6">
-                          <label className="form-label">Clinic {clinicName ? "(Auto-detected)" : "*"}</label>
+                          <label className="form-label">
+                            Clinic {clinicName ? "(Auto-detected)" : "*"}
+                          </label>
                           <input
-                            className={`form-control ${clinicName ? "bg-light" : ""}`}
+                            className={`form-control ${
+                              clinicName ? "bg-light" : ""
+                            }`}
                             name="clinic"
                             value={form.clinic}
                             onChange={handleFormChange}
@@ -571,7 +588,6 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
                             />
                           </div>
                         </div>
-
                       </div>
                     </div>
 
@@ -587,7 +603,6 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
                         Save
                       </button>
                     </div>
-
                   </form>
                 </div>
               </div>
@@ -603,7 +618,9 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                   <div className="modal-header">
-                    <h5 className="modal-title text-primary">Import Doctor Sessions</h5>
+                    <h5 className="modal-title text-primary">
+                      Import Doctor Sessions
+                    </h5>
                     <button
                       className="btn-close"
                       onClick={() => setShowImportModal(false)}
@@ -654,8 +671,6 @@ const DoctorSessions = ({ sidebarCollapsed, toggleSidebar }) => {
             </div>
           </>
         )}
-
-
 
         <ConfirmationModal
           show={confirmModal.show}
