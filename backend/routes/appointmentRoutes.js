@@ -140,7 +140,16 @@ router.post("/", verifyToken, async (req, res) => {
       clinic: req.body.clinic || "",
       date: req.body.date || "",
       time: req.body.time || "",
-      services: req.body.services || req.body.servicesDetail || "",
+      services: (() => {
+        const raw = req.body.services || req.body.servicesDetail || "";
+        if (Array.isArray(raw)) {
+          return raw.map(s => String(s).trim()).filter(Boolean);
+        }
+        if (typeof raw === "string" && raw.trim()) {
+          return raw.split(",").map(s => s.trim()).filter(Boolean);
+        }
+        return [];
+      })(),
       servicesDetail: req.body.servicesDetail || "",
       charges: req.body.charges || 0,
       paymentMode: req.body.paymentMode || "",

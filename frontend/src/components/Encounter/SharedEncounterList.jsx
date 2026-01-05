@@ -50,12 +50,20 @@ export default function SharedEncounterList({ role, doctorId, clinicName: autoCl
     status: "active",
   });
 
+  // Auto-set clinic for doctor role from localStorage on initial load
   useEffect(() => {
-    if (storedDoctor && (storedDoctor.clinic || storedDoctor.clinicName)) {
-      const lockedName = storedDoctor.clinic || storedDoctor.clinicName;
-      setCurrentClinic(lockedName);
-      setFormData((prev) => ({ ...prev, clinic: lockedName }));
-    }if (role === 'doctor' && doctorId && doctors.length > 0) {
+    if (role === 'doctor' && storedDoctor) {
+      const lockedName = storedDoctor.clinic || storedDoctor.clinicName || "";
+      if (lockedName) {
+        setCurrentClinic(lockedName);
+        setFormData((prev) => ({ ...prev, clinic: lockedName }));
+      }
+    }
+  }, [role]);
+
+  // Fallback: If localStorage didn't have clinic, try to get it from fetched doctors data
+  useEffect(() => {
+    if (role === 'doctor' && doctorId && doctors.length > 0 && !currentClinic) {
       const myself = doctors.find(d => d._id === doctorId);
       if (myself) {
         const myClinic = myself.clinic || myself.clinicName || "";
@@ -65,7 +73,7 @@ export default function SharedEncounterList({ role, doctorId, clinicName: autoCl
         }
       }
     }
-  }, [doctors, doctorId, role]);
+  }, [doctors, doctorId, role, currentClinic]);
 
   // 1. Initial Data Fetch
   useEffect(() => {
@@ -383,11 +391,11 @@ export default function SharedEncounterList({ role, doctorId, clinicName: autoCl
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label fw-bold">Clinic {autoClinicName ? "(Auto-detected)" : <span className="text-danger">*</span>}</label>
-              {autoClinicName ? (
+              <label className="form-label fw-bold">Clinic {(autoClinicName || (role === 'doctor' && currentClinic)) ? "(Auto-detected)" : <span className="text-danger">*</span>}</label>
+              {(autoClinicName || (role === 'doctor' && currentClinic)) ? (
                 <input 
                   className="form-control bg-light" 
-                  value={autoClinicName} 
+                  value={autoClinicName || currentClinic} 
                   readOnly 
                 />
               ) : (
