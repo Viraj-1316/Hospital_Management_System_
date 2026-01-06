@@ -125,6 +125,28 @@ export default function DoctorBillingRecords() {
     return "-";
   };
 
+  // --- SECURE PDF DOWNLOAD ---
+  const handleDownloadPdf = async (id) => {
+    try {
+      const toastId = toast.loading("Generating PDF...");
+      // 1. Fetch BLOB with Token in Header
+      const res = await axios.get(`${BASE}/bills/${id}/pdf`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        responseType: "blob",
+      });
+      // 2. Create Object URL
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      // 3. Open
+      window.open(url, "_blank");
+      toast.dismiss(toastId);
+    } catch (err) {
+      console.error(err);
+      toast.dismiss();
+      toast.error("Failed to download PDF");
+    }
+  };
+
   // --- FILTERING ---
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -448,14 +470,13 @@ export default function DoctorBillingRecords() {
                             >
                               <FaTrash />
                             </button>
-                            <a
-                              href={`${BASE}/bills/${bill._id}/pdf`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
                               className="btn btn-sm btn-link text-success p-0"
+                              onClick={() => handleDownloadPdf(bill._id)}
+                              title="Download PDF"
                             >
                               <FaFilePdf />
-                            </a>
+                            </button>
                           </div>
                         </td>
 
@@ -544,14 +565,12 @@ export default function DoctorBillingRecords() {
                               >
                                 <FaEdit /> <small>Edit</small>
                               </button>
-                              <a
-                                href={`${BASE}/bills/${bill._id}/pdf`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-link p-0 text-success d-flex align-items-center gap-1 text-decoration-none"
+                              <button
+                                className="btn btn-link p-0 text-success d-flex align-items-center gap-1 text-decoration-none border-0 bg-transparent"
+                                onClick={() => handleDownloadPdf(bill._id)}
                               >
                                 <FaFilePdf /> <small>PDF</small>
-                              </a>
+                              </button>
                             </div>
                             <button
                               className="btn btn-link p-0 text-danger"
