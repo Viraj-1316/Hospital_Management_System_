@@ -126,7 +126,8 @@ const ZoomIntegration = lazy(() => import("./doctor-dashboard/doctor/Settings/Zo
 const ReceptionistChangePassword = lazy(() => import("./receptionist/ReceptionistChangePassword"));
 const ReceptionistChangePasswordPage = lazy(() => import("./receptionist/ReceptionistChangePasswordPage"));
 const ReceptionistProfile = lazy(() => import("./receptionist/ReceptionistProfile"));
-const ReptionistDashboard = lazy(() => import("./receptionist/ReptionistDashboard"));
+const ReceptionistDashboard = lazy(() => import("./receptionist/ReceptionistDashboard"));
+
 
 /* PDF Editor */
 const PdfEditor = lazy(() => import("./pdf-editor/PdfEditor"));
@@ -466,7 +467,7 @@ function App() {
           <Route path="/patient/appointments/:id" element={<AppointmentDetails />} />
 
           {/* ==================== RECEPTIONIST SECTION ==================== */}
-          <Route path="/reception-dashboard" element={<ReptionistDashboard />} />
+          <Route path="/reception-dashboard" element={<ReceptionistDashboard />} />
           <Route path="/receptionist/change-password" element={<ReceptionistChangePassword />} />
           <Route path="/reception/change-password" element={<ReceptionistChangePasswordPage />} />
           <Route path="/receptionist/profile" element={

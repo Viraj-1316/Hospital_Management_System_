@@ -104,7 +104,7 @@ exports.getReceptionists = async (req, res) => {
     }
 
     const receptionist = await Receptionist.find(query)
-      .populate("clinicIds", "name")
+      .populate("clinicIds", "name clinicLogo")
       .sort({ createdAt: -1 });
 
     res.json({ data: receptionist });
@@ -120,7 +120,7 @@ exports.getReceptionistById = async (req, res) => {
   try {
     const recp = await Receptionist.findById(req.params.id).populate(
       "clinicIds",
-      "name"
+      "name clinicLogo"
     );
 
     if (!recp) return res.status(404).json({ message: "Not found" });
