@@ -21,23 +21,36 @@ export default defineConfig({
           // React core - rarely changes, cache separately
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
 
-          // FullCalendar - only needed on appointment pages
+          // FullCalendar - only needed on appointment pages (~260KB)
           'vendor-calendar': [
             '@fullcalendar/core',
             '@fullcalendar/react',
             '@fullcalendar/daygrid',
             '@fullcalendar/timegrid',
-            '@fullcalendar/interaction'
+            '@fullcalendar/interaction',
+            '@fullcalendar/list'
           ],
 
           // Bootstrap - styling framework
           'vendor-bootstrap': ['bootstrap', 'react-bootstrap'],
 
-          // PDF and Excel - only needed for reports
-          'vendor-docs': ['jspdf', 'jspdf-autotable', 'xlsx'],
+          // PDF generation - split separately (large library)
+          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+
+          // Excel generation - split separately (~440KB library)
+          'vendor-excel': ['xlsx'],
+
+          // Rich text editor - only needed for forms with rich text
+          'vendor-quill': ['react-quill-new'],
 
           // Icons - loaded across many pages
           'vendor-icons': ['lucide-react', 'react-icons'],
+
+          // HTTP client
+          'vendor-axios': ['axios'],
+
+          // Sockets
+          'vendor-socket': ['socket.io-client'],
         },
 
         // Use content hash in filenames for cache busting

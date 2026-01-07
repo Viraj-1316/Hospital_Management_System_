@@ -28,7 +28,9 @@ const Navbar = ({ toggleSidebar }) => {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/user/${userId}`, {
+      const userRole = authUser?.role;
+      const endpoint = userRole === 'admin' ? `${API_BASE}/api/admin/${userId}` : `${API_BASE}/api/user/${userId}`;
+      const res = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
