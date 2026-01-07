@@ -1,0 +1,719 @@
+/* ReceptionistDashboard.css - Modern Dashboard Styling (FIXED) */
+
+/* ============================================
+   RESET & BASE STYLES
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+    "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   MAIN WRAPPER & LAYOUT
+   ============================================ */
+
+.receptionist-dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.receptionist-dashboard-container {
+  display: flex;
+  flex: 1;
+  position: relative;
+}
+
+.receptionist-main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  height: calc(100vh - 70px);
+}
+
+.content-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ============================================
+   STATS GRID
+   ============================================ */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.patients::before {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.stat-card.doctors::before {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.stat-card.appointments::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.stat-card.revenue::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.stat-card-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.stat-card.patients .stat-icon {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+}
+
+.stat-card.doctors .stat-icon {
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+}
+
+.stat-card.appointments .stat-icon {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+}
+
+.stat-card.revenue .stat-icon {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.stat-description {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* ============================================
+   CALENDAR CARD
+   ============================================ */
+
+.calendar-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-right {
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+/* ============================================
+   CALENDAR CONTROLS
+   ============================================ */
+
+.calendar-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.nav-controls,
+.view-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.month-display {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 150px;
+  text-align: center;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn {
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-outline-primary {
+  color: #10b981;
+  border: 1px solid #10b981;
+  background: transparent;
+}
+
+.btn-outline-primary:hover {
+  background: #10b981;
+  color: #fff;
+}
+
+.btn-outline-secondary {
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  background: transparent;
+}
+
+.btn-outline-secondary:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.btn-light {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-light:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.btn-light.active {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: #fff;
+  border: none;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #059669, #10b981);
+  transform: translateY(-2px);
+}
+
+.btn-info {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  color: #fff;
+  border: none;
+}
+
+.btn-info:hover {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  transform: translateY(-2px);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #fff;
+  border: none;
+}
+
+.btn-warning:hover {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   CALENDAR GRID
+   ============================================ */
+
+.calendar-grid {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calendar-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.calendar-day-name {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calendar-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: #e2e8f0;
+  padding: 1px;
+}
+
+.calendar-cell {
+  background: #fff;
+  padding: 12px 8px;
+  min-height: 80px;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-cell:hover {
+  background: #f8fafc;
+  box-shadow: inset 0 0 8px rgba(16, 185, 129, 0.1);
+}
+
+.calendar-cell.empty {
+  background: #f1f5f9;
+  cursor: default;
+}
+
+.date-number {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.calendar-footer {
+  padding: 12px 0;
+  text-align: center;
+  margin-top: 16px;
+}
+
+/* ============================================
+   QUICK ACTIONS
+   ============================================ */
+
+.quick-actions {
+  margin-bottom: 24px;
+}
+
+.quick-actions .card {
+  background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.quick-actions .card-body {
+  padding: 20px;
+}
+
+.quick-actions h5 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ============================================
+   TEXT UTILITIES
+   ============================================ */
+
+.text-muted {
+  color: #64748b;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.mb-4 {
+  margin-bottom: 24px;
+}
+
+.mb-3 {
+  margin-bottom: 16px;
+}
+
+.mt-4 {
+  margin-top: 24px;
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+
+.receptionist-main-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.receptionist-main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.receptionist-main-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.receptionist-main-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .receptionist-main-content {
+    padding: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .calendar-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .receptionist-main-content {
+    padding: 12px;
+    height: auto;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .calendar-controls {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .nav-controls,
+  .view-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .calendar-cell {
+    min-height: 60px;
+    padding: 8px 4px;
+  }
+
+  .date-number {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .receptionist-main-content {
+    padding: 8px;
+  }
+
+  .page-title {
+    font-size: 18px;
+  }
+
+  .page-subtitle {
+    font-size: 12px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .calendar-cell {
+    min-height: 50px;
+    padding: 6px 2px;
+  }
+
+  .calendar-day-name {
+    font-size: 10px;
+    padding: 8px 4px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons .btn {
+    width: 100%;
+    font-size: 12px;
+  }
+}
+
+/* ============================================
+   DARK MODE SUPPORT (Optional)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .receptionist-dashboard-wrapper {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+
+  .receptionist-main-content {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+
+  .stat-card,
+  .calendar-card,
+  .quick-actions .card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .page-title {
+    color: #f1f5f9;
+  }
+
+  .page-subtitle {
+    color: #cbd5e1;
+  }
+
+  .stat-label {
+    color: #94a3b8;
+  }
+
+  .stat-value {
+    color: #f1f5f9;
+  }
+
+  .card-title {
+    color: #f1f5f9;
+  }
+
+  .calendar-header {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    border-bottom-color: #334155;
+  }
+
+  .calendar-day-name {
+    color: #cbd5e1;
+  }
+
+  .calendar-cell {
+    background: #334155;
+  }
+
+  .calendar-cell:hover {
+    background: #475569;
+  }
+
+  .calendar-cell.empty {
+    background: #1e293b;
+  }
+
+  .calendar-body {
+    background: #0f172a;
+  }
+
+  .btn-light {
+    background: #334155;
+    color: #cbd5e1;
+  }
+
+  .btn-light:hover {
+    background: #475569;
+    color: #f1f5f9;
+  }
+
+  .quick-actions h5 {
+    color: #f1f5f9;
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  }
+
+  .card-body {
+    background: #1e293b;
+  }
+}
