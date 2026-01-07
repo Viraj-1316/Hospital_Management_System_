@@ -39,8 +39,9 @@ function AdminProfile() {
   const loadProfile = async () => {
     try {
       const token = localStorage.getItem("token");
-      // Use admin endpoint if role is admin
-      const endpoint = userRole === 'admin' ? `${API_BASE}/api/admin/${userId}` : `${API_BASE}/api/user/${userId}`;
+      // Use admin endpoint if role is admin or clinic_admin
+      const role = userRole?.toLowerCase();
+      const endpoint = (role === 'admin' || role === 'clinic_admin') ? `${API_BASE}/api/admin/${userId}` : `${API_BASE}/api/user/${userId}`;
       const res = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -97,8 +98,9 @@ function AdminProfile() {
 
     try {
       const token = localStorage.getItem("token");
-      // Use admin endpoint if role is admin
-      const endpoint = userRole === 'admin' ? `${API_BASE}/api/admin/${userId}` : `${API_BASE}/api/user/${userId}`;
+      // Use admin endpoint if role is admin or clinic_admin
+      const role = userRole?.toLowerCase();
+      const endpoint = (role === 'admin' || role === 'clinic_admin') ? `${API_BASE}/api/admin/${userId}` : `${API_BASE}/api/user/${userId}`;
       const res = await fetch(endpoint, {
         method: "PUT",
         headers: {
