@@ -98,6 +98,7 @@ export default function PatientBookAppointment() {
     const loadData = async () => {
       try {
         setLoadingData(true);
+        console.log("DEBUG: API_BASE =", API_BASE); // Debugging API Base URL
 
 
         // A. Fetch Clinics
@@ -119,7 +120,11 @@ export default function PatientBookAppointment() {
           : (servRes.data?.data || servRes.data?.services || servRes.data?.rows || []);
 
         // D. Fetch Taxes
-        const taxRes = await api.get(`/api/taxes`);
+        // D. Fetch Taxes (Direct Axios Call to Debug/Fix 404)
+        const token = localStorage.getItem("token") || localStorage.getItem("patientToken");
+        const taxRes = await axios.get(`${API_BASE}/api/taxes`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         const taxData = Array.isArray(taxRes.data) ? taxRes.data : [];
 
         if (mounted) {
