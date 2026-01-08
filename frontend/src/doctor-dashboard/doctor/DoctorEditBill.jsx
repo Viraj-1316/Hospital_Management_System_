@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react";
-import AdminLayout from "../layouts/DoctorLayout"
+import DoctorLayout from "../layouts/DoctorLayout"; 
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
+import { FaTrash, FaPlus, FaArrowLeft } from "react-icons/fa";
 import API_BASE from "../../config";
 
 const BASE = API_BASE;
 
 const EditBill = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get Bill ID from URL
+  const { id } = useParams();
 
   // --- 1. Form State ---
   const [form, setForm] = useState({
@@ -21,67 +22,121 @@ const EditBill = () => {
     clinicId: "",
     clinicName: "",
     encounterId: "",
-    services: "",
-    totalAmount: "",
-    discount: "0",
-    amountDue: "",
+    
+    services: [], // Array of objects
+    selectedTaxes: [], // IDs
+
+    subTotal: 0,
+    taxAmount: 0,
+    totalAmount: 0,
+    discount: 0,
+    paidAmount: 0,
+    amountDue: 0,
+
     date: "",
-    status: "",
+    time: "",
+    status: "unpaid",
     notes: "",
   });
 
-  // --- Data States ---
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
   const [clinics, setClinics] = useState([]);
   const [encounters, setEncounters] = useState([]);
+  const [availableTaxes, setAvailableTaxes] = useState([]);
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // --- 2. Fetch Initial Data (Dropdowns + Bill Details) ---
+  // Categories
+  const serviceCategories = [
+    "Consultation",
+    "Laboratory",
+    "Radiology",
+    "Pharmacy",
+    "Procedure",
+    "Other"
+  ];
+
+  // --- 2. Load Data ---
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
-        // 1. Fetch Dropdown Options
-        const [docRes, patRes, clinicRes] = await Promise.all([
-          axios.get(`${BASE}/doctors`),
-          axios.get(`${BASE}/patients`),
-          axios.get(`${BASE}/api/clinics`)
+        const token = localStorage.getItem("token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const [docRes, patRes, clinicRes, taxRes, billRes] = await Promise.all([
+          axios.get(`${BASE}/doctors`, { headers }),
+          axios.get(`${BASE}/patients`, { headers }),
+          axios.get(`${BASE}/api/clinics`, { headers }),
+          axios.get(`${BASE}/api/taxes`, { headers }),
+          axios.get(`${BASE}/bills/${id}`, { headers })
         ]);
 
+        const allTaxes = Array.isArray(taxRes.data) ? taxRes.data : taxRes.data.data || [];
+        setAvailableTaxes(allTaxes);
+        
         setDoctors(Array.isArray(docRes.data) ? docRes.data : docRes.data.data || []);
         setPatients(Array.isArray(patRes.data) ? patRes.data : patRes.data.data || []);
+        setClinics(Array.isArray(clinicRes.data) ? clinicRes.data : clinicRes.data.clinics || []);
 
-        const cData = Array.isArray(clinicRes.data)
-          ? clinicRes.data
-          : clinicRes.data.clinics || [];
-        setClinics(cData);
-
-        // 2. Fetch The Bill to Edit
-        const billRes = await axios.get(`${BASE}/bills/${id}`);
         const bill = billRes.data;
-
-        if (bill) {
-          // 3. Format Data for Form
-          setForm({
-            ...bill,
-            // Ensure date is YYYY-MM-DD for input type="date"
-            date: bill.date ? new Date(bill.date).toISOString().split("T")[0] : "",
-            // Convert array ["Xray", "Consult"] -> String "Xray, Consult"
-            services: Array.isArray(bill.services) ? bill.services.join(", ") : bill.services || "",
-            // Ensure IDs are present (sometimes mongo returns object, ensure string)
-            patientId: bill.patientId || "",
-            doctorId: bill.doctorId || "",
-            clinicId: bill.clinicId || "",
-            encounterId: bill.encounterId || ""
-          });
-
-          // 4. Fetch Encounters for this patient immediately
-          if (bill.patientId) {
-            fetchEncounters(bill.patientId);
-          }
+        
+        // Normalize Services
+        let services = [];
+        if (Array.isArray(bill.services)) {
+           services = bill.services.map(s => {
+             if (typeof s === 'string') return { name: s, category: "Consultation", description: "", amount: 0 };
+             return {
+               name: s.name || "",
+               category: s.category || "Consultation",
+               description: s.description || "",
+               amount: s.amount || 0
+             };
+           });
         }
+        if (services.length === 0) services.push({ name: "", category: "Consultation", description: "", amount: 0 });
+
+        // Normalize Taxes
+        let selectedTaxIds = [];
+        if (bill.taxDetails && Array.isArray(bill.taxDetails)) {
+           selectedTaxIds = allTaxes
+             .filter(t => bill.taxDetails.some(bd => bd.name === t.name && bd.rate === t.taxRate))
+             .map(t => t._id);
+        }
+
+        // Date
+        let formattedDate = "";
+        if (bill.date) {
+            const d = new Date(bill.date);
+            if (!isNaN(d.getTime())) formattedDate = d.toISOString().split("T")[0];
+        }
+
+        setForm({
+          patientId: bill.patientId?._id || bill.patientId || "",
+          patientName: bill.patientName || "",
+          doctorId: bill.doctorId?._id || bill.doctorId || "",
+          doctorName: bill.doctorName || "",
+          clinicId: bill.clinicId?._id || bill.clinicId || "",
+          clinicName: bill.clinicName || "",
+          encounterId: bill.encounterId || "",
+          
+          services,
+          selectedTaxes: selectedTaxIds,
+
+          subTotal: bill.subTotal || 0,
+          taxAmount: bill.taxAmount || 0,
+          totalAmount: bill.totalAmount || 0,
+          discount: bill.discount || 0,
+          paidAmount: bill.paidAmount || 0,
+          amountDue: bill.amountDue || 0,
+
+          date: formattedDate,
+          time: bill.time || "",
+          status: bill.status || "unpaid",
+          notes: bill.notes || "",
+        });
 
       } catch (err) {
         console.error("Fetch error:", err);
@@ -90,96 +145,105 @@ const EditBill = () => {
         setLoading(false);
       }
     };
-    fetchData();
+    loadData();
   }, [id]);
 
-  // Helper to fetch encounters
-  const fetchEncounters = (patientId) => {
-    axios.get(`${BASE}/encounters?patientId=${patientId}`)
-      .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
-        setEncounters(data);
-      })
-      .catch(() => setEncounters([]));
-  };
+  // --- 3. Calculations ---
+  useEffect(() => {
+    if (loading) return;
 
-  // --- 3. Change Handlers ---
+    const subTotal = form.services.reduce((sum, svc) => sum + (Number(svc.amount) || 0), 0);
+    
+    let totalTax = 0;
+    const taxesToApply = availableTaxes.filter(t => form.selectedTaxes.includes(t._id));
+    taxesToApply.forEach(tax => {
+      totalTax += (subTotal * (tax.taxRate / 100));
+    });
 
-  const handleDoctorChange = (e) => {
-    const selectedId = e.target.value;
-    const selectedObj = doctors.find(d => d._id === selectedId);
-    setForm(prev => ({
-      ...prev,
-      doctorId: selectedId,
-      doctorName: selectedObj ? `${selectedObj.firstName} ${selectedObj.lastName}` : ""
-    }));
-  };
+    const discount = Number(form.discount) || 0;
+    const totalAmount = subTotal + totalTax - discount;
+    const paid = Number(form.paidAmount) || 0;
+    const amountDue = Math.max(totalAmount - paid, 0);
 
-  const handlePatientChange = (e) => {
-    const selectedId = e.target.value;
-    const selectedObj = patients.find(p => p._id === selectedId);
-
-    // Fetch new encounters when patient changes
-    fetchEncounters(selectedId);
+    let status = form.status;
+    if (paid >= totalAmount && totalAmount > 0) status = "paid";
+    else if (paid > 0 && paid < totalAmount) status = "partial";
+    else if (paid === 0) status = "unpaid";
 
     setForm(prev => ({
       ...prev,
-      patientId: selectedId,
-      patientName: selectedObj ? `${selectedObj.firstName} ${selectedObj.lastName}` : "",
-      encounterId: "" // Reset encounter
+      subTotal,
+      taxAmount: totalTax,
+      totalAmount,
+      amountDue,
+      status
     }));
-  };
+  }, [form.services, form.selectedTaxes, form.discount, form.paidAmount, availableTaxes, loading]);
 
-  const handleClinicChange = (e) => {
-    const selectedId = e.target.value;
-    const selectedObj = clinics.find(c => c._id === selectedId);
 
-    if (selectedObj) {
-      setForm(prev => ({
-        ...prev,
-        clinicId: selectedId,
-        clinicName: selectedObj.name || selectedObj.clinicName || ""
-      }));
-    } else {
-      setForm(prev => ({ ...prev, clinicId: "", clinicName: "" }));
-    }
-  };
-
-  const handleManualClinicChange = (e) => {
-    setForm(prev => ({ ...prev, clinicName: e.target.value }));
-  };
-
+  // --- 4. Handlers ---
   const handleGenericChange = (e) => {
     const { name, value } = e.target;
-    let updatedForm = { ...form, [name]: value };
-
-    // Auto-calculate Amount Due
-    if (name === "totalAmount" || name === "discount") {
-      const total = Number(name === "totalAmount" ? value : updatedForm.totalAmount);
-      const discount = Number(name === "discount" ? value : updatedForm.discount);
-      updatedForm.amountDue = Math.max(total - discount, 0);
-    }
-
-    setForm(updatedForm);
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // --- 4. Submit Handler (PUT Request) ---
+  const handleServiceChange = (index, field, value) => {
+    const updatedServices = [...form.services];
+    updatedServices[index][field] = value;
+    setForm(prev => ({ ...prev, services: updatedServices }));
+  };
+
+  const addServiceRow = () => {
+    setForm(prev => ({
+      ...prev,
+      services: [...prev.services, { name: "", category: "Consultation", description: "", amount: 0 }]
+    }));
+  };
+
+  const removeServiceRow = (index) => {
+    if (form.services.length > 1) {
+       const updatedServices = form.services.filter((_, i) => i !== index);
+       setForm(prev => ({ ...prev, services: updatedServices }));
+    }
+  };
+
+  const toggleTax = (taxId) => {
+    setForm(prev => {
+      const current = prev.selectedTaxes;
+      if (current.includes(taxId)) {
+        return { ...prev, selectedTaxes: current.filter(id => id !== taxId) };
+      } else {
+        return { ...prev, selectedTaxes: [...current, taxId] };
+      }
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       setSaving(true);
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const taxDetails = availableTaxes
+        .filter(t => form.selectedTaxes.includes(t._id))
+        .map(t => ({
+          name: t.name,
+          rate: t.taxRate,
+          amount: (form.subTotal * (t.taxRate / 100))
+        }));
 
       const payload = {
         ...form,
-        // Convert string "A, B" -> Array ["A", "B"]
-        services: form.services.split(",").map(s => s.trim()),
+        services: form.services,
+        taxDetails,
         clinicId: form.clinicId || null
       };
 
-      await axios.put(`${BASE}/bills/${id}`, payload);
+      await axios.put(`${BASE}/bills/${id}`, payload, { headers });
       toast.success("Bill updated successfully!");
-      navigate("/BillingRecords");
+      navigate("/doctor/billing");
     } catch (err) {
       console.error(err);
       toast.error("Error updating bill.");
@@ -190,209 +254,196 @@ const EditBill = () => {
 
   if (loading) {
     return (
-      <AdminLayout>
-        <div className="text-center p-5">Loading Bill Details...</div>
-      </AdminLayout>
+      <DoctorLayout>
+        <div className="text-center p-5">
+           <div className="spinner-border text-primary" role="status"></div>
+           <p className="mt-2">Loading Bill Details...</p>
+        </div>
+      </DoctorLayout>
     )
   }
 
   return (
-    <AdminLayout>
-      <div className="container-fluid">
-        <h4 className="fw-bold text-primary mb-4">Edit Bill</h4>
+    <DoctorLayout>
+      <Toaster position="top-right" />
+      <div className="container-fluid py-4">
+        
+        <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+          <div className="d-flex align-items-center gap-2">
+            <button className="btn btn-light rounded-circle shadow-sm border" onClick={() => navigate('/doctor/billing')}>
+              <FaArrowLeft className="text-secondary" size={14} />
+            </button>
+            <h4 className="fw-bold text-primary mb-0">Edit Bill</h4>
+          </div>
+        </div>
 
-        <div className="card shadow-sm p-4">
+        <div className="card shadow-sm p-4 border-0 rounded-3">
           <form onSubmit={handleSubmit}>
-            <div className="row">
+            <div className="row g-3">
+               
+               {/* Doctor (Locked in View usually, but strictly speaking editable by super admin, but here assume consistent) */}
+               <div className="col-md-6 mb-3">
+                  <label className="form-label small fw-bold">Doctor Name</label>
+                  <select name="doctorId" className="form-select" value={form.doctorId} disabled>
+                    <option value="">-- Select Doctor --</option>
+                    {doctors.map(doc => (
+                      <option key={doc._id} value={doc._id}>{doc.firstName} {doc.lastName}</option>
+                    ))}
+                  </select>
+               </div>
 
-              {/* Doctor */}
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Doctor Name <span className="text-danger">*</span></label>
-                <select
-                  name="doctorId"
-                  className="form-select"
-                  value={form.doctorId}
-                  onChange={handleDoctorChange}
-                  required
-                >
-                  <option value="">-- Select Doctor --</option>
-                  {doctors.map((doc) => (
-                    <option key={doc._id} value={doc._id}>
-                      {doc.firstName} {doc.lastName}
-                    </option>
-                  ))}
-                </select>
-              </div>
+               {/* Patient (Locked for simplicity or editable?) Editable usually */}
+               <div className="col-md-6 mb-3">
+                  <label className="form-label small fw-bold">Patient Name</label>
+                  <select name="patientId" className="form-select" value={form.patientId} onChange={(e) => setForm({...form, patientId: e.target.value})}>
+                    <option value="">-- Select Patient --</option>
+                    {patients.map(p => (
+                      <option key={p._id} value={p._id}>{p.firstName} {p.lastName}</option>
+                    ))}
+                  </select>
+               </div>
 
-              {/* Patient */}
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Patient Name <span className="text-danger">*</span></label>
-                <select
-                  name="patientId"
-                  className="form-select"
-                  value={form.patientId}
-                  onChange={handlePatientChange}
-                  required
-                >
-                  <option value="">-- Select Patient --</option>
-                  {patients.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.firstName} {p.lastName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Clinic */}
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Clinic Name <span className="text-danger">*</span></label>
-                {clinics.length > 0 ? (
-                  <select
-                    name="clinicId"
-                    className="form-select"
-                    value={form.clinicId}
-                    onChange={handleClinicChange}
-                    required
-                  >
+                <div className="col-md-6 mb-3">
+                  <label className="form-label small fw-bold">Clinic</label>
+                   <select name="clinicId" className="form-select" value={form.clinicId} onChange={(e) => setForm({...form, clinicId: e.target.value})}>
                     <option value="">-- Select Clinic --</option>
-                    {clinics.map((c) => (
+                    {clinics.map(c => (
                       <option key={c._id} value={c._id}>{c.name || c.clinicName}</option>
                     ))}
                   </select>
-                ) : (
-                  <input
-                    name="clinicName"
-                    className="form-control"
-                    value={form.clinicName}
-                    onChange={handleManualClinicChange}
-                    placeholder="Enter Clinic Name"
-                    required
-                  />
-                )}
-              </div>
+               </div>
 
-              {/* Encounter */}
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Link Encounter (Optional)</label>
-                <select
-                  name="encounterId"
-                  className="form-select"
-                  value={form.encounterId}
-                  onChange={handleGenericChange}
-                  disabled={!form.patientId}
-                >
-                  <option value="">-- Select Encounter --</option>
-                  {encounters.map((enc) => (
-                    <option key={enc._id} value={enc._id}>
-                      {new Date(enc.date).toLocaleDateString()} (ID: {enc.encounterId || enc._id})
-                    </option>
-                  ))}
-                </select>
-              </div>
+               {/* Services Section */}
+               <div className="col-12 mt-4">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                     <label className="form-label small fw-bold mb-0">Services</label>
+                     <button type="button" className="btn btn-sm btn-outline-primary" onClick={addServiceRow}>
+                       <FaPlus className="me-1" /> Add Service
+                     </button>
+                  </div>
+                  
+                  <div className="table-responsive">
+                    <table className="table table-bordered table-sm">
+                       <thead className="table-light">
+                          <tr>
+                             <th style={{width: "25%"}}>Service</th>
+                             <th style={{width: "20%"}}>Category</th>
+                             <th style={{width: "35%"}}>Description</th>
+                             <th style={{width: "15%"}}>Amount</th>
+                             <th style={{width: "5%"}}></th>
+                          </tr>
+                       </thead>
+                       <tbody>
+                          {form.services.map((svc, index) => (
+                             <tr key={index}>
+                                <td>
+                                   <input className="form-control form-control-sm" value={svc.name} onChange={e => handleServiceChange(index, "name", e.target.value)} required />
+                                </td>
+                                <td>
+                                   <select className="form-select form-select-sm" value={svc.category} onChange={e => handleServiceChange(index, "category", e.target.value)}>
+                                      {serviceCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                   </select>
+                                </td>
+                                <td>
+                                   <input className="form-control form-control-sm" value={svc.description} onChange={e => handleServiceChange(index, "description", e.target.value)} />
+                                </td>
+                                <td>
+                                   <input type="number" className="form-control form-control-sm" value={svc.amount} onChange={e => handleServiceChange(index, "amount", e.target.value)} min="0" required />
+                                </td>
+                                <td className="text-center">
+                                   <button type="button" className="btn btn-link text-danger p-0" onClick={() => removeServiceRow(index)}>
+                                      <FaTrash size={12} />
+                                   </button>
+                                </td>
+                             </tr>
+                          ))}
+                       </tbody>
+                    </table>
+                  </div>
+               </div>
 
-              {/* Services */}
-              <div className="col-md-12 mb-3">
-                <label className="form-label">Services (comma separated)</label>
-                <input
-                  name="services"
-                  className="form-control"
-                  value={form.services}
-                  onChange={handleGenericChange}
-                  placeholder="Consultation, X-Ray"
-                />
-              </div>
+               {/* Calculations & Taxes */}
+               <div className="col-md-6 mt-3">
+                 <label className="form-label small fw-bold">Tax Selection</label>
+                 {availableTaxes.length > 0 ? (
+                  <div className="card p-3 border-0 bg-light">
+                    {availableTaxes.map(tax => (
+                      <div className="form-check mb-1" key={tax._id}>
+                        <input className="form-check-input" type="checkbox" id={`tax-${tax._id}`} checked={form.selectedTaxes.includes(tax._id)} onChange={() => toggleTax(tax._id)} />
+                        <label className="form-check-label d-flex justify-content-between small" htmlFor={`tax-${tax._id}`}>
+                          <span>{tax.name}</span>
+                          <span className="fw-bold">{tax.taxRate}%</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                 ) : <div className="text-muted small">No taxes available.</div>}
+                 
+                 <div className="mt-3">
+                    <label className="form-label small fw-bold">Notes</label>
+                    <textarea name="notes" className="form-control" rows="3" value={form.notes} onChange={handleGenericChange}></textarea>
+                 </div>
+               </div>
 
-              {/* Amounts */}
-              <div className="col-md-4 mb-3">
-                <label className="form-label">Total Amount (₹) <span className="text-danger">*</span></label>
-                <input
-                  type="number"
-                  name="totalAmount"
-                  className="form-control"
-                  value={form.totalAmount}
-                  onChange={handleGenericChange}
-                  required
-                />
-              </div>
+               <div className="col-md-6 mt-3">
+                  <div className="card p-3 border-0 bg-light">
+                      <div className="d-flex justify-content-between mb-1 small">
+                        <span>Sub Total:</span>
+                        <span className="fw-bold">₹{Number(form.subTotal).toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mb-1 small">
+                        <span>Tax:</span>
+                        <span className="text-danger">+ ₹{Number(form.taxAmount).toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mb-1 small align-items-center">
+                        <span>Discount:</span>
+                        <input type="number" name="discount" className="form-control form-control-sm text-end" style={{width:"80px"}} value={form.discount} onChange={handleGenericChange} />
+                     </div>
+                     <div className="border-top my-2"></div>
+                      <div className="d-flex justify-content-between mb-1 fw-bold">
+                        <span>Total:</span>
+                        <span className="text-primary">₹{Number(form.totalAmount).toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mb-1 small align-items-center">
+                        <span>Paid:</span>
+                        <input type="number" name="paidAmount" className="form-control form-control-sm text-end" style={{width:"80px"}} value={form.paidAmount} onChange={handleGenericChange} />
+                     </div>
+                     <div className="d-flex justify-content-between fw-bold text-danger">
+                        <span>Due:</span>
+                        <span>₹{Number(form.amountDue).toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mt-2 align-items-center">
+                        <span className="small">Status:</span>
+                        <select name="status" className="form-select form-select-sm" style={{width: "100px"}} value={form.status} onChange={handleGenericChange}>
+                           <option value="paid">Paid</option>
+                           <option value="unpaid">Unpaid</option>
+                           <option value="partial">Partial</option>
+                        </select>
+                     </div>
+                  </div>
+               </div>
+               
+               <div className="col-md-6 mt-3">
+                  <label className="form-label small fw-bold">Date</label>
+                  <input type="date" name="date" className="form-control" value={form.date} onChange={handleGenericChange} required />
+               </div>
+                <div className="col-md-6 mt-3">
+                  <label className="form-label small fw-bold">Time</label>
+                  <input type="text" name="time" className="form-control" value={form.time} onChange={handleGenericChange} />
+               </div>
 
-              {/* Discount */}
-              <div className="col-md-4 mb-3">
-                <label className="form-label">Discount (₹)</label>
-                <input
-                  type="number"
-                  name="discount"
-                  className="form-control"
-                  value={form.discount}
-                  onChange={handleGenericChange}
-                />
-              </div>
-
-              {/* Amount Due */}
-              <div className="col-md-4 mb-3">
-                <label className="form-label">Amount Due (₹)</label>
-                <input
-                  type="number"
-                  className="form-control bg-light"
-                  value={form.amountDue}
-                  readOnly
-                />
-              </div>
-
-              {/* Date & Status */}
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Date <span className="text-danger">*</span></label>
-                <input
-                  type="date"
-                  name="date"
-                  className="form-control"
-                  value={form.date}
-                  onChange={handleGenericChange}
-                  required
-                />
-              </div>
-
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Status</label>
-                <select
-                  name="status"
-                  className="form-select"
-                  value={form.status}
-                  onChange={handleGenericChange}
-                >
-                  <option value="paid">Paid</option>
-                  <option value="unpaid">Unpaid</option>
-                  <option value="partial">Partial</option>
-                </select>
-              </div>
-
-              {/* Notes */}
-              <div className="col-md-12 mb-3">
-                <label className="form-label">Notes</label>
-                <textarea
-                  name="notes"
-                  className="form-control"
-                  rows="3"
-                  value={form.notes}
-                  onChange={handleGenericChange}
-                ></textarea>
-              </div>
             </div>
 
-            <button className="btn btn-primary px-4" disabled={saving}>
-              {saving ? "Updating..." : "Update Bill"}
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary ms-2"
-              onClick={() => navigate("/BillingRecords")}
-            >
-              Cancel
-            </button>
+            <div className="mt-4 d-flex flex-wrap justify-content-end gap-2">
+              <button type="button" className="btn btn-light border px-4" onClick={() => navigate("/doctor/billing")}>Cancel</button>
+              <button className="btn btn-primary px-4" disabled={saving}>
+                {saving ? "Updating..." : "Update Bill"}
+              </button>
+            </div>
           </form>
         </div>
       </div>
-    </AdminLayout>
+    </DoctorLayout>
   );
 };
 

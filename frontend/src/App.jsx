@@ -81,6 +81,7 @@ const ClinicEditBill = lazy(() => import("./clinic-dashboard/clinic/EditBill"));
 /* Clinic Settings - Reuse Admin Settings layout/pages or duplicate if needed. For now assuming reuse but mapped to clinic paths if they are generic enough, OR use copied settings if duplicated. */
 const ClinicSettingsLayout = lazy(() => import("./clinic-dashboard/clinic/settings/SettingsLayout")); // Assuming copied
 const ClinicHolidaySettings = lazy(() => import("./clinic-dashboard/clinic/settings/pages/HolidaySettings"));
+const ClinicBillingSettings = lazy(() => import("./clinic-dashboard/clinic/settings/pages/BillingSettings"));
 const ClinicListingSettings = lazy(() => import("./clinic-dashboard/clinic/settings/pages/ListingSettings"));
 const PendingApprovals = lazy(() => import("./clinic-dashboard/components/PendingApprovals"));
 const PatientDashboard = lazy(() => import("./patient-dashboard/Patient/PatientDashboard"));
@@ -390,6 +391,7 @@ function App() {
           <Route path="/clinic-dashboard/settings" element={<ClinicSettingsLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}>
             <Route index element={<ClinicHolidaySettings />} />
             <Route path="holidays" element={<ClinicHolidaySettings />} />
+            <Route path="billing" element={<ClinicBillingSettings />} />
             <Route path="listings" element={<ClinicListingSettings />} />
           </Route>
 

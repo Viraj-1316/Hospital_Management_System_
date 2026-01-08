@@ -21,11 +21,19 @@ export default function DoctorAddBill() {
     clinicId: null,
     clinicName: "",
     encounterId: "",
-    selectedServices: [],
+    
+    selectedServices: [], // Array of { name, category, description, amount }
+    selectedTaxes: [], // IDs
+
+    subTotal: 0,
+    taxAmount: 0,
     totalAmount: 0,
     discount: 0,
+    paidAmount: 0,
     amountDue: 0,
+
     date: new Date().toISOString().split("T")[0],
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
     status: "unpaid",
     notes: "",
   });
@@ -33,6 +41,7 @@ export default function DoctorAddBill() {
   const [patients, setPatients] = useState([]);
   const [encounters, setEncounters] = useState([]);
   const [doctorServices, setDoctorServices] = useState([]);
+  const [availableTaxes, setAvailableTaxes] = useState([]);
   const [saving, setSaving] = useState(false);
 
   // --- 2. Initialize Data ---
@@ -54,12 +63,17 @@ export default function DoctorAddBill() {
       }));
 
       try {
-        const patRes = await axios.get(`${BASE}/patients`);
-        setPatients(Array.isArray(patRes.data) ? patRes.data : patRes.data.data || []);
+        const token = localStorage.getItem("token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const servRes = await axios.get(`${BASE}/services`, {
-          params: { doctor: doctorName, active: true }
-        });
+        const [patRes, servRes, taxRes] = await Promise.all([
+           axios.get(`${BASE}/patients`, { headers }),
+           axios.get(`${BASE}/services`, { params: { active: true }, headers }),
+           axios.get(`${BASE}/api/taxes`, { headers })
+        ]);
+
+        setPatients(Array.isArray(patRes.data) ? patRes.data : patRes.data.data || []);
+        setAvailableTaxes((Array.isArray(taxRes.data) ? taxRes.data : taxRes.data.data || []).filter(t => t.active !== false));
 
         const servicesData = Array.isArray(servRes.data)
           ? servRes.data
@@ -75,22 +89,45 @@ export default function DoctorAddBill() {
     init();
   }, []);
 
-  // --- 🔥 3. THE "NUCLEAR" FIX FOR MOBILE ZOOM ---
-  // This forces the browser to STOP zooming when this page is open
+  // --- 3. Calculations ---
   useEffect(() => {
-    const meta = document.querySelector('meta[name="viewport"]');
-    const originalContent = meta ? meta.getAttribute('content') : 'width=device-width, initial-scale=1';
-    
-    // Update viewport to disable zoom specifically for this form
-    if (meta) {
-      meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0');
-    }
+    // 1. Calculate SubTotal
+    const subTotal = form.selectedServices.reduce((sum, svc) => sum + (Number(svc.amount) || 0), 0);
 
-    // Clean up: Revert to normal when leaving this page
-    return () => {
-      if (meta) meta.setAttribute('content', originalContent);
-    };
-  }, []);
+    // 2. Calculate Tax Amount
+    let totalTax = 0;
+    const taxesToApply = availableTaxes.filter(t => form.selectedTaxes.includes(t._id));
+    taxesToApply.forEach(tax => {
+      totalTax += (subTotal * (tax.taxRate / 100));
+    });
+
+    // 3. Calculate Final Total
+    const discount = Number(form.discount) || 0;
+    const totalAmount = subTotal + totalTax - discount;
+    
+    // 4. Calculate Amount Due
+    const paid = Number(form.paidAmount) || 0;
+    const amountDue = Math.max(totalAmount - paid, 0);
+
+    // Auto-update status based on logic if changed externally or init
+    // But doctor might want to manually set status too, so we won't FORCE it if they manually changed it maybe?
+    // For now stick to auto logic to be safe
+    let status = form.status;
+    if (paid >= totalAmount && totalAmount > 0) status = "paid";
+    else if (paid > 0 && paid < totalAmount) status = "partial";
+    else if (paid === 0) status = "unpaid"; // default
+
+    setForm(prev => ({
+      ...prev,
+      subTotal,
+      taxAmount: totalTax,
+      totalAmount,
+      amountDue,
+      status
+    }));
+
+  }, [form.selectedServices, form.selectedTaxes, form.discount, form.paidAmount, availableTaxes]);
+
 
   // --- 4. Handlers ---
   const handlePatientChange = async (e) => {
@@ -113,7 +150,9 @@ export default function DoctorAddBill() {
     }
 
     try {
-      const res = await axios.get(`${BASE}/encounters?patientId=${selectedId}&doctorId=${form.doctorId}`);
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${BASE}/encounters?patientId=${selectedId}&doctorId=${form.doctorId}`, { headers });
       const data = Array.isArray(res.data) ? res.data : res.data.encounters || [];
       setEncounters(data);
 
@@ -135,24 +174,22 @@ export default function DoctorAddBill() {
       : (encounter.services || "").split(",");
 
     const matchedServices = rawServices.map(sName => {
-      const nameClean = sName.trim();
+      const nameClean = (typeof sName === 'string' ? sName : sName.name || "").trim();
       if (!nameClean) return null;
+      
       const found = doctorServices.find(ds => ds.name.toLowerCase() === nameClean.toLowerCase());
       return {
         name: nameClean,
-        charges: found ? Number(found.charges) : 0
+        category: found ? found.category || "Consultation" : "Consultation", // try to get category
+        description: "",
+        amount: found ? Number(found.charges) : 0
       };
     }).filter(Boolean);
-
-    const calculatedTotal = matchedServices.reduce((sum, s) => sum + s.charges, 0);
-    const finalTotal = encounter.charges ? Number(encounter.charges) : calculatedTotal;
 
     setForm(prev => ({
       ...prev,
       encounterId: encounter._id,
       selectedServices: matchedServices,
-      totalAmount: finalTotal,
-      amountDue: finalTotal - (Number(prev.discount) || 0),
       date: new Date(encounter.date).toISOString().split('T')[0]
     }));
   };
@@ -160,8 +197,8 @@ export default function DoctorAddBill() {
   const handleEncounterChange = (e) => {
     const selectedId = e.target.value;
     if (!selectedId) {
-      setForm(prev => ({ ...prev, encounterId: "", selectedServices: [], totalAmount: 0, amountDue: 0 }));
-      return;
+       // Reset logic if needed
+       return;
     }
     const encounter = encounters.find(enc => enc._id === selectedId);
     autoFillFromEncounter(encounter);
@@ -174,46 +211,41 @@ export default function DoctorAddBill() {
     const serviceObj = doctorServices.find(s => s.name === serviceName);
     const newService = {
       name: serviceObj ? serviceObj.name : serviceName,
-      charges: serviceObj ? Number(serviceObj.charges) : 0
+      category: serviceObj ? serviceObj.category || "Consultation" : "Consultation",
+      description: "",
+      amount: serviceObj ? Number(serviceObj.charges) : 0
     };
 
     if (!form.selectedServices.find(s => s.name === newService.name)) {
-      const updatedServices = [...form.selectedServices, newService];
-      const newTotal = updatedServices.reduce((sum, s) => sum + s.charges, 0);
-
       setForm(prev => ({
         ...prev,
-        selectedServices: updatedServices,
-        totalAmount: newTotal,
-        amountDue: newTotal - (Number(prev.discount) || 0)
+        selectedServices: [...prev.selectedServices, newService]
       }));
     }
     e.target.value = "";
   };
 
   const removeService = (indexToRemove) => {
-    const updatedServices = form.selectedServices.filter((_, i) => i !== indexToRemove);
-    const newTotal = updatedServices.reduce((sum, s) => sum + s.charges, 0);
-
     setForm(prev => ({
       ...prev,
-      selectedServices: updatedServices,
-      totalAmount: newTotal,
-      amountDue: newTotal - (Number(prev.discount) || 0)
+      selectedServices: prev.selectedServices.filter((_, i) => i !== indexToRemove)
     }));
+  };
+
+  const toggleTax = (taxId) => {
+    setForm(prev => {
+      const current = prev.selectedTaxes;
+      if (current.includes(taxId)) {
+        return { ...prev, selectedTaxes: current.filter(id => id !== taxId) };
+      } else {
+        return { ...prev, selectedTaxes: [...current, taxId] };
+      }
+    });
   };
 
   const handleGenericChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => {
-      const newState = { ...prev, [name]: value };
-      if (name === "totalAmount" || name === "discount") {
-        const total = Number(name === "totalAmount" ? value : newState.totalAmount);
-        const discount = Number(name === "discount" ? value : newState.discount);
-        newState.amountDue = Math.max(total - discount, 0);
-      }
-      return newState;
-    });
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -222,35 +254,51 @@ export default function DoctorAddBill() {
 
     try {
       setSaving(true);
-      const formattedServices = form.selectedServices.map(s => ({
-        name: s.name,
-        amount: s.charges
-      }));
+
+      const taxDetails = availableTaxes
+        .filter(t => form.selectedTaxes.includes(t._id))
+        .map(t => ({
+          name: t.name,
+          rate: t.taxRate,
+          amount: (form.subTotal * (t.taxRate / 100))
+        }));
 
       const payload = {
         ...form,
-        services: formattedServices,
-        clinicId: null
+        services: form.selectedServices, // {name, category, description, amount}
+        taxDetails,
+        clinicId: form.clinicId || null
       };
-      await axios.post(`${BASE}/bills`, payload);
+
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`${BASE}/bills`, payload, { headers });
       toast.success("Bill created successfully!");
       navigate("/doctor/billing");
     } catch (err) {
+      console.error(err);
       toast.error("Error creating bill.");
     } finally {
       setSaving(false);
     }
   };
 
+  // Prevent Zoom
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    const originalContent = meta ? meta.getAttribute('content') : 'width=device-width, initial-scale=1';
+    if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0');
+    return () => { if (meta) meta.setAttribute('content', originalContent); };
+  }, []);
+
+
   return (
     <DoctorLayout>
       <Toaster position="top-right" />
-
-      {/* --- CSS Fallback --- */}
       <style>{`
         @media screen and (max-width: 768px) {
           .form-select, .form-control, input, select, textarea {
-            font-size: 16px !important; /* Forces text large enough to prevent iOS zoom */
+            font-size: 16px !important;
             max-height: 50px;
           }
         }
@@ -258,7 +306,6 @@ export default function DoctorAddBill() {
 
       <div className="container-fluid py-4">
 
-        {/* Header */}
         <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
           <div className="d-flex align-items-center gap-2">
             <button className="btn btn-light rounded-circle shadow-sm border" onClick={() => navigate('/doctor/billing')}>
@@ -302,17 +349,14 @@ export default function DoctorAddBill() {
                   <option value="">-- Select Appointment --</option>
                   {encounters.map((enc) => (
                     <option key={enc._id} value={enc._id}>
-                      {new Date(enc.date).toLocaleDateString()} - {enc.services || "General"}
+                      {new Date(enc.date).toLocaleDateString()} - {Array.isArray(enc.services) ? enc.services.join(", ") : enc.services || "General"}
                     </option>
                   ))}
                 </select>
-                {form.patientId && encounters.length === 0 && (
-                  <small className="text-muted mt-1 d-block">No recent appointments found.</small>
-                )}
               </div>
 
               {/* Services */}
-              <div className="col-12">
+              <div className="col-12 mt-4">
                 <label className="form-label small fw-bold">Services</label>
                 <div className="d-flex gap-2 mb-2">
                   <select className="form-select" onChange={handleServiceSelect} defaultValue="">
@@ -329,43 +373,76 @@ export default function DoctorAddBill() {
                   </select>
                 </div>
 
-                {/* Tags */}
                 <div className="d-flex flex-wrap gap-2 border p-3 rounded bg-light align-items-center" style={{ minHeight: '60px' }}>
                   {form.selectedServices.length === 0 && <span className="text-muted small">No services added.</span>}
                   {form.selectedServices.map((s, idx) => (
                     <span key={idx} className="badge bg-white text-primary border shadow-sm d-flex align-items-center gap-2 py-2 px-3">
-                      {s.name} <span className="fw-bold text-dark">₹{s.charges}</span>
-                      <FaTrash
-                        className="text-danger ms-1"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => removeService(idx)}
-                        size={12}
-                        title="Remove"
-                      />
+                      {s.name} ({s.category}) <span className="fw-bold text-dark">₹{s.amount}</span>
+                      <FaTrash className="text-danger ms-1" style={{ cursor: 'pointer' }} onClick={() => removeService(idx)} size={12} />
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Amounts */}
-              <div className="col-md-4 col-12">
-                <label className="form-label small fw-bold">Total Amount (₹)</label>
-                <input type="number" name="totalAmount" className="form-control fw-bold" value={form.totalAmount} onChange={handleGenericChange} required />
-              </div>
-              <div className="col-md-4 col-12">
-                <label className="form-label small fw-bold">Discount (₹)</label>
-                <input type="number" name="discount" className="form-control" value={form.discount} onChange={handleGenericChange} />
-              </div>
-              <div className="col-md-4 col-12">
-                <label className="form-label small fw-bold text-primary">Amount Due (₹)</label>
-                <input type="number" className="form-control bg-primary bg-opacity-10 fw-bold text-primary" value={form.amountDue} readOnly />
-              </div>
+              {/* Taxes */}
+               <div className="col-md-6 mt-4">
+                 <label className="form-label small fw-bold">Tax Selection</label>
+                 {availableTaxes.length > 0 ? (
+                  <div className="card p-3 border-0 bg-light">
+                    {availableTaxes.map(tax => (
+                      <div className="form-check mb-1" key={tax._id}>
+                        <input className="form-check-input" type="checkbox" id={`tax-${tax._id}`} checked={form.selectedTaxes.includes(tax._id)} onChange={() => toggleTax(tax._id)} />
+                        <label className="form-check-label d-flex justify-content-between small" htmlFor={`tax-${tax._id}`}>
+                          <span>{tax.name}</span>
+                          <span className="fw-bold">{tax.taxRate}%</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                 ) : <div className="text-muted small fst-italic">No taxes available.</div>}
+               </div>
+
+               {/* Calculations */}
+               <div className="col-md-6 mt-4">
+                  <div className="card p-3 border-0 bg-light">
+                      <div className="d-flex justify-content-between mb-1 small">
+                        <span>Sub Total:</span>
+                        <span className="fw-bold">₹{form.subTotal.toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mb-1 small">
+                        <span>Tax:</span>
+                        <span className="text-danger">+ ₹{form.taxAmount.toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mb-1 small align-items-center">
+                        <span>Discount:</span>
+                        <input type="number" name="discount" className="form-control form-control-sm text-end" style={{width:"80px"}} value={form.discount} onChange={handleGenericChange} />
+                     </div>
+                     <div className="border-top my-2"></div>
+                      <div className="d-flex justify-content-between mb-1 fw-bold">
+                        <span>Total:</span>
+                        <span className="text-primary">₹{form.totalAmount.toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mb-1 small align-items-center">
+                        <span>Paid:</span>
+                        <input type="number" name="paidAmount" className="form-control form-control-sm text-end" style={{width:"80px"}} value={form.paidAmount} onChange={handleGenericChange} />
+                     </div>
+                     <div className="d-flex justify-content-between fw-bold text-danger">
+                        <span>Due:</span>
+                        <span>₹{form.amountDue.toFixed(2)}</span>
+                     </div>
+                  </div>
+               </div>
 
               {/* Date & Status */}
               <div className="col-md-6 col-12">
                 <label className="form-label small fw-bold">Date</label>
                 <input type="date" name="date" className="form-control" value={form.date} onChange={handleGenericChange} required />
               </div>
+               <div className="col-md-6 col-12">
+                <label className="form-label small fw-bold">Time</label>
+                <input type="text" name="time" className="form-control" value={form.time} onChange={handleGenericChange} />
+              </div>
+
               <div className="col-md-6 col-12">
                 <label className="form-label small fw-bold">Status</label>
                 <select name="status" className="form-select" value={form.status} onChange={handleGenericChange}>

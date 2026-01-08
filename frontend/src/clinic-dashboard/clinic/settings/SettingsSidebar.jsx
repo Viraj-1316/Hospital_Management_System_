@@ -9,12 +9,14 @@ import {
   FaCrown,
   FaCreditCard,
   FaCalendarCheck,
+  FaFileInvoice,
 } from "react-icons/fa";
 import { SiGooglemeet, SiZoom } from "react-icons/si";
 
 const SettingsSidebar = () => {
   const menuItems = [
     { label: "Holidays", path: "/clinic-dashboard/settings/holidays", icon: <FaCalendarAlt /> },
+    { label: "Billing Settings", path: "/clinic-dashboard/settings/billing", icon: <FaFileInvoice /> },
     { label: "Listings", path: "/clinic-dashboard/settings/listings", icon: <FaList /> },
   ];
 

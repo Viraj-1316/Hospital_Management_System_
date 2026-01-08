@@ -28,13 +28,7 @@ function generateToken(payload, expiresIn = "24h") {
     );
 }
 
-/**
- * Middleware to verify JWT token in request headers
- * Expects: Authorization: Bearer <token>
- * 
- * OPTIMIZATION: Now fetches and caches full user/admin data to eliminate
- * repeated DB lookups in route handlers
- */
+
 async function verifyToken(req, res, next) {
     try {
         let token;

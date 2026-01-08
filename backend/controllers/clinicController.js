@@ -239,6 +239,10 @@ exports.updateClinic = async (req, res) => {
       adminContact,
       dob,
       gender,
+      // Billing settings fields
+      gstin,
+      billPrefix,
+      termsAndConditions,
     } = req.body;
 
     const clinic = await Clinic.findById(req.params.id);
@@ -254,29 +258,34 @@ exports.updateClinic = async (req, res) => {
 
     const parsedSpecialties = specialties ? JSON.parse(specialties) : [];
 
-    clinic.name = name;
-    clinic.email = email;
-    clinic.contact = contact;
-    clinic.specialties = parsedSpecialties;
+    clinic.name = name || clinic.name;
+    clinic.email = email || clinic.email;
+    clinic.contact = contact || clinic.contact;
+    clinic.specialties = specialties ? parsedSpecialties : clinic.specialties;
     clinic.status = status || clinic.status;
 
     if (clinicLogo) clinic.clinicLogo = clinicLogo;
 
+    // Update billing settings if provided
+    if (gstin !== undefined) clinic.gstin = gstin;
+    if (billPrefix !== undefined) clinic.billPrefix = billPrefix;
+    if (termsAndConditions !== undefined) clinic.termsAndConditions = termsAndConditions;
+
     clinic.address = {
-      full: address,
-      city,
-      country,
-      postalCode,
+      full: address || clinic.address?.full,
+      city: city || clinic.address?.city,
+      country: country || clinic.address?.country,
+      postalCode: postalCode || clinic.address?.postalCode,
     };
 
     clinic.admin = {
-      firstName: adminFirstName,
-      lastName: adminLastName,
-      email: adminEmail,
-      contact: adminContact,
-      dob,
-      gender,
-      photo: adminPhoto || clinic.admin.photo,
+      firstName: adminFirstName || clinic.admin?.firstName,
+      lastName: adminLastName || clinic.admin?.lastName,
+      email: adminEmail || clinic.admin?.email,
+      contact: adminContact || clinic.admin?.contact,
+      dob: dob || clinic.admin?.dob,
+      gender: gender || clinic.admin?.gender,
+      photo: adminPhoto || clinic.admin?.photo,
     };
 
     await clinic.save();

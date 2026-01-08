@@ -137,7 +137,7 @@ app.use("/patients", patientRoutes);
 app.use("/doctor-sessions", doctorSessionRoutes);
 app.use("/appointments", appointmentRoutes);
 app.use("/services", serviceRoutes);
-app.use("/taxes", taxRoutes);
+app.use("/api/taxes", taxRoutes);
 app.use("/bills", billingRoutes);
 app.use("/dashboard-stats", dashboardRoutes);
 app.use("/", userRoutes);
