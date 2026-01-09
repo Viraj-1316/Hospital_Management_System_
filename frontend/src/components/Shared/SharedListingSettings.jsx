@@ -17,10 +17,7 @@ import {
 } from "react-icons/fa";
 import { toast, Toaster } from "react-hot-toast";
 
-// --- 1. IMPORT EXPORT LIBRARIES ---
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// --- xlsx, jsPDF, and autoTable are now loaded dynamically ---
 import API_BASE from "../../config";
 
 // Configure your base URL
@@ -112,8 +109,9 @@ const SharedListingSettings = () => {
     link.click();
   };
 
-  // 3. Export to Excel
-  const exportExcel = () => {
+  // 3. Export to Excel (dynamic import)
+  const exportExcel = async () => {
+    const XLSX = await import("xlsx");
     const worksheetData = filteredListings.map((item, index) => ({
       ID: index + 1,
       Name: item.name,
@@ -126,8 +124,13 @@ const SharedListingSettings = () => {
     XLSX.writeFile(workbook, "Listings.xlsx");
   };
 
-  // 4. Export to PDF
+  // 4. Export to PDF (dynamic import)
   const exportPDF = async () => {
+    const jsPDFModule = await import("jspdf");
+    const autoTableModule = await import("jspdf-autotable");
+    const jsPDF = jsPDFModule.default;
+    const autoTable = autoTableModule.default;
+    
     const doc = new jsPDF();
 
     // Add Logo
@@ -284,6 +287,7 @@ const SharedListingSettings = () => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
+        const XLSX = await import("xlsx");
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];

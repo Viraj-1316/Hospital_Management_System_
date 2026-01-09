@@ -32,8 +32,10 @@ export default function Sidebar({ collapsed = false }) {
   const clinicLogo = authUser.clinicLogo;
 
   // Construct the clinic logo URL from uploads folder if available
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
   const logoSrc = clinicLogo ? `${API_BASE}/uploads/${clinicLogo}` : defaultLogo;
+  const currentYear = new Date().getFullYear();
+
 
   return (
     <div
@@ -171,7 +173,7 @@ export default function Sidebar({ collapsed = false }) {
 
       {/* Footer */}
       <div className="clinic-sidebar-footer">
-        {!collapsed ? "© 2024 One Care" : "©"}
+        {!collapsed ? `© ${currentYear} ${clinicName}` : "©"}
       </div>
     </div>
   );

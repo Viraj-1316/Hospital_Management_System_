@@ -1,0 +1,393 @@
+/* ===============================================
+   SHARED TABLE/LIST STYLES
+   Consolidated from ClinicList.css, appointments.css, ReceptionistList.css
+   For: Admin, Clinic dashboards
+   =============================================== */
+
+/* --- LIST CARD WRAPPER --- */
+.clinic-card,
+.receptionist-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* --- SEARCH BAR --- */
+.clinic-search-bar .input-group-text,
+.receptionist-search-bar .input-group-text {
+  background: #f5f7fb;
+  border-right: none;
+}
+
+.clinic-search-bar .form-control,
+.receptionist-search-bar .form-control {
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+}
+
+/* --- TABLE BASE STYLES --- */
+.clinic-table,
+.receptionist-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.clinic-table thead tr:first-child th,
+.receptionist-table thead tr:first-child th {
+  border-bottom: none;
+}
+
+.clinic-table thead tr:nth-child(2) th,
+.receptionist-table thead tr:nth-child(2) th {
+  background: #f8fafc;
+  border-top: none;
+}
+
+/* Row Hover */
+.clinic-table tbody tr:hover,
+.receptionist-table tbody tr:hover {
+  background: #f5f9ff;
+}
+
+/* --- FILTER ROW --- */
+.clinic-filter-row th .form-control,
+.clinic-filter-row th .form-select,
+.receptionist-filter-row th .form-control,
+.receptionist-filter-row th .form-select {
+  font-size: 12px;
+  padding: 3px 6px;
+  height: 30px;
+}
+
+/* --- FILTER PANEL SLIDE --- */
+.filter-panel {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 300ms ease;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 0.5rem;
+}
+
+.filter-panel.open {
+  max-height: 260px;
+}
+
+/* --- FORM PANEL --- */
+.form-panel {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 350ms ease;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 0.5rem;
+}
+
+.form-panel.open {
+  max-height: 700px;
+}
+
+.form-panel .form-control,
+.form-panel .form-select {
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
+}
+
+.form-panel .form-label {
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+
+.form-panel .btn-primary {
+  min-width: 90px;
+}
+
+/* --- AVATARS --- */
+.clinic-avatar,
+.receptionist-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e9f2ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a73e8;
+}
+
+.clinic-avatar.placeholder,
+.receptionist-avatar.placeholder {
+  border: 1px solid #d0e0ff;
+}
+
+/* --- STATUS BADGES --- */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 70px;
+  text-transform: capitalize;
+}
+
+.status-badge.active {
+  background: #e3f9e5;
+  color: #2d8a3b;
+}
+
+.status-badge.inactive {
+  background: #fde2e1;
+  color: #c0392b;
+}
+
+.status-badge.bg-primary {
+  background-color: #0d6efd !important;
+}
+
+.status-badge.bg-info {
+  background-color: #0dcaf0 !important;
+  color: #055160 !important;
+}
+
+.status-badge.bg-success {
+  background-color: #198754 !important;
+}
+
+.status-badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+/* --- ACTION BUTTONS --- */
+.clinic-actions .btn,
+.receptionist-actions .btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appointments-actions .btn {
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.btn-edit {
+  background-color: #0d6efd;
+  color: #fff;
+  border: none;
+}
+
+.btn-edit:hover {
+  background-color: #0b5ed7;
+  color: #fff;
+}
+
+.btn-pdf {
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+}
+
+.btn-pdf:hover {
+  background-color: #5c636a;
+  color: #fff;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+}
+
+.btn-delete:hover {
+  background-color: #bb2d3b;
+  color: #fff;
+}
+
+/* --- APPOINTMENTS SPECIFIC --- */
+.appointments-form .available-slot-box {
+  min-height: 200px;
+  background: #ffffff;
+}
+
+.small-link {
+  color: #2b6ce4;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.small-link:hover {
+  text-decoration: underline;
+}
+
+.appointments-header {
+  align-items: center;
+}
+
+/* --- APPOINTMENTS TABS --- */
+.appointments-tabs .btn {
+  min-width: 80px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border-width: 1px;
+}
+
+.appointments-tabs .btn-outline-primary {
+  background-color: #ffffff;
+  color: #0d6efd;
+}
+
+.appointments-tabs .btn-outline-primary:hover {
+  background-color: #e7f1ff;
+  color: #0d6efd;
+}
+
+.appointments-tabs .btn.btn-primary.active {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #ffffff;
+  box-shadow: 0 0 0 0.12rem rgba(13, 110, 253, 0.25);
+}
+
+/* --- HEADER ACTIONS --- */
+.appointments-header-actions .btn {
+  border-radius: 999px;
+  font-weight: 500;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.btn-add-appointment {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #ffffff;
+}
+
+.btn-add-appointment:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: #ffffff;
+  box-shadow: 0 0 0 0.14rem rgba(13, 110, 253, 0.3);
+}
+
+.btn-filter-toggle,
+.btn-import {
+  background-color: #ffffff;
+  border-color: #0d6efd;
+  color: #0d6efd;
+}
+
+.btn-filter-toggle:hover,
+.btn-import:hover,
+.btn-filter-toggle.active {
+  background-color: #0d6efd;
+  color: #ffffff;
+  box-shadow: 0 0 0 0.14rem rgba(13, 110, 253, 0.2);
+}
+
+.btn-import svg {
+  vertical-align: -1px;
+}
+
+/* --- IMPORT MODAL --- */
+.clinic-import-backdrop,
+.receptionist-import-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: backdrop-fade 0.18s ease-out;
+}
+
+.clinic-import-modal,
+.receptionist-import-modal {
+  background: #fff;
+  width: 600px;
+  max-width: 95vw;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  padding: 16px 20px 18px;
+  transform-origin: center top;
+  animation: modal-pop 0.22s ease-out;
+}
+
+.clinic-import-header,
+.receptionist-import-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.clinic-import-body,
+.receptionist-import-body {
+  max-height: none;
+  overflow: visible;
+}
+
+.clinic-import-body ul,
+.receptionist-import-body ul {
+  margin-left: 18px;
+}
+
+.clinic-import-footer .btn,
+.receptionist-import-footer .btn {
+  min-width: 80px;
+}
+
+/* --- MODAL ANIMATIONS --- */
+@keyframes backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 991px) {
+  .available-slot-box {
+    min-height: 140px;
+  }
+
+  .appointments-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .appointments-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

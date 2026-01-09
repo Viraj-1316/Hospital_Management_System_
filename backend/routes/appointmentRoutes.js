@@ -5,11 +5,15 @@ const path = require("path");
 const csv = require("csv-parser");
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const mongoose = require("mongoose");
+// const puppeteer = require("puppeteer"); // Removed in favor of singleton service
+const QRCode = require("qrcode");
+// PDF generation using pdf-lib (no Puppeteer dependency)
 
 const AppointmentModel = require("../models/Appointment");
 const PatientModel = require("../models/Patient");
 const DoctorModel = require("../models/Doctor");
 const HolidayModel = require("../models/Holiday");
+const DoctorSessionModel = require("../models/DoctorSession");
 const { sendEmail } = require("../utils/emailService");
 const { appointmentBookedTemplate } = require("../utils/emailTemplates");
 const { sendWhatsAppMessage } = require("../utils/whatsappService");
@@ -54,8 +58,23 @@ const generateTimeSlots = (startStr, endStr, intervalMins) => {
 };
 
 // ==========================================
-// GET AVAILABLE SLOTS
+// GET AVAILABLE SLOTS (Dynamic from Doctor Session)
 // ==========================================
+
+// Helper: Parse "HH:MM" time string to Date object for a specific date
+const parseSessionTime = (timeStr, dateStr) => {
+  if (!timeStr) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  dateObj.setHours(hours, minutes, 0, 0);
+  return dateObj;
+};
+
+// Helper: Format Date to "10:00 AM" style
+const formatSlotTime = (date) =>
+  date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+
 router.get("/slots", verifyToken, async (req, res) => {
   try {
     const { doctorId, date } = req.query;
@@ -66,6 +85,7 @@ router.get("/slots", verifyToken, async (req, res) => {
         .json({ message: "Doctor ID and Date are required" });
     }
 
+    // 1. Check for Holidays first
     const requestDate = new Date(date);
     const holiday = await HolidayModel.findOne({
       doctorId: doctorId,
@@ -75,25 +95,111 @@ router.get("/slots", verifyToken, async (req, res) => {
 
     if (holiday) {
       return res.json({
-        message: "Doctor is on holiday",
+        message: `Doctor is on holiday: ${holiday.reason || 'Holiday'}`,
         slots: [],
+        morningSlots: [],
+        eveningSlots: [],
         isHoliday: true,
       });
     }
 
-    const allSlots = generateTimeSlots("09:00:00", "17:00:00", 30);
+    // 2. Fetch Doctor's Session Settings
+    const session = await DoctorSessionModel.findOne({ doctorId });
+    
+    if (!session) {
+      // No session configured - return empty with message
+      return res.json({
+        message: "Doctor has not configured their session timings",
+        slots: [],
+        morningSlots: [],
+        eveningSlots: [],
+        isHoliday: false,
+      });
+    }
+
+    // 3. Check if doctor works on this day
+    const [y, m, d] = date.split('-').map(Number);
+    const inputDate = new Date(y, m - 1, d);
+    const daysMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const longDay = daysMap[inputDate.getDay()];
+    const shortDay = longDay.substring(0, 3);
+
+    const isWorkingDay = (session.days || []).some((day) => {
+      const cleanDay = String(day || "").trim().toLowerCase();
+      return cleanDay === longDay.toLowerCase() || cleanDay === shortDay.toLowerCase();
+    });
+
+    if (!isWorkingDay) {
+      return res.json({
+        message: `Doctor does not work on ${longDay}s`,
+        slots: [],
+        morningSlots: [],
+        eveningSlots: [],
+        isHoliday: false,
+      });
+    }
+
+    // 4. Generate Slots for Morning and Evening Sessions
+    const interval = parseInt(session.timeSlotMinutes, 10) || 30;
+    const morningSlots = [];
+    const eveningSlots = [];
+
+    // Morning Session
+    if (session.morningStart && session.morningEnd && session.morningStart !== "-" && session.morningEnd !== "-") {
+      let current = parseSessionTime(session.morningStart, date);
+      const endTime = parseSessionTime(session.morningEnd, date);
+
+      if (current && endTime && current < endTime) {
+        while (current < endTime) {
+          morningSlots.push(formatSlotTime(current));
+          current.setMinutes(current.getMinutes() + interval);
+        }
+      }
+    }
+
+    // Evening Session
+    if (session.eveningStart && session.eveningEnd && session.eveningStart !== "-" && session.eveningEnd !== "-") {
+      let current = parseSessionTime(session.eveningStart, date);
+      const endTime = parseSessionTime(session.eveningEnd, date);
+
+      if (current && endTime && current < endTime) {
+        while (current < endTime) {
+          eveningSlots.push(formatSlotTime(current));
+          current.setMinutes(current.getMinutes() + interval);
+        }
+      }
+    }
+
+    // 5. Filter out Booked Slots
     const bookedAppointments = await AppointmentModel.find({
       doctorId: doctorId,
       date: date,
       status: { $ne: "cancelled" },
     }).select("time");
 
-    const bookedTimes = bookedAppointments.map((a) => a.time);
-    const availableSlots = allSlots.filter(
-      (time) => !bookedTimes.includes(time)
+    const bookedTimes = bookedAppointments.map((a) => (a.time || "").toLowerCase());
+
+    const availableMorningSlots = morningSlots.filter(
+      (slot) => !bookedTimes.includes(slot.toLowerCase())
+    );
+    const availableEveningSlots = eveningSlots.filter(
+      (slot) => !bookedTimes.includes(slot.toLowerCase())
     );
 
-    res.json({ slots: availableSlots, isHoliday: false });
+    // Combined slots for backward compatibility
+    const allSlots = [...availableMorningSlots, ...availableEveningSlots];
+
+    res.json({
+      slots: allSlots,
+      morningSlots: availableMorningSlots,
+      eveningSlots: availableEveningSlots,
+      isHoliday: false,
+      sessionInfo: {
+        slotDuration: interval,
+        morningSession: session.morningStart && session.morningEnd ? `${session.morningStart} - ${session.morningEnd}` : null,
+        eveningSession: session.eveningStart && session.eveningEnd ? `${session.eveningStart} - ${session.eveningEnd}` : null,
+      }
+    });
   } catch (err) {
     console.error("Error fetching slots:", err.message);
     res.status(500).json({ message: "Server error checking slots" });
@@ -163,8 +269,43 @@ router.post("/", verifyToken, async (req, res) => {
       googleEventId: null,
       zoomMeetingId: null,
       
+      // Queue Token and Department - will be populated below
+      queueToken: null,
+      department: null,
+      
       createdAt: req.body.createdAt ? new Date(req.body.createdAt) : new Date(),
     };
+
+    // Auto-generate Queue Token (sequential per doctor per day)
+    if (payload.doctorId && payload.date) {
+      const apptDate = new Date(payload.date);
+      // Get start and end of the day for the appointment
+      const startOfDay = new Date(apptDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(apptDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Count existing appointments for this doctor on this day
+      const existingCount = await AppointmentModel.countDocuments({
+        doctorId: payload.doctorId,
+        date: { $gte: startOfDay, $lte: endOfDay },
+        status: { $ne: 'cancelled' }
+      });
+
+      payload.queueToken = existingCount + 1;
+    }
+
+    // Auto-populate Department from Doctor's Specialization
+    if (payload.doctorId) {
+      try {
+        const doctor = await DoctorModel.findById(payload.doctorId);
+        if (doctor && doctor.specialization) {
+          payload.department = doctor.specialization;
+        }
+      } catch (docErr) {
+        logger.debug("Could not fetch doctor specialization for department", { error: docErr.message });
+      }
+    }
 
     // Generate meeting link if online appointment
     if (payload.appointmentMode === 'online' && payload.onlinePlatform && payload.doctorId) {
@@ -760,371 +901,399 @@ router.post("/import", verifyToken, upload.single("file"), async (req, res) => {
   }
 });
 
-// PDF Generation
+// Public Verification Endpoint (No Auth Required - for QR code scans)
+router.get("/:id/verify", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid appointment ID" });
+    }
+
+    const appt = await AppointmentModel.findById(id)
+      .populate({
+        path: "patientId",
+        populate: { path: "userId", model: "User", select: "name" }
+      })
+      .populate("doctorId", "firstName lastName specialization");
+
+    if (!appt) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    // Return limited info for verification (no sensitive data)
+    const patientName = appt.patientId?.userId?.name || appt.patientName || "N/A";
+    const patientPid = appt.patientId?.pid || appt.patientId?.uhid || "N/A";
+    const doctorName = appt.doctorId?.firstName 
+      ? `Dr. ${appt.doctorId.firstName} ${appt.doctorId.lastName || ""}`.trim()
+      : (appt.doctorName || "N/A");
+    
+    // Format appointment ID like in PDF
+    const uniqueId = appt._id.toString().slice(-5).toUpperCase();
+    const appointmentId = `APT-${uniqueId}`;
+
+    res.json({
+      id: appt._id,
+      appointmentId,
+      date: appt.date,
+      time: appt.time,
+      patientName,
+      patientPid,
+      doctorName,
+      department: appt.department || appt.doctorId?.specialization || "General",
+      status: appt.status,
+      appointmentMode: appt.appointmentMode,
+      verified: true
+    });
+
+  } catch (err) {
+    logger.error("Appointment verification failed", { error: err.message });
+    res.status(500).json({ message: "Verification failed" });
+  }
+});
+
+// PDF Generation (pdf-lib based - matches HTML template exactly)
 router.get("/:id/pdf", allowUrlToken, verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const appt = await AppointmentModel.findById(id);
-    if (!appt)
-      return res.status(404).json({ message: "Appointment not found" });
+    
+    // Fetch Appointment with all populated fields
+    const appt = await AppointmentModel.findById(id)
+      .populate({
+        path: "patientId",
+        populate: { path: "userId", model: "User" }
+      })
+      .populate("doctorId")
+      .populate("clinicId");
 
-    let doctor = null;
-    if (appt.doctorName) {
-      const parts = appt.doctorName.split(" ");
-      const first = parts[0];
-      const last = parts.slice(1).join(" ");
-      doctor = await DoctorModel.findOne({ firstName: first, lastName: last });
+    if (!appt) {
+      return res.status(404).json({ message: "Appointment not found" });
     }
 
-    const clinicName = appt.clinic || doctor?.clinic || "Valley Clinic";
-    const clinicEmail = doctor?.email || "info@medicalcenter.com";
-    const clinicPhone = doctor?.phone || "+1 234 567 890";
-    const rawAddress =
-      doctor?.address || "123 Health Street\nMedical District, City, 000000";
-    const addressLines = String(rawAddress).split(/\r?\n/).slice(0, 2);
-    const patientName = appt.patientName || "N/A";
+    // === DATA PREPARATION ===
+    
+    // 1. Clinic/Hospital Info
+    const hospitalName = appt.clinicId?.name || appt.doctorId?.clinic || appt.clinic || "OneCare Medical Center";
+    let hospitalAddress = "";
+    if (appt.clinicId?.address?.full) {
+      hospitalAddress = appt.clinicId.address.full;
+      if (appt.clinicId.address.city) hospitalAddress += ", " + appt.clinicId.address.city;
+      if (appt.clinicId.address.state) hospitalAddress += ", " + appt.clinicId.address.state;
+      if (appt.clinicId.address.postalCode) hospitalAddress += " - " + appt.clinicId.address.postalCode;
+    }
+    const hospitalContact = appt.clinicId?.contact || "";
+    const hospitalEmail = appt.clinicId?.email || "";
+    const hospitalGstin = appt.clinicId?.gstin || "";
+    
+    // 2. Patient Info
+    const patientUser = appt.patientId?.userId || {};
+    const patientDetails = appt.patientId || {};
+    
+    const nameParts = (patientUser.name || appt.patientName || "").split(" ");
+    const firstName = nameParts[0] || "N/A";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    const patientPid = patientDetails.pid || patientDetails.uhid || "N/A";
+    
+    const dobObj = patientUser.dob ? new Date(patientUser.dob) : null;
+    const dobFormatted = dobObj ? dobObj.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A";
+    
+    let ageYears = "N/A";
+    if (dobObj) {
+      const now = new Date();
+      let age = now.getFullYear() - dobObj.getFullYear();
+      if (now.getMonth() < dobObj.getMonth() || (now.getMonth() === dobObj.getMonth() && now.getDate() < dobObj.getDate())) age--;
+      if (!isNaN(age) && age >= 0) ageYears = `${age} Years`;
+    }
+    
+    const patientGender = patientUser.gender || "N/A";
+    const patientBloodGroup = patientUser.bloodGroup || "N/A";
+    const patientContact = patientUser.phone || appt.patientPhone || "N/A";
+    const patientEmail = patientUser.email || appt.patientEmail || "N/A";
+    const patientAddress = patientUser.addressLine1 || "N/A";
+    const patientCity = patientUser.city || "N/A";
+    const patientPostalCode = patientUser.postalCode || "N/A";
+    const patientCountry = patientUser.country || "India";
 
-    const todayFormatted = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    const apptDateObj = appt.date ? new Date(appt.date) : null;
-    const apptDateFormatted = apptDateObj
-      ? apptDateObj.toLocaleDateString("en-US", {
-          weekday: "short",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : "N/A";
-    const generatedDate = new Date().toLocaleString("en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    // 3. Doctor Info
+    const doctorFullName = appt.doctorId?.firstName 
+      ? `Dr. ${appt.doctorId.firstName} ${appt.doctorId.lastName || ""}`.trim() 
+      : (appt.doctorName ? `Dr. ${appt.doctorName}` : "Doctor");
+    const doctorQualification = appt.doctorId?.qualification || appt.doctorId?.specialization || "Specialist";
+    const doctorCabin = appt.doctorId?.cabin || "N/A";
+    const doctorFloor = appt.doctorId?.floor || "N/A";
+    const doctorLocation = `${doctorCabin}, ${doctorFloor}`;
+    const doctorClinicWing = appt.clinic || "Main Diagnostic Wing";
+    
+    // 4. Appointment Info
+    const apptDateObj = appt.date ? new Date(appt.date) : new Date();
+    const apptDateFormatted = apptDateObj.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' });
+    const apptTime = appt.time || "N/A";
+    const apptDepartment = appt.department || appt.doctorId?.specialization || "General";
+    const queueToken = appt.queueToken ? `#${appt.queueToken}` : "N/A";
+    
+    let visitCategory = "General Consultation";
+    if (Array.isArray(appt.services) && appt.services.length > 0) {
+      visitCategory = appt.services[0];
+    } else if (appt.services) {
+      visitCategory = appt.services;
+    }
+    
+    const apptType = appt.appointmentMode === 'online' ? "Online Consultation" : "Physical / In-Person";
+    
+    // Generate Appointment ID
+    const uniqueId = appt._id.toString().slice(-5).toUpperCase();
+    const appointmentId = `APT-${uniqueId}`;
+    
+    const generatedDate = new Date().toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' });
 
-    const apptId = String(appt._id).substring(0, 8).toUpperCase();
-    const apptTime = appt.slot || appt.time || "N/A";
-    const apptStatus = (appt.status || "Booked").toUpperCase();
-    const paymentMode = appt.paymentMode || "Manual";
-    const serviceText = Array.isArray(appt.services)
-      ? appt.services.join(", ")
-      : appt.services || "General Consultation";
-    const totalBill = appt.charges ? `Rs. ${appt.charges}/-` : "Rs. 0/-";
-
+    // === PDF CREATION (A4: 595.28 x 841.89 pts) ===
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595, 842]);
+    const page = pdfDoc.addPage([595.28, 841.89]);
     const { width, height } = page.getSize();
-    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const primaryColor = rgb(0, 0.53, 0.71);
-    const black = rgb(0, 0, 0);
-    const gray = rgb(0.4, 0.4, 0.4);
-    const lightGray = rgb(0.92, 0.92, 0.92);
+    // Colors matching the HTML template
+    const brandColor = rgb(0.059, 0.090, 0.165);     // #0f172a
+    const accentBlue = rgb(0.145, 0.388, 0.922);     // #2563eb
+    const primaryText = rgb(0.118, 0.161, 0.231);    // #1e293b
+    const secondaryText = rgb(0.392, 0.455, 0.545);  // #64748b
+    const borderColor = rgb(0.886, 0.910, 0.941);    // #e2e8f0
+    const bgSoft = rgb(0.973, 0.980, 0.988);         // #f8fafc
+    const white = rgb(1, 1, 1);
 
-    let cursorY = height - 50;
-    const margin = 50;
+    const margin = 42; // ~15mm
+    let y = height - margin;
 
-    // Logo
+    // =============================================
+    // 1. HOSPITAL BRAND HEADER
+    // =============================================
+    const headerStartY = y;
+    const logoSize = 60;
+    
+    // Logo/Initials box
+    let logoDrawn = false;
     try {
-      const logoPath = path.join(__dirname, "../assets", "logo.png");
-      if (fs.existsSync(logoPath)) {
-        const logoBytes = fs.readFileSync(logoPath);
-        const logoImg = await pdfDoc.embedPng(logoBytes);
-        const logoDims = logoImg.scale(0.25);
-        page.drawImage(logoImg, {
-          x: margin,
-          y: cursorY - logoDims.height + 10,
-          width: logoDims.width,
-          height: logoDims.height,
-        });
+      if (appt.clinicId?.clinicLogo) {
+        const logoPath = path.join(__dirname, "..", "uploads", appt.clinicId.clinicLogo);
+        if (fs.existsSync(logoPath)) {
+          const logoBytes = fs.readFileSync(logoPath);
+          const ext = appt.clinicId.clinicLogo.toLowerCase();
+          const logoImg = ext.endsWith('.png') ? await pdfDoc.embedPng(logoBytes) : await pdfDoc.embedJpg(logoBytes);
+          if (logoImg) {
+            page.drawImage(logoImg, { x: margin, y: y - logoSize, width: logoSize, height: logoSize });
+            logoDrawn = true;
+          }
+        }
       }
-    } catch (e) {
-      logger.debug("Could not embed logo in PDF", { error: e.message });
+    } catch (e) {}
+
+    if (!logoDrawn) {
+      // Draw placeholder box with initials
+      const initials = hospitalName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+      page.drawRectangle({ x: margin, y: y - logoSize, width: logoSize, height: logoSize, color: brandColor });
+      const iw = fontBold.widthOfTextAtSize(initials, 22);
+      page.drawText(initials, { x: margin + (logoSize - iw) / 2, y: y - logoSize + 22, size: 22, font: fontBold, color: white });
     }
 
-    const textStartX = 180;
-    page.drawText(clinicName.toUpperCase(), {
-      x: textStartX,
-      y: cursorY,
-      size: 18,
-      font: fontBold,
-      color: primaryColor,
+    // Hospital identity (left of logo)
+    const textX = margin + logoSize + 15;
+    page.drawText(hospitalName.toUpperCase(), { x: textX, y: y - 18, size: 20, font: fontBold, color: brandColor });
+    
+    let lineY = y - 34;
+    if (hospitalAddress) {
+      page.drawText(hospitalAddress, { x: textX, y: lineY, size: 9, font, color: secondaryText });
+      lineY -= 12;
+    }
+    if (hospitalContact || hospitalEmail) {
+      let contactLine = "";
+      if (hospitalContact) contactLine += `Contact: ${hospitalContact}`;
+      if (hospitalEmail) contactLine += (contactLine ? " | " : "") + `Email: ${hospitalEmail}`;
+      page.drawText(contactLine, { x: textX, y: lineY, size: 9, font, color: secondaryText });
+      lineY -= 12;
+    }
+    if (hospitalGstin) {
+      page.drawText(`GSTIN: ${hospitalGstin}`, { x: textX, y: lineY, size: 8, font, color: secondaryText });
+    }
+
+    // Appointment label (right side)
+    const rightEdge = width - margin;
+    const slipTitle = "APPOINTMENT SLIP";
+    page.drawText(slipTitle, { x: rightEdge - fontBold.widthOfTextAtSize(slipTitle, 14), y: y - 12, size: 14, font: fontBold, color: accentBlue });
+    
+    // ID Badge
+    const idBadgeText = `ID: #${appointmentId}`;
+    const idBadgeW = fontBold.widthOfTextAtSize(idBadgeText, 10) + 16;
+    const idBadgeX = rightEdge - idBadgeW;
+    page.drawRectangle({ x: idBadgeX, y: y - 38, width: idBadgeW, height: 18, color: brandColor });
+    page.drawText(idBadgeText, { x: idBadgeX + 8, y: y - 33, size: 10, font: fontBold, color: white });
+    
+    // Generated date
+    page.drawText(`Generated: ${generatedDate}`, { x: rightEdge - font.widthOfTextAtSize(`Generated: ${generatedDate}`, 8), y: y - 52, size: 8, font, color: secondaryText });
+
+    // Header bottom border
+    y = headerStartY - logoSize - 15;
+    page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 3, color: brandColor });
+    y -= 20;
+
+    // =============================================
+    // 2. SCHEDULE BAR (4 columns)
+    // =============================================
+    const scheduleBarH = 45;
+    const scheduleColW = (width - 2 * margin - 30) / 4;
+    const scheduleItems = [
+      ["Queue Token", queueToken],
+      ["Appointment Date", apptDateFormatted],
+      ["Reporting Time", apptTime],
+      ["Department", apptDepartment]
+    ];
+
+    scheduleItems.forEach(([label, value], i) => {
+      const boxX = margin + i * (scheduleColW + 10);
+      // Border box
+      page.drawRectangle({ x: boxX, y: y - scheduleBarH, width: scheduleColW, height: scheduleBarH, borderColor, borderWidth: 1, color: white });
+      // Label
+      page.drawText(label.toUpperCase(), { x: boxX + 8, y: y - 14, size: 7, font: fontBold, color: secondaryText });
+      // Value
+      page.drawText(String(value), { x: boxX + 8, y: y - 30, size: 12, font: fontBold, color: brandColor });
     });
 
-    page.drawText(`Date: ${todayFormatted}`, {
-      x: width - margin - 130,
-      y: cursorY,
-      size: 10,
-      font: fontRegular,
-      color: black,
-    });
-    page.drawText(`Booking ID: #${apptId}`, {
-      x: width - margin - 130,
-      y: cursorY - 15,
-      size: 10,
-      font: fontBold,
-      color: black,
-    });
+    y -= scheduleBarH + 20;
 
-    let detailsY = cursorY - 18;
-    page.drawText(addressLines.join(", "), {
-      x: textStartX,
-      y: detailsY,
-      size: 10,
-      font: fontRegular,
-      color: gray,
-    });
-    detailsY -= 12;
-    page.drawText(`Phone: ${clinicPhone}`, {
-      x: textStartX,
-      y: detailsY,
-      size: 10,
-      font: fontRegular,
-      color: gray,
-    });
-    detailsY -= 12;
-    page.drawText(`Email: ${clinicEmail}`, {
-      x: textStartX,
-      y: detailsY,
-      size: 10,
-      font: fontRegular,
-      color: gray,
-    });
+    // =============================================
+    // 3. PATIENT PROFILE SECTION
+    // =============================================
+    // Section title with left border
+    const sectionTitleH = 22;
+    page.drawRectangle({ x: margin, y: y - sectionTitleH, width: width - 2 * margin, height: sectionTitleH, color: bgSoft });
+    page.drawRectangle({ x: margin, y: y - sectionTitleH, width: 4, height: sectionTitleH, color: brandColor });
+    page.drawText("Patient Profile", { x: margin + 12, y: y - 15, size: 10, font: fontBold, color: brandColor });
+    y -= sectionTitleH + 12;
 
-    cursorY -= 80;
-    page.drawRectangle({
-      x: 0,
-      y: cursorY - 10,
-      width: width,
-      height: 30,
-      color: primaryColor,
-    });
-    const titleText = "APPOINTMENT CONFIRMATION";
-    const titleWidth = fontBold.widthOfTextAtSize(titleText, 14);
-    page.drawText(titleText, {
-      x: (width - titleWidth) / 2,
-      y: cursorY,
-      size: 14,
-      font: fontBold,
-      color: rgb(1, 1, 1),
-    });
+    // Patient data grid (3 columns x 3 rows)
+    const fieldColW = (width - 2 * margin) / 3;
+    const fieldRowH = 28;
+    
+    const patientFields = [
+      [["First Name", firstName], ["Last Name", lastName || "—"], ["Patient UHID", patientPid]],
+      [["Date of Birth", dobFormatted], ["Gender", patientGender], ["Blood Group", patientBloodGroup]],
+      [["Contact No", patientContact], ["Email Address", patientEmail], ["Age", ageYears]]
+    ];
 
-    cursorY -= 50;
-    const col1 = margin;
-    const col2 = 320;
-
-    page.drawText("PATIENT DETAILS", {
-      x: col1,
-      y: cursorY + 15,
-      size: 10,
-      font: fontBold,
-      color: gray,
-    });
-    cursorY -= 15;
-    page.drawText(patientName, {
-      x: col1,
-      y: cursorY + 15,
-      size: 14,
-      font: fontBold,
-      color: black,
-    });
-
-    const sectionTopY = cursorY + 30;
-    page.drawText("DOCTOR DETAILS", {
-      x: col2,
-      y: sectionTopY,
-      size: 10,
-      font: fontBold,
-      color: gray,
-    });
-    page.drawText(`Dr. ${appt.doctorName}`, {
-      x: col2,
-      y: sectionTopY - 15,
-      size: 14,
-      font: fontBold,
-      color: black,
-    });
-    page.drawText("General Physician", {
-      x: col2,
-      y: sectionTopY - 30,
-      size: 10,
-      font: fontRegular,
-      color: black,
-    });
-
-    cursorY -= 40;
-    page.drawLine({
-      start: { x: margin, y: cursorY },
-      end: { x: width - margin, y: cursorY },
-      thickness: 1,
-      color: lightGray,
-    });
-    cursorY -= 30;
-
-    page.drawText("APPOINTMENT DETAILS", {
-      x: margin,
-      y: cursorY,
-      size: 12,
-      font: fontBold,
-      color: primaryColor,
-    });
-    cursorY -= 20;
-
-    const drawDetailRow = (label, value, xPos, yPos) => {
-      page.drawText(label, {
-        x: xPos,
-        y: yPos,
-        size: 9,
-        font: fontRegular,
-        color: gray,
+    patientFields.forEach((row, rowIdx) => {
+      row.forEach(([label, value], colIdx) => {
+        const fx = margin + colIdx * fieldColW + 10;
+        const fy = y - rowIdx * fieldRowH;
+        page.drawText(label.toUpperCase(), { x: fx, y: fy, size: 7, font: fontBold, color: secondaryText });
+        page.drawText(String(value), { x: fx, y: fy - 12, size: 10, font, color: primaryText });
       });
-      page.drawText(value, {
-        x: xPos,
-        y: yPos - 12,
-        size: 11,
-        font: fontBold,
-        color: black,
-      });
-    };
-
-    drawDetailRow("Date", apptDateFormatted, margin, cursorY);
-    drawDetailRow("Time", apptTime, margin + 180, cursorY);
-
-    let statusColor = black;
-    if (apptStatus === "BOOKED" || apptStatus === "CONFIRMED")
-      statusColor = rgb(0, 0.6, 0);
-    if (apptStatus === "CANCELLED") statusColor = rgb(0.8, 0, 0);
-    page.drawText("Status", {
-      x: width - margin - 80,
-      y: cursorY,
-      size: 9,
-      font: fontRegular,
-      color: gray,
-    });
-    page.drawText(apptStatus, {
-      x: width - margin - 80,
-      y: cursorY - 12,
-      size: 11,
-      font: fontBold,
-      color: statusColor,
     });
 
-    cursorY -= 50;
-    page.drawRectangle({
-      x: margin,
-      y: cursorY,
-      width: width - margin * 2,
-      height: 25,
-      color: lightGray,
-    });
-    page.drawText("Service / Description", {
-      x: margin + 10,
-      y: cursorY + 7,
-      size: 10,
-      font: fontBold,
-      color: black,
-    });
-    page.drawText("Amount", {
-      x: width - margin - 70,
-      y: cursorY + 7,
-      size: 10,
-      font: fontBold,
-      color: black,
-    });
+    y -= patientFields.length * fieldRowH + 15;
 
-    cursorY -= 25;
-    page.drawText(serviceText, {
-      x: margin + 10,
-      y: cursorY + 8,
-      size: 10,
-      font: fontRegular,
-      color: black,
-    });
-    page.drawText(totalBill, {
-      x: width - margin - 70,
-      y: cursorY + 8,
-      size: 10,
-      font: fontRegular,
-      color: black,
-    });
-    page.drawLine({
-      start: { x: margin, y: cursorY },
-      end: { x: width - margin, y: cursorY },
-      thickness: 1,
-      color: lightGray,
-    });
+    // =============================================
+    // 4. ADDRESS & COMMUNICATION SECTION
+    // =============================================
+    page.drawRectangle({ x: margin, y: y - sectionTitleH, width: width - 2 * margin, height: sectionTitleH, color: bgSoft });
+    page.drawRectangle({ x: margin, y: y - sectionTitleH, width: 4, height: sectionTitleH, color: brandColor });
+    page.drawText("Address & Communication", { x: margin + 12, y: y - 15, size: 10, font: fontBold, color: brandColor });
+    y -= sectionTitleH + 12;
 
-    cursorY -= 35;
-    page.drawText("Total Amount:", {
-      x: width - margin - 150,
-      y: cursorY,
-      size: 12,
-      font: fontBold,
-      color: black,
-    });
-    page.drawText(totalBill, {
-      x: width - margin - 70,
-      y: cursorY,
-      size: 12,
-      font: fontBold,
-      color: primaryColor,
-    });
+    // Address row 1 (address spans 2 cols)
+    page.drawText("RESIDENTIAL ADDRESS", { x: margin + 10, y: y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(patientAddress, { x: margin + 10, y: y - 12, size: 10, font, color: primaryText });
+    page.drawText("CITY", { x: margin + fieldColW * 2 + 10, y: y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(patientCity, { x: margin + fieldColW * 2 + 10, y: y - 12, size: 10, font, color: primaryText });
+    y -= fieldRowH;
 
-    cursorY -= 15;
-    page.drawText(`Payment Mode: ${paymentMode}`, {
-      x: width - margin - 150,
-      y: cursorY,
-      size: 9,
-      font: fontRegular,
-      color: gray,
-    });
+    // Address row 2
+    page.drawText("POSTAL CODE", { x: margin + 10, y: y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(patientPostalCode, { x: margin + 10, y: y - 12, size: 10, font, color: primaryText });
+    page.drawText("COUNTRY", { x: margin + fieldColW + 10, y: y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(patientCountry, { x: margin + fieldColW + 10, y: y - 12, size: 10, font, color: primaryText });
+    y -= fieldRowH + 15;
 
-    const footerY = 50;
-    page.drawText("Note:", {
-      x: margin,
-      y: footerY + 45,
-      size: 9,
-      font: fontBold,
-      color: black,
-    });
-    page.drawText(
-      "Please arrive 15 minutes prior to your appointment time. If you need to reschedule, contact us 24 hours in advance.",
-      { x: margin, y: footerY + 33, size: 9, font: fontRegular, color: black }
-    );
+    // =============================================
+    // 5. CONSULTATION INFORMATION CARD
+    // =============================================
+    page.drawRectangle({ x: margin, y: y - sectionTitleH, width: width - 2 * margin, height: sectionTitleH, color: bgSoft });
+    page.drawRectangle({ x: margin, y: y - sectionTitleH, width: 4, height: sectionTitleH, color: brandColor });
+    page.drawText("Consultation Information", { x: margin + 12, y: y - 15, size: 10, font: fontBold, color: brandColor });
+    y -= sectionTitleH + 8;
 
-    page.drawLine({
-      start: { x: margin, y: footerY + 15 },
-      end: { x: width - margin, y: footerY + 15 },
-      thickness: 1,
-      color: lightGray,
-    });
-    page.drawText(`Generated on: ${generatedDate}`, {
-      x: margin,
-      y: footerY,
-      size: 8,
-      font: fontRegular,
-      color: gray,
-    });
-    page.drawText(
-      "This is a computer-generated document. No signature is required.",
-      { x: margin, y: footerY - 10, size: 8, font: fontRegular, color: gray }
-    );
+    // Consultation card (border box with 2x2 grid)
+    const cardH = 85;
+    const cardPad = 15;
+    page.drawRectangle({ x: margin, y: y - cardH, width: width - 2 * margin, height: cardH, borderColor, borderWidth: 1, color: white });
 
+    const halfW = (width - 2 * margin) / 2;
+    
+    // Row 1: Doctor + Location
+    const consult1Y = y - 20;
+    page.drawText("CONSULTING SPECIALIST", { x: margin + cardPad, y: consult1Y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(doctorFullName, { x: margin + cardPad, y: consult1Y - 14, size: 13, font: fontBold, color: accentBlue });
+    page.drawText(doctorQualification, { x: margin + cardPad, y: consult1Y - 26, size: 9, font, color: secondaryText });
+
+    page.drawText("LOCATION / FLOOR", { x: margin + halfW + cardPad, y: consult1Y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(doctorLocation, { x: margin + halfW + cardPad, y: consult1Y - 14, size: 11, font, color: primaryText });
+    page.drawText(doctorClinicWing, { x: margin + halfW + cardPad, y: consult1Y - 26, size: 9, font, color: secondaryText });
+
+    // Row 2: Visit Category + Appointment Type
+    const consult2Y = consult1Y - 48;
+    page.drawText("VISIT CATEGORY", { x: margin + cardPad, y: consult2Y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(visitCategory, { x: margin + cardPad, y: consult2Y - 12, size: 10, font, color: primaryText });
+
+    page.drawText("APPOINTMENT TYPE", { x: margin + halfW + cardPad, y: consult2Y, size: 7, font: fontBold, color: secondaryText });
+    page.drawText(apptType, { x: margin + halfW + cardPad, y: consult2Y - 12, size: 10, font, color: primaryText });
+
+    y -= cardH + 10;
+
+    // =============================================
+    // 6. FOOTER WITH QR CODE
+    // =============================================
+    const footerY = 70;
+    page.drawLine({ start: { x: margin, y: footerY + 30 }, end: { x: width - margin, y: footerY + 30 }, thickness: 1, color: borderColor });
+
+    // QR Code (left) - uses FRONTEND_URL for verification
+    const qrSize = 65;
+    try {
+      // Use FRONTEND_URL from environment (works for localhost, Render, AWS)
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verifyUrl = `${frontendUrl}/verify/appointment/${appt._id}`;
+      const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 150, margin: 1 });
+      const qrImg = await pdfDoc.embedPng(qrDataUrl);
+      // QR with border
+      page.drawRectangle({ x: margin, y: footerY - qrSize + 20, width: qrSize + 10, height: qrSize + 10, borderColor, borderWidth: 1, color: white });
+      page.drawImage(qrImg, { x: margin + 5, y: footerY - qrSize + 25, width: qrSize, height: qrSize });
+    } catch (e) {
+      logger.debug("QR code generation failed", { error: e.message });
+    }
+
+    // System tag (right) - fixed spacing
+    const sysTag1 = "This is a system-generated document.";
+    page.drawText(sysTag1, { x: rightEdge - font.widthOfTextAtSize(sysTag1, 8), y: footerY + 10, size: 8, font, color: secondaryText });
+    
+    // "Powered by OneCare Hospital Management System" - draw as parts for bold "OneCare"
+    const poweredByText = "Powered by ";
+    const oneCareText = "OneCare";
+    const hmsText = " Hospital Management System";
+    const totalWidth = font.widthOfTextAtSize(poweredByText, 8) + fontBold.widthOfTextAtSize(oneCareText, 8) + font.widthOfTextAtSize(hmsText, 8);
+    const startX = rightEdge - totalWidth;
+    page.drawText(poweredByText, { x: startX, y: footerY - 2, size: 8, font, color: secondaryText });
+    page.drawText(oneCareText, { x: startX + font.widthOfTextAtSize(poweredByText, 8), y: footerY - 2, size: 8, font: fontBold, color: accentBlue });
+    page.drawText(hmsText, { x: startX + font.widthOfTextAtSize(poweredByText, 8) + fontBold.widthOfTextAtSize(oneCareText, 8), y: footerY - 2, size: 8, font, color: secondaryText });
+
+    // === SEND PDF ===
     const pdfBytes = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename=Appointment_${apptId}.pdf`
-    );
+    res.setHeader("Content-Disposition", `inline; filename=Appointment_${appointmentId}.pdf`);
     res.send(Buffer.from(pdfBytes));
+
   } catch (err) {
-    console.error("Appointment PDF error:", err.message);
-    res.status(500).json({ message: "PDF generation failed" });
+    logger.error("Appointment PDF Generation failed", { error: err.message, stack: err.stack });
+    res.status(500).json({ message: "Failed to generate appointment PDF. Please try again." });
   }
 });
 

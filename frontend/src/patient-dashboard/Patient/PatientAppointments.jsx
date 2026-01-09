@@ -14,7 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import API_BASE from "../../config";
 
-export default function PatientAppointments({ sidebarCollapsed, toggleSidebar }) {
+export default function PatientAppointments() {
   const navigate = useNavigate();
 
   const token =
@@ -133,7 +133,8 @@ export default function PatientAppointments({ sidebarCollapsed, toggleSidebar })
 
   // Cancel / delete appointment
   const handleCancel = async (id) => {
-    if (!window.confirm("Cancel this appointment?")) return;
+    const confirmed = await window.confirm("Cancel this appointment?");
+    if (!confirmed) return;
     try {
       await axios.put(
         `${API_BASE}/appointments/${id}/cancel`,
@@ -239,10 +240,7 @@ export default function PatientAppointments({ sidebarCollapsed, toggleSidebar })
   );
 
   return (
-    <PatientLayout
-      sidebarCollapsed={sidebarCollapsed}   // added
-      toggleSidebar={toggleSidebar}         // added
-    >
+    <PatientLayout>
       <div className="container-fluid py-4">
         {/* Filters card */}
         <div className="card shadow-sm p-3 mb-4">

@@ -16,7 +16,7 @@ export default function EncounterTemplateList({ sidebarCollapsed, toggleSidebar 
         }}
       >
         <Navbar toggleSidebar={toggleSidebar} />
-        <SharedEncounterTemplateList role="admin" />
+        <SharedEncounterTemplateList role="clinic" />
       </div>
     </div>
   );

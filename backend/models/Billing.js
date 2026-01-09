@@ -2,8 +2,10 @@ const mongoose = require("mongoose");
 
 const BillingSchema = new mongoose.Schema(
   {
+    // Sequential bill number with prefix (e.g., OC-000001)
+    // Changed from Number to String to support prefixes
     billNumber: {
-      type: Number,
+      type: String,
       required: true,
       unique: true
     },
@@ -36,30 +38,63 @@ const BillingSchema = new mongoose.Schema(
     clinicName: { type: String, required: false, default: "" },
     patientName: { type: String, required: false, default: "" },
 
-    // Billing details
+    // Enhanced services with category and description
     services: [{
       name: { type: String },
+      description: { type: String, default: "" },  // e.g., "Includes Laboratory Testing 1"
+      category: { type: String, default: "" },     // e.g., "Laboratory", "Consultation"
       amount: { type: Number, default: 0 }
     }],
-    totalAmount: { type: Number, required: true },
+
+    // Amounts
+    subTotal: { type: Number, default: 0 },        // Sum before discount/tax
+    totalAmount: { type: Number, required: true }, // Final amount after discount+tax
     discount: { type: Number, default: 0 },
-    amountDue: { type: Number, required: true },
+    
+    // Tax details for GST breakdown
+    taxDetails: [{
+      name: { type: String },       // e.g., "GST", "CGST", "SGST"
+      rate: { type: Number },       // e.g., 0 for 0%, 18 for 18%
+      amount: { type: Number }      // calculated tax amount
+    }],
+    taxAmount: { type: Number, default: 0 },       // Total tax amount
+    
+    amountDue: { type: Number, required: true },   // Amount remaining to be paid
+    paidAmount: { type: Number, default: 0 },      // Amount already paid
+
     status: {
       type: String,
       enum: ["unpaid", "paid", "partial", "cancelled"],
       default: "unpaid"
     },
+
+    // Date and time of bill
     date: { type: Date, required: true, default: Date.now },
+    time: { type: String, default: "" },  // e.g., "05:20 PM"
+
     notes: { type: String, default: "" },
     paymentMethod: { type: String, default: "" },
+
+    // Verification URL for QR code (auto-generated on save)
+    verificationUrl: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
+// Pre-save hook to auto-generate verification URL
+BillingSchema.pre('save', function(next) {
+  if (!this.verificationUrl && this.billNumber) {
+    this.verificationUrl = `https://onecare.bhargavkarande.dev/verify/${this._id}`;
+  }
+  next();
+});
+
 // Index for common queries
 BillingSchema.index({ patientId: 1 });
 BillingSchema.index({ doctorId: 1 });
+BillingSchema.index({ clinicId: 1 });
 BillingSchema.index({ date: -1 });
 BillingSchema.index({ status: 1 });
+
 
 module.exports = mongoose.model("Billing", BillingSchema);

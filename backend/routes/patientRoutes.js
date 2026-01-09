@@ -100,7 +100,8 @@ const mergePatientUser = (patient) => {
     country: user.country || patientObj.country || "",
     postalCode: user.postalCode || patientObj.postalCode || "",
     // Metadata
-    clinicId: patientObj.clinicId,
+    clinicId: patientObj.clinicId?._id || patientObj.clinicId, // Keep ID if populated or specific ID
+    clinicDetails: patientObj.clinicId && patientObj.clinicId.name ? patientObj.clinicId : null, // Pass full object if populated
     clinic: patientObj.clinic,
     isActive: patientObj.isActive,
     createdAt: patientObj.createdAt
@@ -116,9 +117,27 @@ router.get("/by-user/:userId", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Invalid User ID format" });
     }
 
-    const patient = await PatientModel.findOne({ userId }).populate("userId");
+    const patient = await PatientModel.findOne({ userId })
+      .populate("userId")
+      .populate("clinicId", "name clinicLogo");
 
-    if (!patient) return res.status(404).json({ message: "Patient not found" });
+    if (!patient) {
+      // Fallback: Check if User exists. If so, return partial data for UI (e.g. clinic info)
+      const user = await User.findById(userId).populate("clinicId", "name clinicLogo");
+      if (user) {
+         return res.json({
+            // Construct a partial object compatible with mergePatientUser output structure
+            userId: user._id,
+            name: user.name,
+            email: user.email,
+            // Clinic Info
+            clinicId: user.clinicId?._id || user.clinicId,
+            clinicDetails: user.clinicId && user.clinicId.name ? user.clinicId : null,
+            clinic: user.clinicName // Fallback property
+         });
+      }
+      return res.status(404).json({ message: "Patient not found" });
+    }
 
     return res.json(mergePatientUser(patient));
   } catch (err) {

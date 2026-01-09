@@ -15,7 +15,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar }) {
+export default function PatientBookAppointment() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -63,12 +63,15 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
   const [selectedSlot, setSelectedSlot] = useState("");
 
   const [dynamicSlots, setDynamicSlots] = useState([]);
+  const [morningSlots, setMorningSlots] = useState([]);
+  const [eveningSlots, setEveningSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [taxes, setTaxes] = useState([]); // ✅ New State for Taxes
 
   // ✅ New State for Holiday Handling
   const [isHoliday, setIsHoliday] = useState(false);
   const [holidayMessage, setHolidayMessage] = useState("");
+  const [slotMessage, setSlotMessage] = useState(""); // For non-working day messages
 
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -95,6 +98,7 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
     const loadData = async () => {
       try {
         setLoadingData(true);
+        console.log("DEBUG: API_BASE =", API_BASE); // Debugging API Base URL
 
 
         // A. Fetch Clinics
@@ -116,7 +120,11 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
           : (servRes.data?.data || servRes.data?.services || servRes.data?.rows || []);
 
         // D. Fetch Taxes
-        const taxRes = await api.get(`/taxes`);
+        // D. Fetch Taxes (Direct Axios Call to Debug/Fix 404)
+        const token = localStorage.getItem("token") || localStorage.getItem("patientToken");
+        const taxRes = await axios.get(`${API_BASE}/api/taxes`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         const taxData = Array.isArray(taxRes.data) ? taxRes.data : [];
 
         if (mounted) {
@@ -224,16 +232,18 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
       setAvailableServices([]);
     }
 
-    // B. FETCH SLOTS LOGIC (Updated for Holidays)
+    // B. FETCH SLOTS LOGIC (Updated for Holidays & Morning/Evening Sessions)
     const fetchSlots = async () => {
       if (form.doctor && form.date) {
         setLoadingSlots(true);
         setSelectedSlot("");
-        setIsHoliday(false); // Reset holiday status
+        setIsHoliday(false);
         setHolidayMessage("");
+        setSlotMessage("");
+        setMorningSlots([]);
+        setEveningSlots([]);
 
         try {
-          // Use the unified backend endpoint for slots & holidays
           const res = await api.get(`/appointments/slots`, {
             params: { doctorId: form.doctor, date: form.date }
           });
@@ -243,17 +253,31 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
             setHolidayMessage(res.data.message || "Doctor is on holiday.");
             setDynamicSlots([]);
           } else {
+            // Handle grouped slots (morning/evening)
+            if (res.data.morningSlots || res.data.eveningSlots) {
+              setMorningSlots(res.data.morningSlots || []);
+              setEveningSlots(res.data.eveningSlots || []);
+            }
             setDynamicSlots(res.data.slots || []);
+            
+            // Display message if no slots (e.g., "Doctor does not work on Sundays")
+            if (res.data.message && (res.data.slots?.length === 0)) {
+              setSlotMessage(res.data.message);
+            }
           }
 
         } catch {
-          // Error fetching slots
           setDynamicSlots([]);
+          setMorningSlots([]);
+          setEveningSlots([]);
         } finally {
           setLoadingSlots(false);
         }
       } else {
         setDynamicSlots([]);
+        setMorningSlots([]);
+        setEveningSlots([]);
+        setSlotMessage("");
       }
     };
 
@@ -416,7 +440,7 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
   };
 
   return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
       <div className="container-fluid py-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div>
@@ -589,28 +613,79 @@ export default function PatientBookAppointment({ sidebarCollapsed, toggleSidebar
                   ) : loadingSlots ? (
                     <div className="text-center text-muted small p-2">Loading slots...</div>
                   ) : isHoliday ? (
-                    // ✅ SHOW HOLIDAY MESSAGE
                     <div className="text-center text-danger p-3 bg-light rounded">
                       <strong>⛔ {holidayMessage}</strong>
+                      <p className="small mb-0 mt-1">Please select a different date.</p>
+                    </div>
+                  ) : slotMessage && dynamicSlots.length === 0 ? (
+                    <div className="text-center text-warning p-3 bg-light rounded">
+                      <strong>ℹ️ {slotMessage}</strong>
                       <p className="small mb-0 mt-1">Please select a different date.</p>
                     </div>
                   ) : dynamicSlots.length === 0 ? (
                     <div className="text-center text-danger small p-2">No slots available.</div>
                   ) : (
                     <>
-                      <div className="text-center mb-2 fw-semibold">Select a Time</div>
-                      <div className="d-flex flex-wrap gap-2 justify-content-center">
-                        {dynamicSlots.map((slot, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            className={`btn btn-sm ${selectedSlot === slot ? "btn-primary" : "btn-outline-primary"}`}
-                            onClick={() => handleSlotClick(slot)}
-                          >
-                            {slot}
-                          </button>
-                        ))}
-                      </div>
+                      {/* Morning Slots */}
+                      {morningSlots.length > 0 && (
+                        <div className="mb-3">
+                          <div className="fw-semibold text-muted mb-2" style={{ fontSize: '0.85rem' }}>
+                            🌅 Morning Session
+                          </div>
+                          <div className="d-flex flex-wrap gap-2 justify-content-center">
+                            {morningSlots.map((slot, index) => (
+                              <button
+                                key={`morning-${index}`}
+                                type="button"
+                                className={`btn btn-sm ${selectedSlot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                                onClick={() => handleSlotClick(slot)}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Evening Slots */}
+                      {eveningSlots.length > 0 && (
+                        <div className="mb-2">
+                          <div className="fw-semibold text-muted mb-2" style={{ fontSize: '0.85rem' }}>
+                            🌆 Evening Session
+                          </div>
+                          <div className="d-flex flex-wrap gap-2 justify-content-center">
+                            {eveningSlots.map((slot, index) => (
+                              <button
+                                key={`evening-${index}`}
+                                type="button"
+                                className={`btn btn-sm ${selectedSlot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                                onClick={() => handleSlotClick(slot)}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Fallback: If no grouped slots, show flat list */}
+                      {morningSlots.length === 0 && eveningSlots.length === 0 && dynamicSlots.length > 0 && (
+                        <>
+                          <div className="text-center mb-2 fw-semibold">Select a Time</div>
+                          <div className="d-flex flex-wrap gap-2 justify-content-center">
+                            {dynamicSlots.map((slot, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                className={`btn btn-sm ${selectedSlot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                                onClick={() => handleSlotClick(slot)}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
                 </div>

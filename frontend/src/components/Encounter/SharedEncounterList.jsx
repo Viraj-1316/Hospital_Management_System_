@@ -11,7 +11,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/admin-shared.css";
+import "../../shared/styles/shared-components.css";
 import API_BASE from "../../config";
 
 export default function SharedEncounterList({ role, doctorId, clinicName: autoClinicName }) {
@@ -184,6 +184,8 @@ export default function SharedEncounterList({ role, doctorId, clinicName: autoCl
   const handleDashboard = (id) => {
     if (role === "doctor") {
       navigate(`/doctor/encounters/${id}`);
+    } else if (role === "clinic") {
+      navigate(`/clinic-dashboard/encounter-details/${id}`);
     } else {
       navigate(`/encounter-details/${id}`);
     }
@@ -246,6 +248,8 @@ export default function SharedEncounterList({ role, doctorId, clinicName: autoCl
       if (!formData.id && res.data && res.data._id) {
         if (role === "doctor") {
           navigate(`/doctor/encounters/${res.data._id}`);
+        } else if (role === "clinic") {
+          navigate(`/clinic-dashboard/encounter-details/${res.data._id}`);
         } else {
           navigate(`/encounter-details/${res.data._id}`);
         }

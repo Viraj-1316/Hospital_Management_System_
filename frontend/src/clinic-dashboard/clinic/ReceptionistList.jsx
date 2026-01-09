@@ -18,9 +18,9 @@ import {
   toggleReceptionistStatus,
   resendCredentials,
   importReceptionists,
-} from "../utils/receptionistApi";
+} from "../../utils/receptionistApi";
 
-import "../styles/ReceptionistList.css";
+import "../../shared/styles/shared-tables.css";
 
 export default function ReceptionistList({
   sidebarCollapsed = false,

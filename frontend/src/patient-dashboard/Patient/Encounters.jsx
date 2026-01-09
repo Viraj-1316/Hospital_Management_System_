@@ -91,7 +91,7 @@ const buildHaystack = (r) => {
 /* -------------------------------------------------------------------------- */
 /* COMPONENT                                                                  */
 /* -------------------------------------------------------------------------- */
-export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
+export default function Encounters() {
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -199,7 +199,7 @@ export default function Encounters({ sidebarCollapsed, toggleSidebar }) {
   };
 
   return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
       
       <div className="container-fluid py-4 position-relative">
         <div className="encounters-card">

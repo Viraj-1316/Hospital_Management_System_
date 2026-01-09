@@ -6,9 +6,7 @@ import {
   FaQuestionCircle, FaChevronLeft, FaChevronRight 
 } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// xlsx, jsPDF, and autoTable now loaded dynamically in export handlers
 import API_BASE from "../../../config";
 
 const BASE_URL = API_BASE;
@@ -183,9 +181,10 @@ export default function DoctorSessions() {
     return `${fmt(start)} to ${fmt(end)}`;
   };
 
-  const handleExport = (type) => {
-      // (Export logic remains same, simplified for brevity in this view)
+  const handleExport = async (type) => {
+      // Dynamic import for xlsx - only loads when user exports
       if(type === "Excel") {
+        const XLSX = await import("xlsx");
         const ws = XLSX.utils.json_to_sheet(sessions.map(s => ({
             Clinic: s.clinic, Days: s.days.join(", "), Morning: formatRange(s.morningStart, s.morningEnd), Evening: formatRange(s.eveningStart, s.eveningEnd)
         })));

@@ -7,7 +7,7 @@ import { HiSparkles } from "react-icons/hi";
 import API_BASE from "../../config";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
-import "../styles/admin-shared.css";
+import "../../shared/styles/shared-components.css";
 
 // Inline styles for premium modern look
 const styles = {

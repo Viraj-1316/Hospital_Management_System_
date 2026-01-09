@@ -3,8 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import "../styles/admin-shared.css";
-import "../styles/ClinicList.css";
+import "../../shared/styles/shared-components.css";
+import "../../shared/styles/shared-tables.css";
 
 import {
   FaSearch,

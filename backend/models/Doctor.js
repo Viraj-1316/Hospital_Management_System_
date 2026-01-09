@@ -26,6 +26,10 @@ const DoctorSchema = new mongoose.Schema({
   addressLine2: String,
   qualification: String,
   experienceYears: String,
+  
+  // Clinic location details (for appointment PDF)
+  cabin: String,   // e.g., "Cabin-C2"
+  floor: String,   // e.g., "2nd Floor"
   qualifications: [
     {
       degree: String,

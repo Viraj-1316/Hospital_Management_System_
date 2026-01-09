@@ -137,7 +137,7 @@ app.use("/patients", patientRoutes);
 app.use("/doctor-sessions", doctorSessionRoutes);
 app.use("/appointments", appointmentRoutes);
 app.use("/services", serviceRoutes);
-app.use("/taxes", taxRoutes);
+app.use("/api/taxes", taxRoutes);
 app.use("/bills", billingRoutes);
 app.use("/dashboard-stats", dashboardRoutes);
 app.use("/", userRoutes);
@@ -168,4 +168,11 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log("Backend server running on port " + PORT);
   console.log(`Security: Helmet ✓ | Compression ✓ | CORS ✓ | Sanitization ✓ | WebSockets ✓`);
+  
+  // Start keep-alive service in production (prevents Render cold starts)
+  if (isProduction && process.env.RENDER_EXTERNAL_URL) {
+    const { startKeepAlive } = require('./utils/keepAlive');
+    const healthUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
+    startKeepAlive(healthUrl);
+  }
 });

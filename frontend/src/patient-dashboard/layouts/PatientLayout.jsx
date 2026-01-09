@@ -1,55 +1,75 @@
-// src/layouts/PatientLayout.jsx
-import React from "react";
+// src/patient-dashboard/layouts/PatientLayout.jsx
+import React, { useEffect, useState } from "react";
 import PatientSidebar from "../components/PatientSidebar";
 import PatientNavbar from "../components/PatientNavbar";
-import "../styles/PatientSidebar.css";
-import "../styles/PatientNavbar.css";
-
+import "./PatientLayout.css";
 import PageTransition from "../../components/PageTransition";
 
-export default function PatientLayout({
-  children,
-  sidebarCollapsed,
-  toggleSidebar,
-}) {
-  return (
-    <div className="patient-layout d-flex" style={{ background: "#f5f7fb" }}>
+const PatientLayout = ({ children }) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-      {/* Mobile Overlay - Close sidebar when clicking outside */}
-      {!sidebarCollapsed && (
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setMobileOpen(false);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setMobileOpen(!mobileOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
+  };
+
+  const closeMobileSidebar = () => {
+    if (isMobile) setMobileOpen(false);
+  };
+
+  return (
+    <div className="d-flex bg-light min-vh-100">
+      {/* Sidebar Wrapper */}
+      <div
+        className={`sidebar-wrapper ${isMobile ? "mobile-drawer" : ""} ${
+          mobileOpen ? "open" : ""
+        }`}
+      >
+        <PatientSidebar collapsed={isMobile ? false : sidebarCollapsed} />
+      </div>
+
+      {/* Backdrop for Mobile */}
+      {isMobile && (
         <div
-          className="sidebar-overlay d-md-none"
-          onClick={toggleSidebar}
-        ></div>
+          className={`backdrop ${mobileOpen ? "show" : ""}`}
+          onClick={closeMobileSidebar}
+        />
       )}
 
-      {/* Sidebar */}
-      <PatientSidebar isOpen={!sidebarCollapsed} />
-
-      <div className={`patient-main ${sidebarCollapsed ? 'expanded' : ''}`}>
-
-        {/* Top blue navbar */}
+      {/* Main Content Area */}
+      <div
+        className="flex-grow-1 d-flex flex-column"
+        style={{
+          marginLeft: isMobile ? 0 : sidebarCollapsed ? "72px" : "260px",
+          transition: "margin-left 200ms cubic-bezier(0.4, 0, 0.2, 1)",
+          width: "100%",
+          minHeight: "100vh",
+        }}
+      >
+        {/* Navbar inside content flow */}
         <PatientNavbar toggleSidebar={toggleSidebar} />
 
-        <div
-          className="patient-content-wrapper"
-          style={{
-            padding: "0px",
-          }}
-        >
-          <div
-            className="content-card shadow-sm"
-            style={{
-              background: "white",
-              padding: "20px",
-              borderRadius: "8px",
-              minHeight: "85vh" // Ensure card takes reasonable height
-            }}
-          >
-            <PageTransition>{children}</PageTransition>
-          </div>
+        <div className="p-4 flex-grow-1">
+          <PageTransition>{children}</PageTransition>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default PatientLayout;

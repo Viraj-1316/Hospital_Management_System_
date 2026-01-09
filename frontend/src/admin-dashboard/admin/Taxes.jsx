@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import "../styles/admin-shared.css"; 
+import "../../shared/styles/shared-components.css";
 import { FaEdit, FaTrash, FaUpload, FaPlus } from "react-icons/fa";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
@@ -87,7 +87,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
   const fetchTaxes = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE}/taxes`);
+      const res = await axios.get(`${API_BASE}/api/taxes`);
       setTaxes(res.data || []);
     } catch (err) {
       console.error("Error fetching taxes:", err);
@@ -196,14 +196,14 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
     try {
       if (editingTax) {
         const res = await axios.put(
-          `${API_BASE}/taxes/${editingTax._id}`,
+          `${API_BASE}/api/taxes/${editingTax._id}`,
           payload
         );
         if (res.data?.message) {
           toast.success("Tax updated successfully");
         }
       } else {
-        const res = await axios.post(`${API_BASE}/taxes`, payload);
+        const res = await axios.post(`${API_BASE}/api/taxes`, payload);
         if (res.data?.message) {
           toast.success("Tax created successfully");
         }
@@ -231,7 +231,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
     if (!taxToDelete) return;
     try {
       const res = await axios.delete(
-        `${API_BASE}/taxes/${taxToDelete._id}`
+        `${API_BASE}/api/taxes/${taxToDelete._id}`
       );
       if (res.data?.message) {
         toast.success("Tax deleted successfully");
@@ -248,7 +248,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
   const handleToggleActive = async (tax) => {
     try {
       const res = await axios.put(
-        `${API_BASE}/taxes/${tax._id}`,
+        `${API_BASE}/api/taxes/${tax._id}`,
         { active: !tax.active }
       );
       const updated = res.data?.data;
@@ -285,7 +285,7 @@ function Taxes({ sidebarCollapsed = false, toggleSidebar }) {
       formData.append("file", importFile);
 
       const res = await axios.post(
-        `${API_BASE}/taxes/import`,
+        `${API_BASE}/api/taxes/import`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

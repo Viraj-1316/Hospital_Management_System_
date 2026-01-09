@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import PatientLayout from "../layouts/PatientLayout";
 import API_BASE from "../../config";
 
-export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
+export default function PatientDashboard() {
   const navigate = useNavigate();
   const calendarRef = useRef(null);
 
@@ -149,7 +149,7 @@ export default function PatientDashboard({ sidebarCollapsed, toggleSidebar }) {
   const handleFilterChange = (e) => setFilters((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
       <div className="container-fluid py-4 position-relative">
 
         {/* Header */}

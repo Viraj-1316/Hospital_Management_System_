@@ -16,9 +16,7 @@ import {
   FaQuestionCircle
 } from "react-icons/fa";
 import { toast, Toaster } from "react-hot-toast";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// xlsx, jsPDF, and autoTable are loaded dynamically in export handlers
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/light.css";
 
@@ -186,8 +184,9 @@ export default function HolidaySettings() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- EXPORTS ---
-  const exportExcel = () => {
+  // --- EXPORTS (dynamic imports) ---
+  const exportExcel = async () => {
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.json_to_sheet(sortedData.map(h => ({
       ID: h.id, Doctor: h.doctorName, From: h.from, To: h.to
     })));
@@ -207,6 +206,11 @@ export default function HolidaySettings() {
   };
 
   const exportPDF = async () => {
+    const jsPDFModule = await import("jspdf");
+    const autoTableModule = await import("jspdf-autotable");
+    const jsPDF = jsPDFModule.default;
+    const autoTable = autoTableModule.default;
+    
     const doc = new jsPDF();
     try {
       const logoBase64 = await getBase64Image(`${window.location.origin}/logo.png`);

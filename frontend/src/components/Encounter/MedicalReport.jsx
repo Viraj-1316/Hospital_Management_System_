@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { FaPlus, FaTimes, FaTrash, FaEdit, FaEye } from "react-icons/fa";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/admin-shared.css";
+import "../../shared/styles/shared-components.css";
 import API_BASE from "../../config";
 
 export default function MedicalReport({ isEmbedded = false }) {

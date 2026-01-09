@@ -18,6 +18,12 @@ const AppointmentSchema = new mongoose.Schema({
   paymentMode: String,
   status: { type: String, default: "upcoming" },
   
+  // Queue token - auto-generated per doctor per day
+  queueToken: { type: Number, default: null },
+  
+  // Department - copied from doctor's specialization at booking
+  department: { type: String, default: null },
+  
   // Appointment Mode (Online/Offline)
   appointmentMode: { 
     type: String, 

@@ -1,0 +1,30 @@
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 2050; /* Above everything */
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  width: 260px; 
+}
+
+.mobile-drawer.open {
+  transform: translateX(0);
+}
+
+/* --- Backdrop --- */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 2040; /* Below Drawer, Above Content */
+}
+
+.backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}

@@ -1,0 +1,64 @@
+/* Mobile Drawer */
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 2050; /* Above everything */
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  width: 260px; 
+}
+
+.mobile-drawer.open {
+  transform: translateX(0);
+}
+
+/* --- Backdrop --- */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 2040; /* Below Drawer, Above Content */
+}
+
+.backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* =========================================
+   NAVBAR
+   ========================================= */
+.doctor-navbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: linear-gradient(90deg, #1e66ff, #2b7bff);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(16,24,40,0.06);
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* UTILITIES */
+.doctor-nav-left { display: flex; align-items: center; gap: 12px; }
+.doctor-hamburger { border: none; background: rgba(255,255,255,0.12); color: white; padding: 6px 9px; border-radius: 6px; cursor: pointer; font-size: 18px; }
+.doctor-title { font-weight: 600; font-size: 16px; }
+.doctor-nav-right { display: flex; align-items: center; gap: 12px; }
+.doctor-profile { display: flex; gap: 10px; align-items: center; }
+.doctor-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.doctor-name { font-weight: 600; }
+
+/* Dropdown */
+.doctor-dropdown { background: #fff; border-radius: 8px; padding: 6px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; position: absolute; z-index: 2000; }
+.doctor-dropdown .dropdown-item { color: #333 !important; font-size: 14px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; border: none; background: none; width: 100%; text-align: left; }
+.doctor-dropdown .dropdown-item:hover { background: #f5f5f5; }
+.doctor-dropdown .dropdown-item i { font-size: 16px; color: #333; }
+.doctor-dropdown .dropdown-item.text-danger { color: red !important; font-weight: 600; }
+.doctor-dropdown .dropdown-item.text-danger i { color: red !important; }

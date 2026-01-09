@@ -51,15 +51,17 @@ export default function Sidebar({ collapsed = false }) {
   useEffect(() => {
     const fetchReceptionistDetails = async () => {
       try {
-        if (!authUser.id) return;
+        const userId = authUser.id || authUser._id;
+        if (!userId) return;
         
         const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_BASE}/api/receptionists/${authUser.id}`, {
+        const res = await axios.get(`${API_BASE}/api/receptionists/${userId}`, {
              headers: { Authorization: `Bearer ${token}` }
         });
 
         const data = res.data.data;
         if (data && data.clinicIds && data.clinicIds.length > 0) {
+            // clinicIds is populated with { _id, name, clinicLogo }
             const clinic = data.clinicIds[0];
             setClinicDetails({
                 name: clinic.name || "Clinic",
@@ -72,7 +74,9 @@ export default function Sidebar({ collapsed = false }) {
     };
 
     fetchReceptionistDetails();
-  }, [authUser.id, API_BASE]);
+  }, [authUser.id, authUser._id, API_BASE]);
+
+  const currentYear = new Date().getFullYear();
 
   return (
     <div
@@ -94,6 +98,7 @@ export default function Sidebar({ collapsed = false }) {
           src={clinicDetails.logo} 
           alt="Clinic Logo" 
           style={{ width: "40px", height: "40px", borderRadius: "8px", objectFit: "cover" }}
+          onError={(e) => { e.target.onerror = null; e.target.src = defaultLogo; }} 
         />
         {!collapsed && <h4 className="text-truncate" style={{maxWidth: "180px"}}>{clinicDetails.name}</h4>}
       </div>
@@ -232,7 +237,7 @@ export default function Sidebar({ collapsed = false }) {
 
       {/* Footer */}
       <div className="modern-sidebar-footer">
-        {!collapsed ? `© 2026 ${clinicDetails.name}` : "©"}
+        {!collapsed ? `© ${currentYear} ${clinicDetails.name}` : "©"}
       </div>
     </div>
   );

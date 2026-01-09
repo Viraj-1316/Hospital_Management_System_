@@ -2,9 +2,9 @@ import React from "react";
 import PatientLayout from "../layouts/PatientLayout";
 import ChangePasswordForm from "../../common/ChangePasswordForm";
 
-const PatientChangePassword = ({ sidebarCollapsed, toggleSidebar }) => {
+const PatientChangePassword = () => {
   return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
       <div className="container-fluid py-5">
         <div className="row justify-content-center">
           <div className="col-md-8 col-lg-6">

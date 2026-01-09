@@ -136,11 +136,11 @@ async function refreshZoomToken(doctorId) {
   }
   
   try {
-    const response = await axios.post('https://zoom.us/oauth/token', null, {
-      params: {
-        grant_type: 'refresh_token',
-        refresh_token: doctor.zoomTokens.refreshToken
-      },
+    const params = new URLSearchParams();
+    params.append('grant_type', 'refresh_token');
+    params.append('refresh_token', doctor.zoomTokens.refreshToken);
+
+    const response = await axios.post('https://zoom.us/oauth/token', params, {
       headers: {
         'Authorization': `Basic ${Buffer.from(`${process.env.ZOOM_CLIENT_ID}:${process.env.ZOOM_CLIENT_SECRET}`).toString('base64')}`,
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -157,7 +157,11 @@ async function refreshZoomToken(doctorId) {
     
     return tokens.access_token;
   } catch (err) {
-    logger.error("Failed to refresh Zoom token", { doctorId, error: err.message });
+    logger.error("Failed to refresh Zoom token", { 
+      doctorId, 
+      error: err.message,
+      responseData: err.response?.data 
+    });
     throw new Error("Zoom authentication expired. Please reconnect.");
   }
 }

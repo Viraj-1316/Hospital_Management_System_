@@ -5,7 +5,7 @@ import { FaArrowLeft, FaEdit } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
-import "../styles/AddClinic.css"; // Ensure you have this or remove if using inline styles
+import "../../shared/styles/shared-forms.css";
 
 import API_BASE from "../../config";
 

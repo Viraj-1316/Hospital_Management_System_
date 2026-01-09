@@ -9,10 +9,9 @@ import ConfirmationModal from "../ConfirmationModal";
 
 import API_BASE from "../../config";
 
-// Import the appointments CSS for collapsible panels styling
-import "../../admin-dashboard/styles/appointments.css";
-// Import admin-shared CSS for the blue header bar (services-topbar) styling
-import "../../admin-dashboard/styles/admin-shared.css";
+// Import shared CSS for component styling
+import "../../shared/styles/shared-components.css";
+import "../../shared/styles/shared-tables.css";
 
 const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
   const navigate = useNavigate();
@@ -44,6 +43,9 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
 
   // Server-Side Slots
   const [dynamicSlots, setDynamicSlots] = useState([]);
+  const [morningSlots, setMorningSlots] = useState([]);
+  const [eveningSlots, setEveningSlots] = useState([]);
+  const [slotMessage, setSlotMessage] = useState("");
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [form, setForm] = useState({
@@ -136,7 +138,7 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
             axios.get(`${API_BASE}/services`, config),
             axios.get(`${API_BASE}/patients`, config),
             axios.get(`${API_BASE}/api/clinics`, config),
-            axios.get(`${API_BASE}/taxes`, config),
+            axios.get(`${API_BASE}/api/taxes`, config),
           ]);
 
         setDoctors(Array.isArray(docRes.data) ? docRes.data : docRes.data.data || []);
@@ -170,6 +172,9 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
       if (form.doctorId && form.date) {
         setLoadingSlots(true);
         setDynamicSlots([]);
+        setMorningSlots([]);
+        setEveningSlots([]);
+        setSlotMessage("");
         try {
           const token = localStorage.getItem("token");
           const res = await axios.get(`${API_BASE}/appointments/slots`, {
@@ -177,10 +182,22 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
             headers: { Authorization: `Bearer ${token}` }
           });
 
-          if (res.data && res.data.slots) {
-            setDynamicSlots(res.data.slots);
-          } else if (Array.isArray(res.data)) {
-            setDynamicSlots(res.data);
+          if (res.data) {
+            // Handle grouped slots (morning/evening)
+            if (res.data.morningSlots || res.data.eveningSlots) {
+              setMorningSlots(res.data.morningSlots || []);
+              setEveningSlots(res.data.eveningSlots || []);
+            }
+            // Also set combined slots for backward compatibility
+            if (res.data.slots) {
+              setDynamicSlots(res.data.slots);
+            } else if (Array.isArray(res.data)) {
+              setDynamicSlots(res.data);
+            }
+            // Display message if provided (e.g., "Doctor does not work on Sundays")
+            if (res.data.message && (res.data.slots?.length === 0 || !res.data.slots)) {
+              setSlotMessage(res.data.message);
+            }
           }
         } catch (err) {
           console.error("Error fetching slots:", err);
@@ -190,6 +207,9 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
         }
       } else {
         setDynamicSlots([]);
+        setMorningSlots([]);
+        setEveningSlots([]);
+        setSlotMessage("");
       }
     };
 
@@ -670,21 +690,72 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
                       <div className="text-center text-muted small mt-4">Select Doctor & Date to see slots</div>
                     ) : loadingSlots ? (
                       <div className="text-center text-primary mt-4">Loading available times...</div>
+                    ) : slotMessage && dynamicSlots.length === 0 ? (
+                      <div className="text-center text-warning mt-4">
+                        <i className="bi bi-info-circle me-1"></i>{slotMessage}
+                      </div>
                     ) : dynamicSlots.length === 0 ? (
                       <div className="text-center text-danger mt-4">No slots available for this date.</div>
                     ) : (
-                      <div className="d-flex flex-wrap gap-2">
-                        {dynamicSlots.map((slot) => (
-                          <button
-                            key={slot}
-                            type="button"
-                            className={`btn btn-sm ${form.slot === slot ? "btn-primary" : "btn-outline-primary"}`}
-                            onClick={() => setForm(p => ({ ...p, slot }))}
-                          >
-                            {slot}
-                          </button>
-                        ))}
-                      </div>
+                      <>
+                        {/* Morning Slots */}
+                        {morningSlots.length > 0 && (
+                          <div className="mb-3">
+                            <div className="fw-semibold text-muted mb-2" style={{ fontSize: '0.85rem' }}>
+                              🌅 Morning Session
+                            </div>
+                            <div className="d-flex flex-wrap gap-2">
+                              {morningSlots.map((slot) => (
+                                <button
+                                  key={slot}
+                                  type="button"
+                                  className={`btn btn-sm ${form.slot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                                  onClick={() => setForm(p => ({ ...p, slot }))}
+                                >
+                                  {slot}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Evening Slots */}
+                        {eveningSlots.length > 0 && (
+                          <div className="mb-2">
+                            <div className="fw-semibold text-muted mb-2" style={{ fontSize: '0.85rem' }}>
+                              🌆 Evening Session
+                            </div>
+                            <div className="d-flex flex-wrap gap-2">
+                              {eveningSlots.map((slot) => (
+                                <button
+                                  key={slot}
+                                  type="button"
+                                  className={`btn btn-sm ${form.slot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                                  onClick={() => setForm(p => ({ ...p, slot }))}
+                                >
+                                  {slot}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Fallback: If no grouped slots, show flat list */}
+                        {morningSlots.length === 0 && eveningSlots.length === 0 && dynamicSlots.length > 0 && (
+                          <div className="d-flex flex-wrap gap-2">
+                            {dynamicSlots.map((slot) => (
+                              <button
+                                key={slot}
+                                type="button"
+                                className={`btn btn-sm ${form.slot === slot ? "btn-primary" : "btn-outline-primary"}`}
+                                onClick={() => setForm(p => ({ ...p, slot }))}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 

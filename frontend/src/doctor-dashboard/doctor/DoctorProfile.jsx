@@ -19,9 +19,13 @@ function DoctorProfile() {
     addressLine2: "",
     city: "",
     postalCode: "",
+    country: "",
     qualification: "",
     specialization: "",
     experienceYears: "",
+    // Clinic Location fields
+    cabin: "",
+    floor: "",
   });
 
   const [avatarPreview, setAvatarPreview] = useState("");
@@ -61,9 +65,12 @@ function DoctorProfile() {
         addressLine2: data.addressLine2 || "",
         city: data.city || "",
         postalCode: data.postalCode || "",
+        country: data.country || "",
         qualification: data.qualification || "",
         specialization: data.specialization || "",
         experienceYears: data.experienceYears || "",
+        cabin: data.cabin || "",
+        floor: data.floor || "",
       });
       setAvatarPreview(data.avatar || "");
       setLoading(false);
@@ -443,6 +450,46 @@ function DoctorProfile() {
                       value={form.postalCode}
                       onChange={handleChange}
                       className="form-control"
+                    />
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="small mb-1">Country</label>
+                    <input
+                      name="country"
+                      value={form.country}
+                      onChange={handleChange}
+                      className="form-control"
+                      placeholder="e.g. India"
+                    />
+                  </div>
+
+                  <div className="col-12 mt-3">
+                    <h6 className="fw-semibold">Clinic Location</h6>
+                    <p className="small text-muted mb-2">
+                      This information will be displayed on appointment slips
+                    </p>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="small mb-1">Cabin / Room Number</label>
+                    <input
+                      name="cabin"
+                      value={form.cabin}
+                      onChange={handleChange}
+                      className="form-control"
+                      placeholder="e.g. Cabin-C2"
+                    />
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="small mb-1">Floor</label>
+                    <input
+                      name="floor"
+                      value={form.floor}
+                      onChange={handleChange}
+                      className="form-control"
+                      placeholder="e.g. 2nd Floor"
                     />
                   </div>
 

@@ -2,7 +2,7 @@ import React from "react";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import AppointmentsContent from "../../components/dashboard-shared/AppointmentsContent";
-import "../styles/admin-shared.css"; // Import shared styles for components
+import "../../shared/styles/shared-components.css"; // Import shared styles for components
 
 const Appointments = ({ sidebarCollapsed, toggleSidebar }) => {
   return (

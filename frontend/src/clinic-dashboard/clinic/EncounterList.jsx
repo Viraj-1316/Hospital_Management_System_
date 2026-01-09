@@ -25,7 +25,7 @@ export default function EncounterList({ sidebarCollapsed, toggleSidebar }) {
         }}
       >
         <Navbar toggleSidebar={toggleSidebar} />
-        <SharedEncounterList role="admin" clinicName={clinicName} />
+        <SharedEncounterList role="clinic" clinicName={clinicName} />
       </div>
     </div>
   );

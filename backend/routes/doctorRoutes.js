@@ -339,9 +339,13 @@ router.get("/profile/:id", verifyToken, async (req, res) => {
       addressLine2: doctor.addressLine2 || "",
       city: doctor.city || "",
       postalCode: doctor.postalCode || "",
+      country: doctor.country || "",
       qualification: doctor.qualification || "",
       specialization: doctor.specialization || "",
       experienceYears: doctor.experienceYears || doctor.experience || "",
+      // Clinic Location fields (for appointment PDF)
+      cabin: doctor.cabin || "",
+      floor: doctor.floor || "",
     };
 
     res.json(profileData);
@@ -365,9 +369,12 @@ router.put("/profile/:id", verifyToken, async (req, res) => {
       addressLine2,
       city,
       postalCode,
+      country,
       qualification,
       specialization,
       experienceYears,
+      cabin,
+      floor,
     } = req.body;
 
     // Split name into firstName and lastName
@@ -386,9 +393,12 @@ router.put("/profile/:id", verifyToken, async (req, res) => {
       addressLine2,
       city,
       postalCode,
+      country,
       qualification,
       specialization,
       experienceYears,
+      cabin,
+      floor,
       // Also update the address field (combined)
       address: [addressLine1, addressLine2, city, postalCode]
         .filter(Boolean)
@@ -417,9 +427,12 @@ router.put("/profile/:id", verifyToken, async (req, res) => {
       addressLine2: updatedDoctor.addressLine2 || "",
       city: updatedDoctor.city || "",
       postalCode: updatedDoctor.postalCode || "",
+      country: updatedDoctor.country || "",
       qualification: updatedDoctor.qualification || "",
       specialization: updatedDoctor.specialization || "",
       experienceYears: updatedDoctor.experienceYears || "",
+      cabin: updatedDoctor.cabin || "",
+      floor: updatedDoctor.floor || "",
     };
 
     res.json(profileData);

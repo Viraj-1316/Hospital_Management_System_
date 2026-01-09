@@ -7,9 +7,9 @@ import {
   addReceptionist,
   updateReceptionist,
   getReceptionistById,
-} from "../utils/receptionistApi";
+} from "../../utils/receptionistApi";
 import axios from "axios";
-import "../styles/AddReceptionist.css";
+import "../../shared/styles/shared-forms.css";
 
 import API_BASE from "../../config";
 

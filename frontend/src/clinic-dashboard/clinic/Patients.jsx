@@ -2,7 +2,7 @@ import React from "react";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import PatientsContent from "../../components/dashboard-shared/PatientsContent";
-import "../styles/admin-shared.css";
+import "../../shared/styles/shared-components.css";
 
 const Patients = ({ sidebarCollapsed, toggleSidebar }) => {
   return (

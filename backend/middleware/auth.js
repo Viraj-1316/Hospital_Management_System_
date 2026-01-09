@@ -28,11 +28,8 @@ function generateToken(payload, expiresIn = "24h") {
     );
 }
 
-/**
- * Middleware to verify JWT token in request headers
- * Expects: Authorization: Bearer <token>
- */
-function verifyToken(req, res, next) {
+
+async function verifyToken(req, res, next) {
     try {
         let token;
         const authHeader = req.headers.authorization;
@@ -49,8 +46,42 @@ function verifyToken(req, res, next) {
         }
         const decoded = jwt.verify(token, JWT_SECRET);
 
-        // Attach user info to request
+        // Attach basic user info to request
         req.user = decoded;
+        
+        // OPTIMIZATION: Fetch full user data once to avoid repeated DB lookups in routes
+        // This data is cached in req.fullUser for routes that need it
+        try {
+            const cache = require('../utils/cache');
+            const cacheKey = `user:${decoded.id}`;
+            
+            let fullUser = cache.get(cacheKey);
+            
+            if (!fullUser) {
+                if (decoded.role === 'admin') {
+                    const Admin = require('../models/Admin');
+                    fullUser = await Admin.findById(decoded.id).select('-password').lean();
+                } else {
+                    const User = require('../models/User');
+                    fullUser = await User.findById(decoded.id).select('-password').lean();
+                }
+                
+                if (fullUser) {
+                    // Cache for 5 minutes
+                    cache.set(cacheKey, fullUser, 300);
+                }
+            }
+            
+            if (fullUser) {
+                req.fullUser = fullUser;
+                // Ensure clinicId is always available from the actual user record
+                req.user.clinicId = fullUser.clinicId || decoded.clinicId;
+            }
+        } catch (cacheErr) {
+            // Silent fail - routes will fall back to their own lookups
+            // This keeps backward compatibility
+        }
+        
         next();
     } catch (err) {
         if (err.name === "TokenExpiredError") {

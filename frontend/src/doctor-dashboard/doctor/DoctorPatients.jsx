@@ -4,8 +4,6 @@ import DoctorLayout from "../layouts/DoctorLayout";
 import { useNavigate } from "react-router-dom";
 import { MdEditCalendar } from "react-icons/md";
 import "../styles/DoctorPatients.css";
-import PdfPreviewModal from "../components/PdfPreviewModal";
-import "../styles/PdfPreviewModal.css";
 import { toast } from "react-hot-toast";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import API_BASE from "../../config";
@@ -18,7 +16,6 @@ import {
   FaPen,
   FaEye,
   FaCalendarCheck,
-  FaFilePdf,
   FaTrash,
   FaMapMarkerAlt,
 } from "react-icons/fa";
@@ -29,9 +26,6 @@ export default function DoctorPatients() {
   const [err, setErr] = useState(null);
   const [toggling, setToggling] = useState({});
   const navigate = useNavigate();
-  const [pdfModalOpen, setPdfModalOpen] = useState(false);
-  const [selectedAppointmentForPdf, setSelectedAppointmentForPdf] =
-    useState(null);
 
   const [confirmModal, setConfirmModal] = useState({
     show: false,
@@ -144,17 +138,7 @@ export default function DoctorPatients() {
     });
   };
 
-  const openPdfPreview = async (p) => {
-    try {
-      const res = await axios.get(
-        `${API_BASE}/patients/${p._id || p.id}/latest-appointment`
-      );
-      setSelectedAppointmentForPdf(res.data._id);
-      setPdfModalOpen(true);
-    } catch (err) {
-      toast.error("No appointment found.");
-    }
-  };
+
 
   // --- Import Logic ---
   const handleImportSubmit = async () => {
@@ -448,12 +432,7 @@ export default function DoctorPatients() {
                                 >
                                   <MdEditCalendar size={20} />
                                 </button>
-                                <button
-                                  className="btn btn-link p-0 text-dark"
-                                  onClick={() => openPdfPreview(p)}
-                                >
-                                  <FaFilePdf size={18} />
-                                </button>
+
                               </div>
                               <button
                                 className="btn btn-link p-0 text-danger"
@@ -475,12 +454,7 @@ export default function DoctorPatients() {
       </div>
 
       {/* --- Modals --- */}
-      <PdfPreviewModal
-        open={pdfModalOpen}
-        onClose={() => setPdfModalOpen(false)}
-        appointmentId={selectedAppointmentForPdf}
-        defaultFilename="file.pdf"
-      />
+
       <ConfirmationModal
         show={confirmModal.show}
         title={confirmModal.title}

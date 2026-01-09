@@ -65,12 +65,12 @@ router.get("/callback", async (req, res) => {
     });
 
     // Exchange code for tokens
-    const tokenResponse = await axios.post('https://zoom.us/oauth/token', null, {
-      params: {
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: ZOOM_REDIRECT_URI
-      },
+    const params = new URLSearchParams();
+    params.append('grant_type', 'authorization_code');
+    params.append('code', code);
+    params.append('redirect_uri', ZOOM_REDIRECT_URI);
+
+    const tokenResponse = await axios.post('https://zoom.us/oauth/token', params, {
       headers: {
         'Authorization': `Basic ${Buffer.from(`${ZOOM_CLIENT_ID}:${ZOOM_CLIENT_SECRET}`).toString('base64')}`,
         'Content-Type': 'application/x-www-form-urlencoded'

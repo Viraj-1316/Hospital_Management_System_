@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// xlsx, jsPDF, and autoTable are loaded dynamically in export handlers
 
 import {
   FaEdit,
@@ -331,8 +329,9 @@ const exportCSV = () => {
   link.click();
 };
 
-// Export to Excel
-const exportExcel = () => {
+// Export to Excel (dynamic import)
+const exportExcel = async () => {
+  const XLSX = await import("xlsx");
   const worksheetData = sortedData.map((h) => ({
     ID: h.id,
     "Schedule Of": h.scheduleOf,
@@ -348,8 +347,13 @@ const exportExcel = () => {
   XLSX.writeFile(workbook, "Holiday_List.xlsx");
 };
 
-// 💡 UPDATED Export to PDF function (Async and uses getBase64Image)
+// 💡 UPDATED Export to PDF function (Async and uses dynamic imports)
 const exportPDF = async () => {
+  const jsPDFModule = await import("jspdf");
+  const autoTableModule = await import("jspdf-autotable");
+  const jsPDF = jsPDFModule.default;
+  const autoTable = autoTableModule.default;
+  
   const doc = new jsPDF("p", "pt", "a4");
 
   const pageWidth = doc.internal.pageSize.getWidth();

@@ -81,7 +81,7 @@ const billsStyles = `
   }
 `;
 
-export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
+export default function PatientBills() {
   const [rows, setRows] = useState([]);
   const [encounters, setEncounters] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -192,7 +192,7 @@ export default function PatientBills({ sidebarCollapsed, toggleSidebar }) {
   };
 
   return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
       <style>{billsStyles}</style>
 
       <div className="container-fluid py-4 bills-scope">

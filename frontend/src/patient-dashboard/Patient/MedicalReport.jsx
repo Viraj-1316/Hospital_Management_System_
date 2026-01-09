@@ -26,7 +26,7 @@ const reportStyles = `
   .report-scope .enc-id-text { font-family: monospace; font-weight: 700; color: #0d6efd; background: #f0f9ff; padding: 2px 6px; border-radius: 4px; }
 `;
 
-export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
+export default function MedicalReport() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -72,7 +72,7 @@ export default function MedicalReport({ sidebarCollapsed, toggleSidebar }) {
   };
 
   return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
       <style>{reportStyles}</style>
       
       <div className="container-fluid py-4 report-scope">

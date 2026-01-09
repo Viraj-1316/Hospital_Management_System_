@@ -13,7 +13,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
+const PatientAppointmentDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation(); // ✅ Hook to access passed state
@@ -81,7 +81,7 @@ const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
 
   // --- RENDER ---
   if (loading) return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
         <div className="d-flex justify-content-center align-items-center" style={{height:'80vh'}}>
             <div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div>
         </div>
@@ -89,7 +89,7 @@ const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
   );
 
   if (!appointment) return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
         <div className="p-5 text-center mt-5">
             <h4 className="text-danger fw-bold">Receipt Not Found</h4>
             <p className="text-muted">{errorMsg || "We couldn't locate the details for this appointment."}</p>
@@ -103,7 +103,7 @@ const PatientAppointmentDetails = ({ sidebarCollapsed, toggleSidebar }) => {
   const { list: serviceList, pricePerItem } = getServiceData();
 
   return (
-    <PatientLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar}>
+    <PatientLayout>
       <div className="container py-4">
         
         {/* Navigation & Print Buttons */}

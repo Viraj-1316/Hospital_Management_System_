@@ -3,8 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaPlus, FaTimes, FaTrash, FaEdit, FaPrint, FaEnvelope, FaFileImport } from "react-icons/fa";
 import toast from "react-hot-toast";
-import { read, utils } from 'xlsx';
-import "../../admin-dashboard/styles/admin-shared.css";
+// xlsx is loaded dynamically in file import handler
+import "../../shared/styles/shared-components.css";
 import API_BASE from "../../config";
 import MedicalReport from "./MedicalReport";
 
@@ -334,13 +334,14 @@ export default function SharedEncounterDetails() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await import('xlsx');
         const bstr = evt.target.result;
-        const wb = read(bstr, { type: 'binary' });
+        const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const data = utils.sheet_to_json(ws);
+        const data = XLSX.utils.sheet_to_json(ws);
 
         // Expected columns: Name, Frequency, Duration, Instruction
         const newPrescriptionsToAdd = data.map(row => ({

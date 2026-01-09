@@ -10,7 +10,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import "../../admin-dashboard/styles/admin-shared.css";
+import "../../shared/styles/shared-components.css";
 import API_BASE from "../../config";
 
 export default function SharedEncounterTemplateList({ role }) {
@@ -77,6 +77,8 @@ export default function SharedEncounterTemplateList({ role }) {
         // Redirect to details page to edit the rest
         if (role === "doctor") {
           navigate(`/doctor/encounter-template-details/${res.data._id}`);
+        } else if (role === "clinic") {
+          navigate(`/clinic-dashboard/encounter-template-details/${res.data._id}`);
         } else {
           navigate(`/encounter-template-details/${res.data._id}`);
         }
@@ -226,6 +228,10 @@ const confirmDelete = async () => {
                             if (role === "doctor") {
                               navigate(
                                 `/doctor/encounter-template-details/${t._id}`
+                              );
+                            } else if (role === "clinic") {
+                              navigate(
+                                `/clinic-dashboard/encounter-template-details/${t._id}`
                               );
                             } else {
                               navigate(`/encounter-template-details/${t._id}`);
