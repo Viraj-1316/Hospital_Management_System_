@@ -73,7 +73,17 @@ const BillingSchema = new mongoose.Schema(
     time: { type: String, default: "" },  // e.g., "05:20 PM"
 
     notes: { type: String, default: "" },
-    paymentMethod: { type: String, default: "" },
+    
+    // Payment Mode (for Razorpay integration)
+    paymentMethod: { 
+      type: String, 
+      enum: ["", "Cash", "Online"],
+      default: "" 
+    },
+    
+    // Razorpay payment tracking
+    razorpayOrderId: { type: String, default: "" },
+    razorpayPaymentId: { type: String, default: "" },
 
     // Verification URL for QR code (auto-generated on save)
     verificationUrl: { type: String, default: "" },

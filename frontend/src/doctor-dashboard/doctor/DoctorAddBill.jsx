@@ -36,6 +36,7 @@ export default function DoctorAddBill() {
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
     status: "unpaid",
     notes: "",
+    paymentMethod: "",  // Payment mode for Razorpay integration
   });
 
   const [patients, setPatients] = useState([]);
@@ -441,6 +442,19 @@ export default function DoctorAddBill() {
                <div className="col-md-6 col-12">
                 <label className="form-label small fw-bold">Time</label>
                 <input type="text" name="time" className="form-control" value={form.time} onChange={handleGenericChange} />
+              </div>
+
+              {/* Payment Mode */}
+              <div className="col-md-6 col-12">
+                <label className="form-label small fw-bold">Payment Mode</label>
+                <select name="paymentMethod" className="form-select" value={form.paymentMethod} onChange={handleGenericChange}>
+                  <option value="">-- Select Payment Mode --</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online (Razorpay)</option>
+                </select>
+                {form.paymentMethod === "Online" && (
+                  <small className="text-info">Patient can pay online via Razorpay from their portal</small>
+                )}
               </div>
 
               <div className="col-md-6 col-12">

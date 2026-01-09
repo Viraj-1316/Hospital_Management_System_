@@ -49,6 +49,9 @@ const approvalRoutes = require("./routes/approvalRoutes");
 const googleOAuthRoutes = require("./routes/googleOAuthRoutes");
 const zoomOAuthRoutes = require("./routes/zoomOAuthRoutes");
 
+// Razorpay Payment Routes
+const razorpayRoutes = require("./routes/razorpayRoutes");
+
 // Import Interface for Socket.io
 const { initSocket } = require("./utils/socketServer");
 
@@ -155,6 +158,9 @@ app.use("/api/approvals", approvalRoutes);
 // OAuth Routes for Doctor Integrations
 app.use("/api/auth/google/doctor", googleOAuthRoutes);
 app.use("/api/auth/zoom/doctor", zoomOAuthRoutes);
+
+// Razorpay Payment Routes
+app.use("/api/razorpay", razorpayRoutes);
 
 
 // --- 404 Handler (Must be after all routes) ---

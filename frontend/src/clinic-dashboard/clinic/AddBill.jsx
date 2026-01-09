@@ -49,6 +49,7 @@ const AddBill = () => {
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
     status: "unpaid",
     notes: "",
+    paymentMethod: "",  // Payment mode for Razorpay integration
   });
 
   // --- Data States ---
@@ -618,6 +619,26 @@ const AddBill = () => {
                       {form.status.toUpperCase()}
                     </span>
                   </div>
+                </div>
+                
+                {/* Payment Mode Selection */}
+                <div className="mt-3">
+                  <label className="form-label fw-bold">Payment Mode</label>
+                  <select 
+                    name="paymentMethod" 
+                    className="form-select"
+                    value={form.paymentMethod}
+                    onChange={handleGenericChange}
+                  >
+                    <option value="">-- Select Payment Mode --</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Online">Online (Razorpay)</option>
+                  </select>
+                  {form.paymentMethod === "Online" && (
+                    <small className="text-info">
+                      Patient can pay online via Razorpay from their portal
+                    </small>
+                  )}
                 </div>
                 
                 <div className="row mt-3">

@@ -37,6 +37,7 @@ const EditBill = () => {
     time: "",
     status: "unpaid",
     notes: "",
+    paymentMethod: "",  // Payment mode for Razorpay integration
   });
 
   const [doctors, setDoctors] = useState([]);
@@ -136,6 +137,7 @@ const EditBill = () => {
           time: bill.time || "",
           status: bill.status || "unpaid",
           notes: bill.notes || "",
+          paymentMethod: bill.paymentMethod || "",
         });
 
       } catch (err) {
@@ -411,6 +413,14 @@ const EditBill = () => {
                      <div className="d-flex justify-content-between fw-bold text-danger">
                         <span>Due:</span>
                         <span>₹{Number(form.amountDue).toFixed(2)}</span>
+                     </div>
+                     <div className="d-flex justify-content-between mt-2 align-items-center">
+                        <span className="small">Payment Mode:</span>
+                        <select name="paymentMethod" className="form-select form-select-sm" style={{width: "130px"}} value={form.paymentMethod} onChange={handleGenericChange}>
+                           <option value="">-- Select --</option>
+                           <option value="Cash">Cash</option>
+                           <option value="Online">Online</option>
+                        </select>
                      </div>
                      <div className="d-flex justify-content-between mt-2 align-items-center">
                         <span className="small">Status:</span>

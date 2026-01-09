@@ -16,6 +16,12 @@ const ProSettingSchema = new mongoose.Schema(
 
     // Copyright Text
     copyrightText: { type: String, default: "OneCare © 2024. All rights reserved." },
+
+    // Razorpay Configuration
+    razorpayEnabled: { type: Boolean, default: false },
+    razorpayKeyId: { type: String, default: "" },
+    razorpayKeySecret: { type: String, default: "" },
+    razorpayCurrency: { type: String, default: "INR" },
   },
   { timestamps: true }
 );

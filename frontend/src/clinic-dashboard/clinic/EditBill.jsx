@@ -50,6 +50,7 @@ const EditBill = () => {
     time: "",
     status: "unpaid",
     notes: "",
+    paymentMethod: "",  // Payment mode for Razorpay integration
   });
 
   // --- Data States ---
@@ -158,6 +159,7 @@ const EditBill = () => {
           time: bill.time || "",
           status: bill.status || "unpaid",
           notes: bill.notes || "",
+          paymentMethod: bill.paymentMethod || "",
         });
 
       } catch (err) {
@@ -506,7 +508,21 @@ const EditBill = () => {
                         <span className="fw-bold">Amount Due:</span>
                         <span className="fw-bold text-danger">₹{Number(form.amountDue).toFixed(2)}</span>
                      </div>
-                     <div className="d-flex justify-content-between align-items-center">
+                     
+                     {/* Payment Mode */}
+                     <div className="d-flex justify-content-between align-items-center mt-2">
+                        <span>Payment Mode:</span>
+                        <select name="paymentMethod" className="form-select form-select-sm" style={{width: "130px"}} value={form.paymentMethod} onChange={handleGenericChange}>
+                           <option value="">-- Select --</option>
+                           <option value="Cash">Cash</option>
+                           <option value="Online">Online (Razorpay)</option>
+                        </select>
+                     </div>
+                     {form.paymentMethod === "Online" && (
+                       <small className="text-info d-block mt-1">Patient can pay online via Razorpay</small>
+                     )}
+                     
+                     <div className="d-flex justify-content-between align-items-center mt-2">
                         <span>Status:</span>
                          <span className={`badge bg-${form.status === 'paid' ? 'success' : form.status === 'partial' ? 'warning' : 'danger'}`}>
                             {form.status.toUpperCase()}
