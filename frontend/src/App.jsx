@@ -127,6 +127,12 @@ const ReceptionistChangePassword = lazy(() => import("./receptionist/Receptionis
 const ReceptionistChangePasswordPage = lazy(() => import("./receptionist/ReceptionistChangePasswordPage"));
 const ReceptionistProfile = lazy(() => import("./receptionist/ReceptionistProfile"));
 const ReceptionistDashboard = lazy(() => import("./receptionist/ReceptionistDashboard"));
+const ReceptionistAppoitment = lazy(() => import("./receptionist/ReceptionistAppoitment"));
+const ReceptionistEncounterList = lazy(() => import("./receptionist/ReceptionistEncounterList"));
+const ReceptionistEncounterDetails = lazy(() => import("./receptionist/ReceptionistEncounterDetails"));
+const ReceptionistEncounterTempletList = lazy(() => import("./receptionist/ReceptionistEncounterTempletList"));
+const ReceptionistEncounterTempletDetails = lazy(() => import("./receptionist/ReceptionistEncounterTempletDetails"));
+
 
 
 /* PDF Editor */
@@ -468,9 +474,14 @@ function App() {
 
           {/* ==================== RECEPTIONIST SECTION ==================== */}
           <Route path="/reception-dashboard" element={<ReceptionistDashboard />} />
-          <Route path="/receptionist/change-password" element={<ReceptionistChangePassword />} />
+          <Route path="/reception-dashboard/appointments" element={<ReceptionistAppoitment/>} />
+          <Route path="/reception-dashboard/encounters" element={<ReceptionistEncounterList/>} />
+          <Route path="/reception-dashboard/encounters/:id" element={<ReceptionistEncounterDetails/>} />
+          <Route path="/reception-dashboard/encounter-templates" element={<ReceptionistEncounterTempletList/>} />
+          <Route path="/reception-dashboard/encounter-template-details/:id" element={<ReceptionistEncounterTempletDetails/>} />
+          <Route path="/reception/change-password" element={<ReceptionistChangePassword />} />
           <Route path="/reception/change-password" element={<ReceptionistChangePasswordPage />} />
-          <Route path="/receptionist/profile" element={
+          <Route path="/reception/profile" element={
             <ReceptionistProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
           } />
 

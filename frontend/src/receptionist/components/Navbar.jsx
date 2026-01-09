@@ -38,7 +38,6 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
       if (!token) return;
-
       const res = await fetch(`${API_BASE}/api/user/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -66,7 +65,9 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
       const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
       const clinic = receptionist?.clinic || authUser?.clinic;
       
-      let url = `${API_BASE}/api/appointments`; 
+      // Keep this as is (it seems to work now)
+      let url = `${API_BASE}/appointments`; 
+      
       const params = { status: 'booked' };
       if (clinic) params.clinic = clinic;
 
@@ -127,7 +128,6 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
         <button className="modern-menu-btn" onClick={toggleSidebar}>
           <FaBars />
         </button>
-        {/* Title kept as requested, though typically in sidebar for modern layouts */}
         <h1 className="modern-navbar-title">Reception Dashboard</h1>
       </div>
 

@@ -77,7 +77,12 @@ export default function DoctorDashboard() {
       try {
         const res = await axios.get(`${API_BASE}/dashboard-stats`);
         if (mounted) {
-          const { totalPatients, totalAppointments, todayAppointments, totalServices } = res.data || {};
+          const {
+            totalPatients,
+            totalAppointments,
+            todayAppointments,
+            totalServices,
+          } = res.data || {};
           setStats({
             totalPatients: totalPatients || 0,
             totalAppointments: totalAppointments || 0,
@@ -92,7 +97,9 @@ export default function DoctorDashboard() {
       }
     };
     fetchStats();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -111,7 +118,9 @@ export default function DoctorDashboard() {
         if (doctorId) url += `?doctorId=${doctorId}`;
 
         const res = await axios.get(url);
-        const appointments = Array.isArray(res.data) ? res.data : res.data.data ?? [];
+        const appointments = Array.isArray(res.data)
+          ? res.data
+          : res.data.data ?? [];
         const mapped = appointments.map(mapAppointmentToEvent).filter(Boolean);
 
         if (mounted) setEvents(mapped);
@@ -123,14 +132,15 @@ export default function DoctorDashboard() {
       }
     };
     fetchEvents();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // ---------- RENDER ----------
   return (
     <DoctorLayout>
       <div className="dashboard-container">
-        
         {/* HEADER */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h3 className="fw-bold text-primary m-0">Doctor Dashboard</h3>
@@ -139,8 +149,13 @@ export default function DoctorDashboard() {
         {/* STATS WIDGETS */}
         <div className="row g-4 mb-4">
           <div className="col-xl-3 col-md-6 col-12">
-            <div className="stat-card clickable" onClick={() => navigate("/doctor/patients")}>
-              <div className="stat-icon patients"><FaUserInjured /></div>
+            <div
+              className="stat-card clickable"
+              onClick={() => navigate("/doctor/patients")}
+            >
+              <div className="stat-icon patients">
+                <FaUserInjured />
+              </div>
               <div className="stat-content">
                 <h6>Total Patients</h6>
                 <h3>{loadingStats ? "-" : stats.totalPatients}</h3>
@@ -148,8 +163,13 @@ export default function DoctorDashboard() {
             </div>
           </div>
           <div className="col-xl-3 col-md-6 col-12">
-            <div className="stat-card clickable" onClick={() => navigate("/doctor/appointments")}>
-              <div className="stat-icon appointments"><FaCalendarAlt /></div>
+            <div
+              className="stat-card clickable"
+              onClick={() => navigate("/doctor/appointments")}
+            >
+              <div className="stat-icon appointments">
+                <FaCalendarAlt />
+              </div>
               <div className="stat-content">
                 <h6>Total Appointments</h6>
                 <h3>{loadingStats ? "-" : stats.totalAppointments}</h3>
@@ -157,8 +177,13 @@ export default function DoctorDashboard() {
             </div>
           </div>
           <div className="col-xl-3 col-md-6 col-12">
-            <div className="stat-card clickable" onClick={() => navigate("/doctor/appointments")}>
-              <div className="stat-icon today"><FaCalendarCheck /></div>
+            <div
+              className="stat-card clickable"
+              onClick={() => navigate("/doctor/appointments")}
+            >
+              <div className="stat-icon today">
+                <FaCalendarCheck />
+              </div>
               <div className="stat-content">
                 <h6>Today's Appointments</h6>
                 <h3>{loadingStats ? "-" : stats.todayAppointments}</h3>
@@ -166,8 +191,13 @@ export default function DoctorDashboard() {
             </div>
           </div>
           <div className="col-xl-3 col-md-6 col-12">
-            <div className="stat-card clickable" onClick={() => navigate("/doctor/services")}>
-              <div className="stat-icon services"><FaListAlt /></div>
+            <div
+              className="stat-card clickable"
+              onClick={() => navigate("/doctor/services")}
+            >
+              <div className="stat-icon services">
+                <FaListAlt />
+              </div>
               <div className="stat-content">
                 <h6>Total Services</h6>
                 <h3>{loadingStats ? "-" : stats.totalServices}</h3>
@@ -180,14 +210,19 @@ export default function DoctorDashboard() {
         <div className="row">
           <div className="col-12">
             <div className="calendar-card">
-              
               {/* Custom Header: Title Left, Filters/Count Right */}
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="m-0 text-dark" style={{ fontSize: '1.2rem', fontWeight: '400' }}>
+                <h5
+                  className="m-0 text-dark"
+                  style={{ fontSize: "1.2rem", fontWeight: "400" }}
+                >
                   Appointment
                 </h5>
                 <div className="d-flex align-items-center gap-2">
-                  <button className="btn btn-outline-secondary btn-sm" style={{fontSize: '0.85rem'}}>
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    style={{ fontSize: "0.85rem" }}
+                  >
                     Apply filters
                   </button>
                   <span className="badge bg-white text-secondary border">
@@ -196,7 +231,9 @@ export default function DoctorDashboard() {
                 </div>
               </div>
 
-              {error && <div className="alert alert-danger py-2 small">{error}</div>}
+              {error && (
+                <div className="alert alert-danger py-2 small">{error}</div>
+              )}
 
               {/* Calendar Component */}
               <FullCalendar
@@ -206,7 +243,7 @@ export default function DoctorDashboard() {
                 headerToolbar={{
                   left: "prev,next today",
                   center: "title",
-                  right: "dayGridMonth,timeGridWeek,timeGridDay"
+                  right: "dayGridMonth,timeGridWeek,timeGridDay",
                 }}
                 selectable={true}
                 selectMirror={true}
@@ -221,7 +258,6 @@ export default function DoctorDashboard() {
             </div>
           </div>
         </div>
-
       </div>
     </DoctorLayout>
   );

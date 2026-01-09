@@ -103,7 +103,7 @@ export default function Sidebar({ collapsed = false }) {
         
         {/* 1. Dashboard */}
         <li className="modern-nav-item">
-          <NavLink to="/receptionist/dashboard" className={linkClass} end>
+          <NavLink to="/reception-dashboard" className={linkClass} end>
             <span className="modern-nav-icon">
               <FaTachometerAlt />
             </span>
@@ -113,47 +113,10 @@ export default function Sidebar({ collapsed = false }) {
 
         {/* 2. Appointments Dropdown */}
         <li className="modern-nav-item">
-          <div
-            className={`modern-nav-link modern-nav-toggle ${isAppointmentsOpen ? "open" : ""}`}
-            onClick={() => setIsAppointmentsOpen(!isAppointmentsOpen)}
-          >
-            <span className="modern-nav-icon">
-              <FaCalendarAlt />
-            </span>
-            {!collapsed && (
-              <>
-                <span>Appointments</span>
-                <span className="toggle-icon">
-                  <FaChevronDown />
-                </span>
-              </>
-            )}
-          </div>
-
-          {!collapsed && (
-            <Collapse in={isAppointmentsOpen}>
-              <ul className="modern-submenu">
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/appointments" className={linkClass}>
-                    <span className="modern-nav-icon"><FaListAlt /></span>
-                    <span>All Appointments</span>
-                  </NavLink>
-                </li>
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/appointments-today" className={linkClass}>
-                    <span className="modern-nav-icon"><FaClock /></span>
-                    <span>Today's Appointments</span>
-                  </NavLink>
-                </li>
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/appointments-pending" className={linkClass}>
-                    <span className="modern-nav-icon"><FaCheckCircle /></span>
-                    <span>Pending Confirmations</span>
-                  </NavLink>
-                </li>
-              </ul>
-            </Collapse>
-          )}
+          <NavLink to="/reception-dashboard/appointments" className={linkClass}>
+            <span className="clinic-nav-icon"><FaCalendarAlt /></span>
+            {!collapsed && <span>Appointments</span>}
+          </NavLink>
         </li>
 
         {/* 3. Encounters Dropdown */}
@@ -179,13 +142,13 @@ export default function Sidebar({ collapsed = false }) {
             <Collapse in={isEncountersOpen}>
               <ul className="modern-submenu">
                 <li className="modern-nav-item">
-                  <NavLink to="/receptionist/encounters" className={linkClass} end>
+                  <NavLink to="/reception-dashboard/encounters" className={linkClass} end>
                     <span className="modern-nav-icon"><FaListAlt /></span>
                     <span>Encounter List</span>
                   </NavLink>
                 </li>
                 <li className="modern-nav-item">
-                  <NavLink to="/receptionist/encounters/templates" className={linkClass}>
+                  <NavLink to="/reception-dashboard/encounters/templates" className={linkClass}>
                     <span className="modern-nav-icon"><FaRegCalendarAlt /></span>
                     <span>Encounter Templates</span>
                   </NavLink>
@@ -218,13 +181,13 @@ export default function Sidebar({ collapsed = false }) {
             <Collapse in={isPatientsOpen}>
               <ul className="modern-submenu">
                 <li className="modern-nav-item">
-                  <NavLink to="/receptionist/patients" className={linkClass} end>
+                  <NavLink to="/reception-dashboard/patients" className={linkClass} end>
                     <span className="modern-nav-icon"><FaListAlt /></span>
                     <span>Patient List</span>
                   </NavLink>
                 </li>
                 <li className="modern-nav-item">
-                  <NavLink to="/receptionist/patients/new" className={linkClass}>
+                  <NavLink to="/reception-dashboard/patients/new" className={linkClass}>
                     <span className="modern-nav-icon"><FaUserInjured /></span>
                     <span>Register Patient</span>
                   </NavLink>
@@ -236,7 +199,7 @@ export default function Sidebar({ collapsed = false }) {
 
         {/* 5. Doctors */}
         <li className="modern-nav-item">
-          <NavLink to="/receptionist/doctors" className={linkClass}>
+          <NavLink to="/reception-dashboard/doctors" className={linkClass}>
             <span className="modern-nav-icon"><FaUserMd /></span>
             {!collapsed && <span>Doctors</span>}
           </NavLink>
@@ -244,7 +207,7 @@ export default function Sidebar({ collapsed = false }) {
 
         {/* 6. Services - Updated Icon to FaList */}
         <li className="modern-nav-item">
-          <NavLink to="/receptionist/services" className={linkClass}>
+          <NavLink to="/reception-dashboard/services" className={linkClass}>
             <span className="modern-nav-icon"><FaList /></span>
             {!collapsed && <span>Services</span>}
           </NavLink>
@@ -252,7 +215,7 @@ export default function Sidebar({ collapsed = false }) {
 
         {/* 7. Billing Records */}
         <li className="modern-nav-item">
-          <NavLink to="/receptionist/billing" className={linkClass}>
+          <NavLink to="/reception-dashboard/billing" className={linkClass}>
             <span className="modern-nav-icon"><FaFileInvoice /></span>
             {!collapsed && <span>Billing Records</span>}
           </NavLink>
@@ -260,7 +223,7 @@ export default function Sidebar({ collapsed = false }) {
 
         {/* 8. Settings */}
         <li className="modern-nav-item">
-          <NavLink to="/receptionist/settings" className={linkClass}>
+          <NavLink to="/reception-dashboard/settings" className={linkClass}>
             <span className="modern-nav-icon"><IoMdSettings /></span>
             {!collapsed && <span>Settings</span>}
           </NavLink>
