@@ -79,6 +79,8 @@ export default function SharedEncounterTemplateList({ role }) {
           navigate(`/doctor/encounter-template-details/${res.data._id}`);
         } else if (role === "clinic") {
           navigate(`/clinic-dashboard/encounter-template-details/${res.data._id}`);
+        } else if (role === "receptionist") {
+        navigate(`/reception-dashboard/encounter-template-details/${res.data._id}`);
         } else {
           navigate(`/encounter-template-details/${res.data._id}`);
         }

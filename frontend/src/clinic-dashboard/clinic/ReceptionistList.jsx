@@ -380,7 +380,6 @@ export default function ReceptionistList({
 
                           <td>
                             <div className="d-flex align-items-center gap-2">
-                              <div className="reception-avatar">{initials}</div>
                               <div className="fw-semibold">{row.name}</div>
                             </div>
                           </td>

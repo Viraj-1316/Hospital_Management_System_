@@ -1,84 +1,120 @@
 # Frontend Developer Guide
 
-## Overview
+## 🏗️ Architecture Overview
 
-This document outlines the architecture changes made to support environment-specific configurations, specifically for handling API URLs across Development and Production environments.
+The frontend is a Single Page Application (SPA) built with **React** and **Vite**. It uses a dashboard-centric layout with specific sections for different user roles (Admin, Doctor, Patient, Receptionist, Clinic).
 
-## Key Changes: Centralized API Configuration
+### 📂 Directory Structure (`src/`)
 
-We have moved away from hardcoded API URLs (e.g., `http://localhost:3001`) to a centralized configuration pattern.
+```
+src/
+├── admin-dashboard/     # Super Admin Interface
+│   ├── admin/           # Admin pages (Doctors, Patients, Settings)
+├── clinic-dashboard/    # Clinic Admin Interface
+├── doctor-dashboard/    # Doctor Interface
+├── patient-dashboard/   # Patient Interface
+├── receptionist/        # Receptionist Interface
+├── auth/                # Authentication Pages (Login, Forgot Password)
+├── components/          # Shared Generic Components (Modals, Buttons)
+├── context/             # React Contexts (UserContext, etc.)
+├── utils/               # Helper functions
+│   ├── config.js        # API Configuration
+│   └── setFavicon.js    # Dynamic Favicon logic
+├── App.jsx              # Main Routing Logic
+└── main.jsx             # Entry point & Provider wrappers
+```
 
-### 1. The `config.js` File
+---
 
-Located at `src/config.js`, this file is the **single source of truth** for the backend API URL.
+## 🚀 Key Technologies
+
+- **Build Tool**: Vite
+- **Framework**: React 18
+- **Routing**: React Router v6
+- **Styling**: Bootstrap 5 + Custom CSS (`OneCareAuth.css` etc.)
+- **HTTP Client**: Axios (implied usage)
+- **Notifications**: `react-hot-toast`
+- **PDF Viewing**: Browser native + `pdf-lib` (backend generated)
+- **Icons**: React Icons (FontAwesome, Material, etc.)
+
+---
+
+## 📡 API Integration
+
+### Configuration
+
+All API requests should reference the backend URL dynamically.
+**File**: `src/config.js`
 
 ```javascript
-// src/config.js
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 export default API_BASE;
 ```
 
-### 2. Environment Variables
+### Making Requests
 
-We use Vite's environment variable system to inject the correct URL based on the environment.
+```javascript
+import axios from "axios";
+import API_BASE from "../utils/config";
 
-- **Local Development**: Uses `.env`
-  ```properties
-  VITE_API_URL=http://localhost:3001
-  ```
-- **Production**: Uses `.env.production`
-  ```properties
-  VITE_API_URL=http://your-ec2-instance-url.com
-  ```
-
-## Developer Guidelines
-
-### ⛔ DO NOT
-
-- **Do not hardcode URLs** like `axios.get("http://localhost:3001/api/...")`.
-- **Do not import `API_BASE` locally** inside components if it's already available globally or via a shared config (though importing from `config.js` is the correct way).
-
-### ✅ DO
-
-- **Always import `API_BASE`** from the config file.
-
-  ```javascript
-  import API_BASE from "../../config"; // Adjust path as needed
-
-  // Usage
-  axios.get(`${API_BASE}/doctors`);
-  ```
-
-- **Ensure imports are at the top level** of the file.
-
-## Deployment Workflow
-
-### 1. Local Development
-
-Run the app locally connecting to the local backend:
-
-```bash
-npm run dev
+const fetchData = async () => {
+  const token = localStorage.getItem("token");
+  const response = await axios.get(`${API_BASE}/api/endpoint`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
 ```
 
-_Reads `VITE_API_URL` from `.env`._
+---
 
-### 2. Production Build
+## 🔐 Authentication Flow
 
-To build the application for deployment (e.g., to AWS S3):
+1.  **Login**: User posts credentials to `/login`.
+2.  **Token**: Backend returns JWT + User Role + Clinic ID.
+3.  **Storage**: Token is stored in `localStorage` ("token").
+4.  **Routing**: `App.jsx` checks the token and redirects the user to their specific dashboard (`/admin-dashboard`, `/doctor-dashboard`, etc.) based on their role.
 
-1. **Update Production Config**: Ensure `frontend/.env.production` contains the live backend URL.
-   ```properties
-   VITE_API_URL=http://ec2-xx-xx-xx-xx.compute-1.amazonaws.com:3001
-   ```
-2. **Build**:
-   ```bash
-   npm run build
-   ```
-   This generates a `dist/` folder containing the static assets.
-3. **Deploy**: Upload the contents of `dist/` to your S3 bucket or hosting provider.
+---
 
-## Troubleshooting
+## 🛠️ Common Tasks
 
-- **"Declaration or statement expected"**: This usually happens if `import` statements are inside a function or conditional block. Ensure all imports are at the very top of the file.
-- **API Calls Failing in Production**: Check the Network tab in Chrome DevTools. If requests are going to `localhost` instead of the EC2 IP, verify that `.env.production` was correctly set **before** running `npm run build`.
+### 1. Creating a New Page
+
+1.  Create Component: `src/admin-dashboard/pages/NewPage.jsx`
+2.  Register Route: Add `<Route>` in `src/App.jsx`.
+    ```jsx
+    <Route path="/admin/new-page" element={<NewPage />} />
+    ```
+3.  Add Sidebar Link: Update the Sidebar component in `src/admin-dashboard/components/Sidebar.jsx`.
+
+### 2. Styling
+
+- **Global Styles**: Imported in `main.jsx`.
+- **Component Styles**: Use CSS modules or specific CSS files (e.g., `OneCareAuth.css`).
+- **Bootstrap**: Utility classes (`d-flex`, `mt-3`, `btn-primary`) are heavily used.
+
+### 3. Environment Variables
+
+- Create `.env` for local dev:
+  ```
+  VITE_API_BASE_URL=http://localhost:3001
+  ```
+- Create `.env.production` for build:
+  ```
+  VITE_API_BASE_URL=https://api.yourdomain.com
+  ```
+
+---
+
+## 📦 Build & Deployment
+
+To build for production:
+
+```bash
+npm run build
+```
+
+This produces a `dist/` folder which can be served statically (AWS S3, Vercel, Netlify).
+
+See `OneCare_AWS_Deployment_Guide.md` for full deployment details.

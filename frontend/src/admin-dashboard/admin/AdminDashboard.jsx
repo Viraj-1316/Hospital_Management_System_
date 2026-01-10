@@ -213,23 +213,6 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
             {/* Left: Today's / upcoming appointments */}
             <div className="col-md-8 mb-4">
               <div className="card shadow-sm p-3 h-100">
-                {/* <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="fw-bold mb-0">Todays Appointment List</h5>
-
-                  <div className="d-flex gap-2">
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => fetchAppointments("all")}
-                    >
-                      All Upcoming Appointments
-                    </button>
-                    <button
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => fetchAppointments("today")}
-                    >
-                      Reload
-                    </button>
-                  </div> */}
 
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   {/* Dynamic Title based on selection */}

@@ -186,7 +186,9 @@ export default function SharedEncounterList({ role, doctorId, clinicName: autoCl
       navigate(`/doctor/encounters/${id}`);
     } else if (role === "clinic") {
       navigate(`/clinic-dashboard/encounter-details/${id}`);
-    } else {
+    } else if (role === "receptionist") {
+      navigate(`/reception-dashboard/encounters/${id}`);
+    }else {
       navigate(`/encounter-details/${id}`);
     }
   };

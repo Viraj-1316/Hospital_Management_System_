@@ -1,140 +1,120 @@
 # Backend Developer Guide
 
-## Overview
+## 🏗️ Architecture Overview
 
-This guide covers the backend architecture, configuration, and deployment steps for the Hospital Management System. The backend is built with **Node.js** and **Express**, using **MongoDB Atlas** for the database.
+The backend is built using **Node.js** and **Express.js**, following a modular architecture. It serves as the REST API for the frontend and handles business logic, database interactions, and third-party integrations.
 
-It is designed to be deployed on an **AWS EC2 instance**, serving requests from the frontend hosted on S3.
+### 📂 Directory Structure
 
-## Configuration
-
-The backend relies on environment variables for database connections, email services, and Twilio integration.
-
-### Environment Variables (`.env`)
-
-Create a `.env` file in the `backend/` directory with the following keys:
-
-```properties
-# Database (MongoDB Atlas)
-MONGO_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/hospital_auth?retryWrites=true&w=majority
-
-# Server Port (Default is 3001)
-PORT=3001
-
-# Email Service (SMTP - e.g., Brevo/SendGrid)
-EMAIL_HOST=smtp-relay.brevo.com
-EMAIL_PORT=587
-EMAIL_USER=your-smtp-username
-EMAIL_PASS=your-smtp-password
-EMAIL_FROM=no-reply@yourhospital.com
-
-# Twilio (WhatsApp & SMS)
-TWILIO_ACCOUNT_SID=your-twilio-sid
-TWILIO_AUTH_TOKEN=your-twilio-auth-token
-TWILIO_WHATSAPP_NUMBER=+14155238886
+```
+backend/
+├── config/              # Configuration files
+│   └── db.js            # MongoDB connection setup
+├── controllers/         # (Optional) Route logic separated from routes
+├── middleware/          # Request processing middleware
+│   ├── auth.js          # JWT verification
+│   ├── errorHandler.js  # Global error handling
+│   ├── upload.js        # Multer file upload config
+│   └── validation.js    # Input validation schemas
+├── models/              # Mongoose Data Models
+│   ├── User.js          # Generic user (patients, clinic admins)
+│   ├── Doctor.js        # Doctor specific profiles
+│   ├── Appointment.js   # Appointment records
+│   └── ... (see Database Schema doc)
+├── routes/              # API Route Definitions
+│   ├── auth.js          # Authentication routes
+│   ├── appointmentRoutes.js # Appointment management
+│   ├── billingRoutes.js # Billing & Invoicing
+│   └── ... (one file per domain)
+├── utils/               # Helper functions
+│   ├── emailService.js  # Email sending (Nodemailer)
+│   ├── pdfRoutes.js     # PDF generation logic
+│   └── socketServer.js  # Real-time WebSocket setup
+├── uploads/             # Local storage for uploaded files
+├── index.js             # Application entry point
+└── .env                 # Environment variables
 ```
 
-> **Note**: The server currently listens on port **3001** by default. Ensure this port is open in your firewall/Security Group.
+---
 
-## Running Locally
+## 🚀 Key Technologies
 
-1.  **Install Dependencies**:
-    ```bash
-    cd backend
-    npm install
-    ```
-2.  **Start Server**:
-    ```bash
-    npm start
-    # OR
-    node index.js
-    ```
-3.  **Verify**:
-    The server should output:
-    ```
-    ✅ Connected to MongoDB (hospital_auth)
-    Backend server running on http://localhost:3001
-    ```
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB (via Mongoose)
+- **Authentication**: JSON Web Tokens (JWT)
+- **File Uploads**: Multer
+- **PDF Generation**: `pdf-lib` (Backend-side generation)
+- **Payments**: Razorpay
+- **Real-time**: Socket.io
+- **Validation**: Joi (or custom validators)
+- **Logging**: Winston (`utils/logger.js`)
 
-## Deployment Guide (AWS EC2)
+---
 
-To deploy this backend to an AWS EC2 instance:
+## 🛠️ Common Tasks
 
-### 1. Prerequisite Setup
+### 1. Adding a New API Route
 
-- Launch an EC2 instance (Ubuntu/Amazon Linux).
-- **Security Group**: Allow Inbound traffic on **Port 3001** (Custom TCP) and **SSH (22)**.
-- SSH into your instance.
+To add a new feature, e.g., "Inventory":
 
-### 2. Environment Setup
+1.  **Create Model**: `models/Inventory.js`
+2.  **Create Route File**: `routes/inventoryRoutes.js`
+3.  **Define Endpoints**:
 
-Install Node.js and Git:
+    ```javascript
+    const express = require("express");
+    const router = express.Router();
+    const { verifyToken } = require("../middleware/auth");
 
-```bash
-# Update packages
-sudo apt update
+    router.get("/", verifyToken, async (req, res) => {
+      // Implementation
+    });
 
-# Install Node.js (v18+ recommended)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Install PM2 (Process Manager)
-sudo npm install -g pm2
-```
-
-### 3. Deploy Code
-
-1.  Clone the repository:
-    ```bash
-    git clone <your-repo-url>
-    cd Hospital_Management_System_/backend
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  **Configure Environment**:
-    Create the `.env` file with your production keys (MongoDB Atlas connection string, etc.).
-    ```bash
-    nano .env
-    # Paste your env vars here, then Save (Ctrl+O) and Exit (Ctrl+X)
+    module.exports = router;
     ```
 
-### 4. Start Application
+4.  **Register in `index.js`**:
+    ```javascript
+    const inventoryRoutes = require("./routes/inventoryRoutes");
+    app.use("/api/inventory", inventoryRoutes);
+    ```
 
-Use **PM2** to keep the app running in the background:
+### 2. Database Migrations
 
-```bash
-pm2 start index.js --name "hospital-backend"
-pm2 save
-pm2 startup
-```
+We use Mongoose schemas. To "migrate", simply update the Schema definition in `models/YourModel.js`. Mongoose handles the structure for new documents. For existing documents, you may need to write a one-time script in `scripts/` if data transformation is needed.
 
-### 5. Verification
+### 3. PDF Generation
 
-- Your backend is now live at `http://<your-ec2-public-ip>:3001`.
-- You can now use this URL to update the **Frontend** configuration (`VITE_API_URL` in `.env.production`).
+We use `pdf-lib` for generating PDFs.
 
-## Database Management
+- **Preview Logic**: `routes/pdfRoutes.js` (for temporary previews)
+- **Permanent Records**: Specific logic in `billingRoutes.js` and `appointmentRoutes.js`.
+- **Assets**: Logos and fonts are loaded from `backend/assets/`.
 
-We have migrated to **MongoDB Atlas** to support cloud deployment.
+---
 
-### Changes Made for Migration
+## 🔒 Security Best Practices
 
-1.  **Updated `config/db.js`**:
-    - Removed hardcoded local connection string (`mongodb://localhost:27017/...`).
-    - Switched to using `process.env.MONGO_URI` to allow dynamic configuration.
-2.  **Environment Variable**:
-    - The application now strictly requires `MONGO_URI` to be defined in the `.env` file.
-    - This allows us to connect to the Atlas cluster from any environment (Local, EC2, etc.) without changing code.
+1.  **Always use `verifyToken` middleware** for protected routes.
+2.  **Sanitize Inputs**: The `mongoSanitize` middleware is active globally.
+3.  **Environment Variables**: Never commit secrets. Use `.env`.
+4.  **Role Checks**: Inside routes, check `req.user.role` before performing sensitive actions.
 
-### Why this matters for EC2
+---
 
-- **No Local Database**: You do **not** need to install MongoDB on the EC2 instance.
-- **Security**: Database credentials are not stored in the source code.
-- **Scalability**: The database is managed independently of the application server.
+## 🧪 Testing
 
-## Troubleshooting
+Currently, the project relies on manual API testing using Postman.
 
-- **Connection Refused**: Check EC2 Security Groups to ensure Port 3001 is open to `0.0.0.0/0`.
-- **MongoDB Error**: Verify `MONGO_URI` in `.env` is correct and your EC2 IP is whitelisted in MongoDB Atlas Network Access (or set to allow all IPs `0.0.0.0/0`).
+- **Collection**: `OneCare_API.postman_collection.json` (Import this into Postman)
+
+---
+
+## 📦 Deployment
+
+See `OneCare_AWS_Deployment_Guide.md` for detailed deployment instructions on AWS EC2.
+
+### Keep-Alive Mechanism
+
+For platforms that sleep (like Render free tier), `utils/keepAlive.js` pings the server periodically. This is enabled via `RENDER_EXTERNAL_URL` env var.

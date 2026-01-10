@@ -9,7 +9,24 @@ export default function DoctorServices() {
   useEffect(() => {
     const stored = localStorage.getItem("doctor");
     if (stored) {
-      setCurrentDoctor(JSON.parse(stored));
+      const doctorData = JSON.parse(stored);
+
+      // Check if clinic info is missing and try to get from authUser
+      if (!doctorData.clinic) {
+        const authUser = localStorage.getItem("authUser");
+        if (authUser) {
+          try {
+            const authData = JSON.parse(authUser);
+            if (authData.clinicName) {
+              doctorData.clinic = authData.clinicName;
+            }
+          } catch (e) {
+            console.error("Error parsing authUser", e);
+          }
+        }
+      }
+
+      setCurrentDoctor(doctorData);
     }
   }, []);
 

@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const PatientModel = require("../models/Patient");
 const DoctorModel = require("../models/Doctor");
 const AppointmentModel = require("../models/Appointment");
@@ -38,7 +39,12 @@ router.get("/", verifyToken, async (req, res) => {
     if (effectiveRole === 'admin') {
       // Global View
     } else if (safeClinicId) {
-      query.clinicId = safeClinicId;
+      // Convert to ObjectId for aggregation pipeline compatibility
+      if (typeof safeClinicId === 'string') {
+        query.clinicId = new mongoose.Types.ObjectId(safeClinicId);
+      } else {
+        query.clinicId = safeClinicId;
+      }
     } else {
       // Fallback: Return 0s
       return res.json({

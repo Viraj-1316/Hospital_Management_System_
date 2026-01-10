@@ -323,7 +323,7 @@ export default function DoctorSessions() {
                         </div>
                         <div className="col-12 col-md-6">
                             <label className="form-label small fw-bold">Clinic *</label>
-                            <input className="form-control" value={form.clinic} onChange={e => setForm({...form, clinic: e.target.value})} required />
+                            <input className="form-control" value={form.clinic} onChange={e => setForm({...form, clinic: e.target.value})} required disabled/>
                         </div>
                         
                         <div className="col-12">

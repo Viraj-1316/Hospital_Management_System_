@@ -291,24 +291,25 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
     setPage(1);
   };
 
-  const lookupCustomId = (bill) => {
+  const lookupCustomId = (bill, allEncounters = []) => {
     // Check encounterCustomId first (set by backend)
-    if (bill.encounterCustomId) {
-      return bill.encounterCustomId;
+    let rawId = null;
+    if (bill.encounterId) {
+      rawId = typeof bill.encounterId === 'object' ? bill.encounterId._id : bill.encounterId;
     }
     // Check encounterId
-    if (bill.encounterId) {
-      const encId = bill.encounterId;
-      if (typeof encId === 'string') {
-        if (encId.startsWith("ENC-")) return encId;
-        // If it's a MongoDB ObjectId string, show truncated version
-        if (encId.length === 24) return `ENC-${encId.substring(0, 6)}`;
-        return encId;
-      }
-      if (typeof encId === 'object' && encId._id) {
-        return encId.encounterId || `ENC-${encId._id.toString().substring(0, 6)}`;
+    if (rawId && allEncounters.length > 0) {
+      const foundEncounter = allEncounters.find(enc => enc._id === rawId);
+      if (foundEncounter) {
+        return foundEncounter.encounterId || "Pending"; 
       }
     }
+
+    // 3. Fallbacks (Existing logic)
+    if (bill.encounterCustomId) return bill.encounterCustomId;
+    if (typeof bill.encounterId === 'object' && bill.encounterId.encounterId) return bill.encounterId.encounterId;
+    if (typeof bill.encounterId === 'string' && bill.encounterId.startsWith("ENC-")) return bill.encounterId;
+
     return "-";
   };
 
@@ -316,7 +317,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return bills.filter((bill) => {
-      const customEncId = lookupCustomId(bill);
+      const customEncId = lookupCustomId(bill, encountersList);
       const combined = `${bill._id} ${customEncId} ${bill.doctorName} ${bill.clinicName} ${bill.patientName} ${bill.status}`.toLowerCase();
 
       if (q && !combined.includes(q)) return false;
@@ -427,7 +428,7 @@ export default function BillingRecords({ sidebarCollapsed = false, toggleSidebar
                       </td>
 
                       <td>
-                        <span className="enc-badge">{lookupCustomId(bill)}</span>
+                        <span className="enc-badge">{lookupCustomId(bill, encountersList)}</span>
                       </td>
 
                       <td>{bill.doctorName}</td>

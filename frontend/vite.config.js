@@ -1,9 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import viteCompression from 'vite-plugin-compression'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Pre-compress with gzip for production
+    viteCompression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 1024, // Only compress files > 1KB
+    }),
+    // Pre-compress with brotli for modern browsers
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024,
+    }),
+  ],
 
   // Build optimizations
   build: {
@@ -12,6 +27,12 @@ export default defineConfig({
 
     // Warn if chunks exceed this size (in KB)
     chunkSizeWarningLimit: 500,
+
+    // Use lightningcss for faster CSS minification
+    cssMinify: 'lightningcss',
+
+    // Ensure CSS is split by component
+    cssCodeSplit: true,
 
     // Rollup options for manual chunking
     rollupOptions: {
@@ -51,6 +72,9 @@ export default defineConfig({
 
           // Sockets
           'vendor-socket': ['socket.io-client'],
+
+          // HTML to canvas - for PDF screenshots
+          'vendor-html2canvas': ['html2canvas'],
         },
 
         // Use content hash in filenames for cache busting
