@@ -12,7 +12,8 @@ import {
   FaUserMd,
   FaList,
   FaRegCalendarAlt,
-  FaFileInvoice
+  FaFileInvoice,
+  FaCreditCard
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 import axios from "axios";
@@ -260,7 +261,18 @@ export default function ReceptionistSidebar({ collapsed = false }) {
           </NavLink>
         </li>
 
-        {/* 8. Settings */}
+        {/* 8. Payment Reports */}
+        <li>
+          <NavLink 
+            to="/reception-dashboard/payment-reports" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+          >
+            <span style={{ fontSize: "18px", display: "flex" }}><FaCreditCard /></span>
+            {!collapsed && <span>Payment Reports</span>}
+          </NavLink>
+        </li>
+
+        {/* 9. Settings */}
         <li style={{ marginTop: "auto" }}> {/* Push Settings to bottom if preferred, or keep natural flow */}
           <NavLink 
             to="/receptionist-dashboard/settings" 

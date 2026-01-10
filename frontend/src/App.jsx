@@ -149,6 +149,7 @@ const ReceptionistEditBill = lazy(() => import("./receptionist/ReceptionistEditB
 const ReceptionistSettingsLayout = lazy(() => import("./receptionist/Settings/ReceptionistSettingsLayout")); // Assuming copied
 const ReceptionistHolidaySettings = lazy(() => import("./receptionist/Settings/Pages/ReceptionistHolidaySettings"));
 const ReceptionistListingSettings = lazy(() => import("./receptionist/Settings/Pages/ReceptionistListingSettings"));
+const ReceptionistPaymentReports = lazy(() => import("./receptionist/ReceptionistPaymentReports"));
 
 
 
@@ -506,6 +507,9 @@ function App() {
           <Route path="/receptionist/doctor-sessions" element={<ReceptionistDoctorSession/>} />
           <Route path="/reception-dashboard/services" element={<ReceptionistServices/>} />
           <Route path="/reception-dashboard/billing" element={<ReceptionistBillingRecords/>} />
+          <Route path="/reception-dashboard/payment-reports" element={
+            <ReceptionistPaymentReports sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
           <Route path="/receptionist/add-bill" element={<ReceptionistAddBill/>} />
           <Route path="/receptionist/edit-bill/:id" element={<ReceptionistEditBill/>} />
           <Route path="/reception-dashboard/encounters" element={<ReceptionistEncounterList/>} /> 
