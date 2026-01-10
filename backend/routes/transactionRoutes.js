@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const BillingModel = require("../models/Billing");
 const { verifyToken } = require("../middleware/auth");
 const logger = require("../utils/logger");
@@ -25,8 +26,14 @@ const getClinicQuery = async (req) => {
   const effectiveRole = currentUser ? currentUser.role : req.user.role;
 
   // Admin sees all, others see only their clinic
+  // Ensure clinicId is properly converted to ObjectId for aggregation pipeline
   if (effectiveRole !== 'admin' && safeClinicId) {
-    query.clinicId = safeClinicId;
+    // Convert to ObjectId if it's a string
+    if (typeof safeClinicId === 'string') {
+      query.clinicId = new mongoose.Types.ObjectId(safeClinicId);
+    } else {
+      query.clinicId = safeClinicId;
+    }
   }
 
   return { query, effectiveRole, safeClinicId };

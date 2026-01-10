@@ -217,7 +217,7 @@ export default function ReceptionistDashboard() {
             <div
               className="card shadow-sm border-0 p-3 text-center clickable"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate("/reception-dashboard/billing")}
+              onClick={() => navigate("/reception-dashboard/payment-reports")}
             >
               <div className="d-flex justify-content-center align-items-center gap-3">
                 <div className="bg-info bg-opacity-10 text-info rounded-circle p-3">
