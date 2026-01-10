@@ -39,12 +39,30 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
       const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
       if (!token) return;
 
-      const res = await fetch(`${API_BASE}/api/user/${userId}`, {
+      let endpoint = `${API_BASE}/api/user/${userId}`;
+      let isReceptionist = false;
+
+      // Check if logged in as receptionist
+      const userRole = authUser?.role?.toLowerCase();
+      if (receptionist?._id || userRole === "receptionist") {
+        endpoint = `${API_BASE}/api/receptionists/${userId}`;
+        isReceptionist = true;
+      }
+
+      const res = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
-        const data = await res.json();
+        let data = await res.json();
+
+        // Handle inconsistent API response structure
+        // Receptionist API returns { data: { ... } }
+        // User API returns { ... } directly
+        if (isReceptionist && data.data) {
+          data = data.data;
+        }
+
         setProfileData({
           name: data.firstName && data.lastName 
             ? `${data.firstName} ${data.lastName}` 
@@ -66,7 +84,9 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
       const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
       const clinic = receptionist?.clinic || authUser?.clinic;
       
-      let url = `${API_BASE}/api/appointments`; 
+      // Keep this as is (it seems to work now)
+      let url = `${API_BASE}/appointments`; 
+      
       const params = { status: 'booked' };
       if (clinic) params.clinic = clinic;
 
@@ -127,7 +147,6 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
         <button className="modern-menu-btn" onClick={toggleSidebar}>
           <FaBars />
         </button>
-        {/* Title kept as requested, though typically in sidebar for modern layouts */}
         <h1 className="modern-navbar-title">Reception Dashboard</h1>
       </div>
 
@@ -166,7 +185,7 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
                     <div 
                       key={apt._id} 
                       className="modern-dropdown-item" 
-                      onClick={() => navigate("/reception/appointments")}
+                      onClick={() => navigate("/reception-dashboard/appointments")}
                       style={{ borderBottom: "1px solid #f1f5f9", alignItems: "flex-start" }}
                     >
                       <div style={{ 

@@ -8,13 +8,11 @@ import {
   FaUserInjured,
   FaClipboardList,
   FaChevronDown,
-  FaCheckCircle,
-  FaClock,
-  FaFileInvoice,
   FaListAlt,
-  FaUserMd, 
-  FaList, 
-  FaRegCalendarAlt 
+  FaUserMd,
+  FaList,
+  FaRegCalendarAlt,
+  FaFileInvoice
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 import axios from "axios";
@@ -23,16 +21,14 @@ import API_BASE from "../../config";
 // Import Shared Modern Styles
 import "../../shared/styles/ModernUI.css";
 
-// Define or Import a default logo
+// Default logo fallback
 const defaultLogo = "https://via.placeholder.com/40"; 
 
-export default function Sidebar({ collapsed = false }) {
+export default function ReceptionistSidebar({ collapsed = false }) {
   const expandedWidth = 260;
-  const collapsedWidth = 72; 
+  const collapsedWidth = 72;
   
   // State for collapsible menus
-  const [isAppointmentsOpen, setIsAppointmentsOpen] = useState(false);
-  const [isPatientsOpen, setIsPatientsOpen] = useState(false);
   const [isEncountersOpen, setIsEncountersOpen] = useState(false);
 
   // State for clinic details
@@ -41,13 +37,40 @@ export default function Sidebar({ collapsed = false }) {
     logo: defaultLogo
   });
 
-  // Helper for active class based on ModernUI.css
-  const linkClass = ({ isActive }) =>
-    `modern-nav-link ${isActive ? "active" : ""}`;
+  // API Base URL
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  // --- STYLING START ---
+  
+  // Base style for all nav items
+  const navItemStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px", 
+    width: "calc(100% - 24px)", // Width minus margins to creates the rounded floating look
+    margin: "4px 12px",         // Margins to separate items
+    padding: "12px 16px",
+    borderRadius: "8px",        // Rounded corners as per screenshot
+    textDecoration: "none",
+    color: "#64748b",           // Default gray text color
+    fontWeight: "500",
+    cursor: "pointer",
+    transition: "all 0.2s ease-in-out",
+    fontSize: "15px"
+  };
+
+  // Active state style (Solid Blue Background)
+  const activeStyle = {
+    ...navItemStyle,
+    background: "#0d6efd",      // Bootstrap Primary Blue
+    color: "#ffffff",           // White text
+    boxShadow: "0 4px 6px -1px rgba(13, 110, 253, 0.3)" // Subtle shadow
+  };
+
+  // --- STYLING END ---
 
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
-  // Get API Base URL
-
+ 
 
   useEffect(() => {
     const fetchReceptionistDetails = async () => {
@@ -62,7 +85,6 @@ export default function Sidebar({ collapsed = false }) {
 
         const data = res.data.data;
         if (data && data.clinicIds && data.clinicIds.length > 0) {
-            // clinicIds is populated with { _id, name, clinicLogo }
             const clinic = data.clinicIds[0];
             setClinicDetails({
                 name: clinic.name || "Clinic",
@@ -81,16 +103,19 @@ export default function Sidebar({ collapsed = false }) {
 
   return (
     <div
-      className="modern-sidebar d-flex flex-column vh-100"
+      className="modern-sidebar d-flex flex-column"
       style={{
         width: collapsed ? collapsedWidth : expandedWidth,
         position: "fixed",
-        top: 0,
+        top: 0,             // Removed gap (was 64px)
         left: 0,
         bottom: 0,
+        height: "100vh",
+        backgroundColor: "#ffffff",
+        borderRight: "1px solid #e2e8f0",
         transition: "width 200ms cubic-bezier(0.4, 0, 0.2, 1)",
         overflow: "hidden",
-        zIndex: 1000
+        zIndex: 1050        // High z-index to stay above other content
       }}
     >
       {/* Logo / Title */}
@@ -105,94 +130,84 @@ export default function Sidebar({ collapsed = false }) {
       </div>
 
       {/* Menu Items */}
-      <ul className="modern-nav" style={{ overflowY: "auto", flex: 1 }}>
+      {/* Added marginBottom to increase gap above footer */}
+      <ul className="modern-nav" style={{ listStyle: "none", padding: 0, margin: 0, marginBottom: "30px", overflowY: "auto", flex: 1 }}>
         
         {/* 1. Dashboard */}
-        <li className="modern-nav-item">
-          <NavLink to="/receptionist/dashboard" className={linkClass} end>
-            <span className="modern-nav-icon">
-              <FaTachometerAlt />
-            </span>
+        <li>
+          <NavLink 
+            to="/reception-dashboard" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+            end
+          >
+            <span style={{ fontSize: "18px", display: "flex" }}><FaTachometerAlt /></span>
             {!collapsed && <span>Dashboard</span>}
           </NavLink>
         </li>
 
-        {/* 2. Appointments Dropdown */}
-        <li className="modern-nav-item">
-          <div
-            className={`modern-nav-link modern-nav-toggle ${isAppointmentsOpen ? "open" : ""}`}
-            onClick={() => setIsAppointmentsOpen(!isAppointmentsOpen)}
+        {/* 2. Appointments */}
+        <li>
+          <NavLink 
+            to="/reception-dashboard/appointments" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
           >
-            <span className="modern-nav-icon">
-              <FaCalendarAlt />
-            </span>
-            {!collapsed && (
-              <>
-                <span>Appointments</span>
-                <span className="toggle-icon">
-                  <FaChevronDown />
-                </span>
-              </>
-            )}
-          </div>
-
-          {!collapsed && (
-            <Collapse in={isAppointmentsOpen}>
-              <ul className="modern-submenu">
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/appointments" className={linkClass}>
-                    <span className="modern-nav-icon"><FaListAlt /></span>
-                    <span>All Appointments</span>
-                  </NavLink>
-                </li>
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/appointments-today" className={linkClass}>
-                    <span className="modern-nav-icon"><FaClock /></span>
-                    <span>Today's Appointments</span>
-                  </NavLink>
-                </li>
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/appointments-pending" className={linkClass}>
-                    <span className="modern-nav-icon"><FaCheckCircle /></span>
-                    <span>Pending Confirmations</span>
-                  </NavLink>
-                </li>
-              </ul>
-            </Collapse>
-          )}
+            <span style={{ fontSize: "18px", display: "flex" }}><FaCalendarAlt /></span>
+            {!collapsed && <span>Appointments</span>}
+          </NavLink>
         </li>
 
-        {/* 3. Encounters Dropdown */}
-        <li className="modern-nav-item">
+        {/* 3. Encounters (Dropdown) */}
+        <li>
           <div
-            className={`modern-nav-link modern-nav-toggle ${isEncountersOpen ? "open" : ""}`}
             onClick={() => setIsEncountersOpen(!isEncountersOpen)}
+            style={{ ...navItemStyle, justifyContent: "space-between" }} // Use basic style for parent, managed manually
           >
-            <span className="modern-nav-icon">
-              <FaClipboardList />
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "18px", display: "flex" }}><FaClipboardList /></span>
+              {!collapsed && <span>Encounters</span>}
+            </div>
             {!collapsed && (
-              <>
-                <span>Encounters</span>
-                <span className="toggle-icon">
-                  <FaChevronDown />
-                </span>
-              </>
+              <span style={{ fontSize: "12px", display: "flex" }}>
+                <FaChevronDown style={{ transform: isEncountersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+              </span>
             )}
           </div>
 
           {!collapsed && (
             <Collapse in={isEncountersOpen}>
-              <ul className="modern-submenu">
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/encounters" className={linkClass} end>
-                    <span className="modern-nav-icon"><FaListAlt /></span>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                <li>
+                  <NavLink 
+                    to="/reception-dashboard/encounters" 
+                    style={({ isActive }) => ({ 
+                        ...navItemStyle, 
+                        width: "calc(100% - 40px)",
+                        margin: "4px 20px",
+                        padding: "10px 16px",
+                        fontSize: "14px", 
+                        background: isActive ? "#eff6ff" : "transparent", // Submenu uses light blue instead of solid
+                        color: isActive ? "#0d6efd" : "#64748b" 
+                    })}
+                    end
+                  >
+                    <span style={{ marginRight: "10px" }}><FaListAlt /></span>
                     <span>Encounter List</span>
                   </NavLink>
                 </li>
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/encounters/templates" className={linkClass}>
-                    <span className="modern-nav-icon"><FaRegCalendarAlt /></span>
+                <li>
+                  <NavLink 
+                    to="/reception-dashboard/encounters/templates" 
+                    style={({ isActive }) => ({ 
+                        ...navItemStyle, 
+                        width: "calc(100% - 40px)",
+                        margin: "4px 20px",
+                        padding: "10px 16px",
+                        fontSize: "14px", 
+                        background: isActive ? "#eff6ff" : "transparent",
+                        color: isActive ? "#0d6efd" : "#64748b"
+                    })}
+                  >
+                    <span style={{ marginRight: "10px" }}><FaRegCalendarAlt /></span>
                     <span>Encounter Templates</span>
                   </NavLink>
                 </li>
@@ -201,80 +216,64 @@ export default function Sidebar({ collapsed = false }) {
           )}
         </li>
 
-        {/* 4. Patients Dropdown */}
-        <li className="modern-nav-item">
-          <div
-            className={`modern-nav-link modern-nav-toggle ${isPatientsOpen ? "open" : ""}`}
-            onClick={() => setIsPatientsOpen(!isPatientsOpen)}
+        {/* 4. Patients */}
+        <li>
+          <NavLink 
+            to="/receptionist-dashboard/patients" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
           >
-            <span className="modern-nav-icon">
-              <FaUserInjured />
-            </span>
-            {!collapsed && (
-              <>
-                <span>Patients</span>
-                <span className="toggle-icon">
-                  <FaChevronDown />
-                </span>
-              </>
-            )}
-          </div>
-
-          {!collapsed && (
-            <Collapse in={isPatientsOpen}>
-              <ul className="modern-submenu">
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/patients" className={linkClass} end>
-                    <span className="modern-nav-icon"><FaListAlt /></span>
-                    <span>Patient List</span>
-                  </NavLink>
-                </li>
-                <li className="modern-nav-item">
-                  <NavLink to="/receptionist/patients/new" className={linkClass}>
-                    <span className="modern-nav-icon"><FaUserInjured /></span>
-                    <span>Register Patient</span>
-                  </NavLink>
-                </li>
-              </ul>
-            </Collapse>
-          )}
+            <span style={{ fontSize: "18px", display: "flex" }}><FaUserInjured /></span>
+            {!collapsed && <span>Patients</span>}
+          </NavLink>
         </li>
 
         {/* 5. Doctors */}
-        <li className="modern-nav-item">
-          <NavLink to="/receptionist/doctors" className={linkClass}>
-            <span className="modern-nav-icon"><FaUserMd /></span>
+        <li>
+          <NavLink 
+            to="/reception-dashboard/doctors" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+          >
+            <span style={{ fontSize: "18px", display: "flex" }}><FaUserMd /></span>
             {!collapsed && <span>Doctors</span>}
           </NavLink>
         </li>
 
-        {/* 6. Services - Updated Icon to FaList */}
-        <li className="modern-nav-item">
-          <NavLink to="/receptionist/services" className={linkClass}>
-            <span className="modern-nav-icon"><FaList /></span>
+        {/* 6. Services */}
+        <li>
+          <NavLink 
+            to="/reception-dashboard/services" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+          >
+            <span style={{ fontSize: "18px", display: "flex" }}><FaList /></span>
             {!collapsed && <span>Services</span>}
           </NavLink>
         </li>
 
         {/* 7. Billing Records */}
-        <li className="modern-nav-item">
-          <NavLink to="/receptionist/billing" className={linkClass}>
-            <span className="modern-nav-icon"><FaFileInvoice /></span>
+        <li>
+          <NavLink 
+            to="/reception-dashboard/billing" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+          >
+            <span style={{ fontSize: "18px", display: "flex" }}><FaFileInvoice /></span>
             {!collapsed && <span>Billing Records</span>}
           </NavLink>
         </li>
 
         {/* 8. Settings */}
-        <li className="modern-nav-item">
-          <NavLink to="/receptionist/settings" className={linkClass}>
-            <span className="modern-nav-icon"><IoMdSettings /></span>
+        <li style={{ marginTop: "auto" }}> {/* Push Settings to bottom if preferred, or keep natural flow */}
+          <NavLink 
+            to="/receptionist-dashboard/settings" 
+            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+          >
+            <span style={{ fontSize: "18px", display: "flex" }}><IoMdSettings /></span>
             {!collapsed && <span>Settings</span>}
           </NavLink>
         </li>
       </ul>
 
       {/* Footer */}
-      <div className="modern-sidebar-footer">
+      <div style={{ padding: "16px", textAlign: "center", borderTop: "1px solid #f1f5f9", fontSize: "12px", color: "#94a3b8" }}>
         {!collapsed ? `© ${currentYear} ${clinicDetails.name}` : "©"}
       </div>
     </div>

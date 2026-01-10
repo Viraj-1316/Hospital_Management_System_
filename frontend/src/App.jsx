@@ -23,6 +23,8 @@ const Doctors = lazy(() => import("./admin-dashboard/admin/Doctors"));
 const AddDoctor = lazy(() => import("./admin-dashboard/admin/AddDoctor"));
 // Note: Appointment is eagerly loaded due to 429 error debugging - can be converted back to lazy() when stable
 import Appointment from "./admin-dashboard/admin/Appointments";
+import ReceptionistBillingRecords from "./receptionist/ReceptionistBillingRecords.jsx";
+import ReceptionistAppointmentSettings from "./receptionist/Settings/Pages/ReceptionistAppointmentSettings.jsx";
 const BillingRecords = lazy(() => import("./admin-dashboard/admin/BillingRecords"));
 const AddBill = lazy(() => import("./admin-dashboard/admin/AddBill"));
 const EditBill = lazy(() => import("./admin-dashboard/admin/EditBill"));
@@ -130,11 +132,28 @@ const ReceptionistChangePassword = lazy(() => import("./receptionist/Receptionis
 const ReceptionistChangePasswordPage = lazy(() => import("./receptionist/ReceptionistChangePasswordPage"));
 const ReceptionistProfile = lazy(() => import("./receptionist/ReceptionistProfile"));
 const ReceptionistDashboard = lazy(() => import("./receptionist/ReceptionistDashboard"));
+const ReceptionistAppointment = lazy(() => import("./receptionist/ReceptionistAppointment"));
+const ReceptionistEncounterList = lazy(() => import("./receptionist/ReceptionistEncounterList"));
+const ReceptionistEncounterDetails = lazy(() => import("./receptionist/ReceptionistEncounterDetails"));
+const ReceptionistEncounterTempletList = lazy(() => import("./receptionist/ReceptionistEncounterTempletList"));
+const ReceptionistEncounterTempletDetails = lazy(() => import("./receptionist/ReceptionistEncounterTempletDetails"));
+const ReceptionistPatients = lazy(() => import("./receptionist/ReceptionistPatients"));
+const ReceptionistAddPatient = lazy(() => import("./receptionist/ReceptionistAddPatient"));
+const ReceptionistDoctor = lazy(() => import("./receptionist/ReceptionistDoctor"));
+const ReceptionistAddDoctor = lazy(() => import("./receptionist/ReceptionistAddDoctor"));
+const ReceptionistDoctorSession = lazy(() => import("./receptionist/ReceptionistDoctorSession"));
+const ReceptionistServices = lazy(() => import("./receptionist/ReceptionistServices"));
+const ReceptionistEditBill = lazy(() => import("./receptionist/ReceptionistEditBill"));
+//Settings Section
+const ReceptionistSettingsLayout = lazy(() => import("./receptionist/Settings/ReceptionistSettingsLayout")); // Assuming copied
+const ReceptionistHolidaySettings = lazy(() => import("./receptionist/Settings/Pages/ReceptionistHolidaySettings"));
+const ReceptionistListingSettings = lazy(() => import("./receptionist/Settings/Pages/ReceptionistListingSettings"));
+
+
 
 /* Public Verification Pages */
 const VerifyAppointment = lazy(() => import("./components/VerifyAppointment"));
 const VerifyBill = lazy(() => import("./components/VerifyBill"));
-
 // ============================================
 // APP COMPONENT
 // ============================================
@@ -478,12 +497,31 @@ function App() {
 
           {/* ==================== RECEPTIONIST SECTION ==================== */}
           <Route path="/reception-dashboard" element={<ReceptionistDashboard />} />
-          <Route path="/receptionist/change-password" element={<ReceptionistChangePassword />} />
+          <Route path="/reception-dashboard/appointments" element={<ReceptionistAppointment/>} />
+          <Route path="/reception-dashboard/doctors" element={<ReceptionistDoctor/>} />
+          <Route path="/receptionist-dashboard/patients" element={<ReceptionistPatients/>} />
+          <Route path="/receptionist-dashboard/AddPatient" element={<ReceptionistAddPatient/>} />
+          <Route path="/receptionist/add-doctor" element={<ReceptionistAddDoctor/>} />
+          <Route path="/receptionist/doctor-sessions" element={<ReceptionistDoctorSession/>} />
+          <Route path="/reception-dashboard/services" element={<ReceptionistServices/>} />
+          <Route path="/reception-dashboard/billing" element={<ReceptionistBillingRecords/>} />
+          <Route path="/receptionist/edit-bill/:id" element={<ReceptionistEditBill/>} />
+          <Route path="/reception-dashboard/encounters" element={<ReceptionistEncounterList/>} /> 
+          <Route path="/reception-dashboard/encounters/:id" element={<ReceptionistEncounterDetails/>} />
+          <Route path="/reception-dashboard/encounters/templates" element={<ReceptionistEncounterTempletList/>} />
+          <Route path="/reception-dashboard/encounter-template-details/:id" element={<ReceptionistEncounterTempletDetails/>} />
+          <Route path="/reception/change-password" element={<ReceptionistChangePassword />} />
           <Route path="/reception/change-password" element={<ReceptionistChangePasswordPage />} />
-          <Route path="/receptionist/profile" element={
+          <Route path="/reception/profile" element={
             <ReceptionistProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
           } />
-
+          {/* Receptionist Settings */}
+          <Route path="/receptionist-dashboard/settings" element={<ReceptionistSettingsLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />}>
+            <Route index element={<ReceptionistHolidaySettings />} />
+            <Route path="holidays" element={<ReceptionistHolidaySettings />} />
+            <Route path="appointment-settings" element={<ReceptionistAppointmentSettings/>} />
+            <Route path="listings" element={<ReceptionistListingSettings />} />
+          </Route>
 
 
           {/* ==================== PUBLIC VERIFICATION ==================== */}

@@ -149,16 +149,6 @@ export default function PatientSidebar({ collapsed = false }) {
             {!collapsed && <span>Reports</span>}
           </NavLink>
         </li>
-
-        {/* 6. Settings */}
-        <li className="modern-nav-item">
-          <NavLink to="/patient/settings" className={linkClass}>
-            <span className="modern-nav-icon">
-              <IoMdSettings />
-            </span>
-            {!collapsed && <span>Settings</span>}
-          </NavLink>
-        </li>
       </ul>
 
       {/* Footer */}

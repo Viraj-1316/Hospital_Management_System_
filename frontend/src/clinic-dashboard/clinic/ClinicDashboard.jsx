@@ -112,7 +112,7 @@ const AdminDashboard = ({ sidebarCollapsed = false, toggleSidebar }) => {
       <div
         className="flex-grow-1 main-content-transition"
         style={{
-          marginLeft: sidebarCollapsed ? 64 : 250,
+          marginLeft: sidebarCollapsed ? 72 : 260,
           minHeight: "100vh",
         }}
       >

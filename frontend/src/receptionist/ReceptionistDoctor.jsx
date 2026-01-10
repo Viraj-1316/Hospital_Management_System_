@@ -1,0 +1,812 @@
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import API_BASE from "../config";
+import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
+import { FaSearch, FaPlus, FaTrash, FaEdit, FaDownload, FaEnvelope, FaCalendarAlt, FaBriefcaseMedical } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "../shared/styles/shared-components.css";
+import { toast } from "react-hot-toast";
+import ConfirmationModal from "../components/ConfirmationModal";
+
+const ReceptionistDoctor = ({ sidebarCollapsed, toggleSidebar }) => {
+  const [doctors, setDoctors] = useState([]);
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Import modal
+  const [importOpen, setImportOpen] = useState(false);
+  const [importType, setImportType] = useState("csv");
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+
+  // Add Service modal
+  const [serviceModalOpen, setServiceModalOpen] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [serviceForm, setServiceForm] = useState({
+    name: "",
+    category: "",
+    charges: "",
+    duration: "00:30",
+    clinic: "",
+    isTelemedicine: false,
+    status: "Active",
+    allowMultiSelection: true,
+  });
+  const [clinics, setClinics] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: "",
+    message: "",
+    action: null,
+    confirmText: "Delete",
+    confirmVariant: "danger"
+  });
+
+  // Get receptionist info for clinic filtering
+  const receptionist = JSON.parse(localStorage.getItem("receptionist") || "{}");
+  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
+  const receptionistClinic = receptionist?.clinic || authUser?.clinic;
+
+  // Fetch doctors
+  const fetchDoctors = async () => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
+      const params = {};
+      
+      // Filter by receptionist's clinic if available
+      if (receptionistClinic) {
+        params.clinic = receptionistClinic;
+      }
+
+      const res = await axios.get(`${API_BASE}/doctors`, {
+        params,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setDoctors(res.data || []);
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+      toast.error("Error fetching doctors");
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+
+  // Delete doctor
+  const handleDelete = (id) => {
+    setConfirmModal({
+      show: true,
+      title: "Delete Doctor",
+      message: "Are you sure you want to delete this doctor? This action cannot be undone.",
+      action: () => executeDelete(id),
+      confirmText: "Delete",
+      confirmVariant: "danger"
+    });
+  };
+
+  const executeDelete = async (id) => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
+      await axios.delete(`${API_BASE}/doctors/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDoctors((prev) => prev.filter((doc) => doc._id !== id));
+      toast.success("Doctor deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting doctor:", error);
+      toast.error("Error deleting doctor");
+    } finally {
+      closeConfirmModal();
+    }
+  };
+
+  // Resend Credentials
+  const handleResendCredentials = (id) => {
+    setConfirmModal({
+      show: true,
+      title: "Resend Credentials",
+      message: "Resend login credentials to this doctor? This will reset their password and send new credentials via email.",
+      action: () => executeResend(id),
+      confirmText: "Resend",
+      confirmVariant: "warning"
+    });
+  };
+
+  const executeResend = async (id) => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
+      await axios.post(`${API_BASE}/doctors/${id}/resend-credentials`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Credentials resent successfully!");
+    } catch (error) {
+      console.error("Error resending credentials:", error);
+      toast.error("Failed to resend credentials.");
+    } finally {
+      closeConfirmModal();
+    }
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({ show: false, title: "", message: "", action: null });
+  };
+
+  // Import modal handlers
+  const openImportModal = () => {
+    setImportOpen(true);
+    setImportFile(null);
+  };
+
+  const closeImportModal = () => {
+    if (!importing) setImportOpen(false);
+  };
+
+  const handleFileChange = (e) => {
+    setImportFile(e.target.files[0] || null);
+  };
+
+  const handleImportSubmit = async (e) => {
+    e.preventDefault();
+    if (!importFile) return toast.error("Please select a CSV file");
+
+    try {
+      setImporting(true);
+      const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
+      const formData = new FormData();
+      formData.append("file", importFile);
+      formData.append("type", importType);
+      
+      // Add clinic if receptionist has one
+      if (receptionistClinic) {
+        formData.append("clinic", receptionistClinic);
+      }
+
+      const res = await axios.post(
+        `${API_BASE}/doctors/import`,
+        formData,
+        { 
+          headers: { 
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`
+          } 
+        }
+      );
+
+      toast.success(`Imported ${res.data?.count || 0} doctors successfully!`);
+      setImportOpen(false);
+      fetchDoctors();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Error importing doctors");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // Edit Doctor handlers
+  const handleEditClick = (doctor) => {
+    navigate("/receptionist/add-doctor", { state: { editDoctor: doctor } });
+  };
+
+  // Doctor Session navigation
+  const handleDoctorSession = (doctor) => {
+    navigate("/receptionist/doctor-sessions", {
+      state: { doctorFilter: `${doctor.firstName} ${doctor.lastName}` }
+    });
+  };
+
+  // Add Service handlers
+  const handleAddServiceClick = (doctor) => {
+    setSelectedDoctor(doctor);
+    setServiceForm({
+      name: "",
+      category: "",
+      charges: "",
+      duration: "00:30",
+      clinic: doctor.clinic || receptionistClinic || "",
+      isTelemedicine: false,
+      status: "Active",
+      allowMultiSelection: true,
+    });
+    setServiceModalOpen(true);
+  };
+
+  const handleServiceFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setServiceForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleServiceSubmit = async (e) => {
+    e.preventDefault();
+    if (!serviceForm.name || !serviceForm.category) {
+      return toast.error("Please fill required fields");
+    }
+
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
+      const payload = {
+        ...serviceForm,
+        doctor: `${selectedDoctor.firstName} ${selectedDoctor.lastName}`,
+        doctorId: selectedDoctor._id,
+        clinicName: serviceForm.clinic,
+        active: serviceForm.status === "Active",
+      };
+
+      await axios.post(`${API_BASE}/services`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success("Service added successfully!");
+      setServiceModalOpen(false);
+    } catch (error) {
+      console.error("Error adding service:", error);
+      toast.error(error.response?.data?.message || "Error adding service");
+    }
+  };
+
+  const closeServiceModal = () => {
+    setServiceModalOpen(false);
+    setSelectedDoctor(null);
+  };
+
+  // Load categories and clinics for service modal
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
+        
+        const categoriesData = [
+          "general dentistry",
+          "system service",
+          "checkup",
+          "telemed",
+          "physiotherapy",
+          "consultation",
+          "diagnostic"
+        ];
+        setCategories(categoriesData);
+
+        const clinicsRes = await axios.get(`${API_BASE}/api/clinics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (clinicsRes.data.success) {
+          setClinics(clinicsRes.data.clinics || []);
+        }
+      } catch (error) {
+        console.error("Error loading options:", error);
+      }
+    };
+    loadOptions();
+  }, []);
+
+  // Filter doctors
+  const filteredDoctors = doctors.filter((doc) => {
+    const text = searchTerm.toLowerCase();
+    return (
+      (doc.firstName || "").toLowerCase().includes(text) ||
+      (doc.lastName || "").toLowerCase().includes(text) ||
+      (doc.email || "").toLowerCase().includes(text) ||
+      (doc.clinic || "").toLowerCase().includes(text) ||
+      (doc.specialization || "").toLowerCase().includes(text)
+    );
+  });
+
+  return (
+    <div>
+      {/* Sidebar */}
+      <Sidebar collapsed={sidebarCollapsed} />
+
+      {/* Main container */}
+      <div
+        className="main-content-transition"
+        style={{
+          marginLeft: sidebarCollapsed ? "64px" : "250px",
+          minHeight: "100vh",
+          background: "#f5f6fa",
+        }}
+      >
+        {/* Navbar */}
+        <Navbar toggleSidebar={toggleSidebar} />
+
+        {/* PAGE CONTENT */}
+        <div className="container-fluid mt-3">
+
+          {/* TOP BLUE HEADER */}
+          <div className="services-topbar services-card d-flex justify-content-between align-items-center">
+            <h5 className="fw-bold text-white mb-0">Doctors List</h5>
+
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+                onClick={openImportModal}
+              >
+                <FaDownload /> Import Doctors
+              </button>
+
+              <button
+                className="btn btn-light btn-sm d-flex align-items-center gap-2"
+                onClick={() => navigate("/receptionist/add-doctor")}
+              >
+                <FaPlus /> Add Doctor
+              </button>
+            </div>
+          </div>
+
+          {/* SEARCH BAR */}
+          <div className="card p-3 mt-3 services-card">
+            <div className="input-group" style={{ maxWidth: 400 }}>
+              <span className="input-group-text bg-white border-end-0">
+                <FaSearch />
+              </span>
+              <input
+                type="text"
+                className="form-control border-start-0"
+                placeholder="Search doctor by name, email, clinic or specialization"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* DOCTORS TABLE */}
+          <div className="card p-3 mt-3 services-card">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle text-center">
+                <thead className="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Clinic</th>
+                    <th>Email</th>
+                    <th>Specialization</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredDoctors.length > 0 ? (
+                    filteredDoctors.map((doctor, index) => (
+                      <tr key={doctor._id}>
+                        <td>{index + 1}</td>
+                        <td>{doctor.firstName} {doctor.lastName}</td>
+                        <td>{doctor.clinic}</td>
+                        <td>{doctor.email}</td>
+                        <td>{doctor.specialization || "—"}</td>
+                        <td>
+                          <span
+                            className={`badge ${doctor.status === "Active" ? "bg-success" : "bg-secondary"
+                              }`}
+                          >
+                            {doctor.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="d-flex justify-content-center gap-2 flex-wrap">
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              title="Edit Doctor"
+                              onClick={() => handleEditClick(doctor)}
+                            >
+                              <FaEdit />
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-info"
+                              title="Doctor Sessions"
+                              onClick={() => handleDoctorSession(doctor)}
+                            >
+                              <FaCalendarAlt />
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-success"
+                              title="Add Service"
+                              onClick={() => handleAddServiceClick(doctor)}
+                            >
+                              <FaBriefcaseMedical />
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              title="Delete Doctor"
+                              onClick={() => handleDelete(doctor._id)}
+                            >
+                              <FaTrash />
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-warning"
+                              title="Resend Credentials"
+                              onClick={() => handleResendCredentials(doctor._id)}
+                            >
+                              <FaEnvelope />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="text-muted py-3">
+                        {searchTerm ? "No doctors found matching your search." : "No doctors found."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* PAGINATION */}
+            {filteredDoctors.length > 0 && (
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <span className="text-muted">Showing {filteredDoctors.length} doctor(s)</span>
+                <nav>
+                  <ul className="pagination pagination-sm m-0">
+                    <li className="page-item disabled">
+                      <button className="page-link">Prev</button>
+                    </li>
+                    <li className="page-item active">
+                      <button className="page-link">1</button>
+                    </li>
+                    <li className="page-item disabled">
+                      <button className="page-link">Next</button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* IMPORT MODAL */}
+        {importOpen && (
+          <>
+            <div className="modal-backdrop fade show" />
+
+            <div className="modal fade show d-block" tabIndex="-1">
+              <div className="modal-dialog modal-lg modal-dialog-centered">
+                <div className="modal-content">
+
+                  <div className="modal-header">
+                    <h5 className="modal-title text-primary">Import Doctors</h5>
+                    <button className="btn-close" onClick={closeImportModal} disabled={importing}></button>
+                  </div>
+
+                  <form onSubmit={handleImportSubmit}>
+                    <div className="modal-body">
+
+                      <div className="row g-3 mb-3">
+                        <div className="col-md-4">
+                          <label className="form-label">Select Type</label>
+                          <select
+                            className="form-select"
+                            value={importType}
+                            onChange={(e) => setImportType(e.target.value)}
+                            disabled={importing}
+                          >
+                            <option value="csv">CSV</option>
+                          </select>
+                        </div>
+
+                        <div className="col-md-8">
+                          <label className="form-label">Upload CSV File *</label>
+                          <input
+                            type="file"
+                            className="form-control"
+                            accept=".csv"
+                            onChange={handleFileChange}
+                            disabled={importing}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="alert alert-info">
+                        <p className="fw-semibold mb-2">CSV Required Fields:</p>
+                        <ul className="small mb-0">
+                          <li>firstName</li>
+                          <li>lastName</li>
+                          <li>clinic</li>
+                          <li>email</li>
+                          <li>phone</li>
+                          <li>dob (format: YYYY-MM-DD)</li>
+                          <li>specialization</li>
+                          <li>gender</li>
+                          <li>status (Active/Inactive)</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={closeImportModal}
+                        disabled={importing}
+                      >
+                        Cancel
+                      </button>
+
+                      <button type="submit" className="btn btn-primary" disabled={importing}>
+                        {importing ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Importing...
+                          </>
+                        ) : (
+                          "Import Doctors"
+                        )}
+                      </button>
+                    </div>
+
+                  </form>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ADD SERVICE MODAL */}
+        {serviceModalOpen && (
+          <>
+            <div className="modal-backdrop fade show" />
+
+            <div className="modal fade show d-block" tabIndex="-1">
+              <div className="modal-dialog modal-lg modal-dialog-centered">
+                <div className="modal-content">
+
+                  <div className="modal-header">
+                    <h5 className="modal-title text-primary">
+                      Add Service for Dr. {selectedDoctor?.firstName} {selectedDoctor?.lastName}
+                    </h5>
+                    <button className="btn-close" onClick={closeServiceModal}></button>
+                  </div>
+
+                  <form onSubmit={handleServiceSubmit}>
+                    <div className="modal-body">
+
+                      {/* Service Image Upload Section */}
+                      <div className="row mb-4">
+                        <div className="col-12 text-center">
+                          <div className="d-inline-block position-relative">
+                            <div
+                              className="rounded-circle bg-light d-flex align-items-center justify-content-center shadow-sm"
+                              style={{
+                                width: "130px",
+                                height: "130px",
+                                border: "3px solid #e0e0e0",
+                                cursor: "pointer",
+                                transition: "all 0.3s ease"
+                              }}
+                            >
+                              <div className="text-center">
+                                <i className="bi bi-camera" style={{ fontSize: "36px", color: "#999" }}></i>
+                                <div style={{ fontSize: "11px", color: "#999", marginTop: "5px" }}>Upload Image</div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-primary position-absolute d-flex align-items-center justify-content-center"
+                              style={{
+                                bottom: "5px",
+                                right: "5px",
+                                borderRadius: "50%",
+                                width: "36px",
+                                height: "36px",
+                                padding: "0",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
+                              }}
+                            >
+                              <i className="bi bi-pencil-fill"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label className="form-label">Service Category *</label>
+                          <select
+                            name="category"
+                            className="form-select"
+                            value={serviceForm.category}
+                            onChange={handleServiceFormChange}
+                            required
+                          >
+                            <option value="">Select service category</option>
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                          <small className="text-muted">Type and press enter to add new category</small>
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label">Service Name *</label>
+                          <input
+                            type="text"
+                            name="name"
+                            className="form-control"
+                            placeholder="Enter service name"
+                            value={serviceForm.name}
+                            onChange={handleServiceFormChange}
+                            required
+                          />
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label">Charges *</label>
+                          <div className="input-group">
+                            <span className="input-group-text">$</span>
+                            <input
+                              type="number"
+                              name="charges"
+                              className="form-control"
+                              placeholder="Enter charges"
+                              value={serviceForm.charges}
+                              onChange={handleServiceFormChange}
+                              min="0"
+                              step="0.01"
+                              required
+                            />
+                            <span className="input-group-text">/-</span>
+                          </div>
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label">Duration</label>
+                          <input
+                            type="time"
+                            name="duration"
+                            className="form-control"
+                            placeholder="HH:MM"
+                            value={serviceForm.duration}
+                            onChange={handleServiceFormChange}
+                          />
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Is this a telemedicine service? *</label>
+                          <div className="d-flex gap-3">
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="isTelemedicine"
+                                id="telemed-no"
+                                value="false"
+                                checked={!serviceForm.isTelemedicine}
+                                onChange={() => setServiceForm({ ...serviceForm, isTelemedicine: false })}
+                              />
+                              <label className="form-check-label" htmlFor="telemed-no">
+                                No
+                              </label>
+                            </div>
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="isTelemedicine"
+                                id="telemed-yes"
+                                value="true"
+                                checked={serviceForm.isTelemedicine}
+                                onChange={() => setServiceForm({ ...serviceForm, isTelemedicine: true })}
+                              />
+                              <label className="form-check-label" htmlFor="telemed-yes">
+                                Yes
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Clinic *</label>
+                          <select
+                            name="clinic"
+                            className="form-select"
+                            value={serviceForm.clinic}
+                            onChange={handleServiceFormChange}
+                            required
+                          >
+                            <option value="">Select clinic</option>
+                            {clinics.map((clinic) => (
+                              <option key={clinic._id} value={clinic.name}>
+                                {clinic.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Status *</label>
+                          <select
+                            name="status"
+                            className="form-select"
+                            value={serviceForm.status}
+                            onChange={handleServiceFormChange}
+                            required
+                          >
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                          </select>
+                        </div>
+
+                        <div className="col-md-12">
+                          <label className="form-label">Allow multi selection while booking *</label>
+                          <div className="d-flex gap-3">
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="allowMultiSelection"
+                                id="multi-yes"
+                                checked={serviceForm.allowMultiSelection}
+                                onChange={() => setServiceForm({ ...serviceForm, allowMultiSelection: true })}
+                              />
+                              <label className="form-check-label" htmlFor="multi-yes">
+                                Yes
+                              </label>
+                            </div>
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="allowMultiSelection"
+                                id="multi-no"
+                                checked={!serviceForm.allowMultiSelection}
+                                onChange={() => setServiceForm({ ...serviceForm, allowMultiSelection: false })}
+                              />
+                              <label className="form-check-label" htmlFor="multi-no">
+                                No
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={closeServiceModal}
+                      >
+                        Cancel
+                      </button>
+
+                      <button type="submit" className="btn btn-primary">
+                        Add Service
+                      </button>
+                    </div>
+
+                  </form>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <ConfirmationModal
+          show={confirmModal.show}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.action}
+          onCancel={closeConfirmModal}
+          confirmText={confirmModal.confirmText}
+          confirmVariant={confirmModal.confirmVariant}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default ReceptionistDoctor;

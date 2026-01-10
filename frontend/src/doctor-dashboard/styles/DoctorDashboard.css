@@ -156,3 +156,23 @@
   .fc .fc-toolbar { flex-direction: column; gap: 10px; align-items: start; }
   .fc-toolbar-chunk { display: flex; justify-content: space-between; width: 100%; }
 }
+
+/* src/doctor-dashboard/styles/DoctorDashboard.css */
+
+.clickable {
+  transition: all 0.3s ease; /* Smooth transition for hover effects */
+  position: relative;
+  top: 0;
+}
+
+.clickable:hover {
+  transform: translateY(-5px); /* Moves the card up by 5px */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important; /* Adds a deeper shadow */
+  cursor: pointer;
+}
+
+/* Optional: Add a subtle border color change on hover */
+.clickable:hover .rounded-circle {
+  transform: scale(1.1); /* Slightly enlarges the icon background */
+  transition: transform 0.3s ease;
+}

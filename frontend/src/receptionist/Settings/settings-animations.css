@@ -1,0 +1,29 @@
+/* Keyframes for Fade In and Slide Up */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility Class to apply the animation */
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Staggered animation delays for lists/cards */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Ensure elements with stagger start invisible if we want them to pop in */
+.stagger-item {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
