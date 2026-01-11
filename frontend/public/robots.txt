@@ -1,0 +1,28 @@
+# OneCare Hospital Management System
+# https://onecare.bhargavkarande.dev
+
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /privacy
+Allow: /terms
+Allow: /login
+Allow: /signup
+
+# Disallow dashboard areas (require authentication)
+Disallow: /admin-dashboard
+Disallow: /clinic-dashboard
+Disallow: /doctor-dashboard
+Disallow: /patient-dashboard
+Disallow: /reception-dashboard
+Disallow: /doctor/
+Disallow: /patient/
+Disallow: /admin/
+Disallow: /receptionist/
+Disallow: /settings
+
+# Sitemap
+Sitemap: https://onecare.bhargavkarande.dev/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1

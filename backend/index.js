@@ -150,6 +150,10 @@ app.use("/api/email", emailRoutes);
 app.use("/api/sms", smsRoutes);
 app.use("/holidays", holidayRoutes);
 
+// Public Contact Form Routes (no auth required)
+const contactRoutes = require("./routes/contactRoutes");
+app.use("/api/contact", contactRoutes);
+
 // ✅ NEW: Register Listing Routes
 app.use("/listings", listingRoutes);
 app.use("/api/settings", settingsRoutes);

@@ -14,6 +14,14 @@ import Login from "./auth/Login";
 import ForgotPassword from "./auth/ForgotPassword";
 import ResetPassword from "./auth/ResetPassword";
 
+/* Landing Page - Public SaaS homepage */
+const LandingPage = lazy(() => import("./components/LandingPage/LandingPage"));
+const AboutPage = lazy(() => import("./components/LandingPage/AboutPage"));
+const PrivacyPage = lazy(() => import("./components/LandingPage/PrivacyPage"));
+const TermsPage = lazy(() => import("./components/LandingPage/TermsPage"));
+const ContactPage = lazy(() => import("./components/LandingPage/ContactPage"));
+const PricingPage = lazy(() => import("./components/LandingPage/PricingPage"));
+
 /* Admin Dashboard Components */
 const AdminDashboard = lazy(() => import("./admin-dashboard/admin/AdminDashboard"));
 const AddPatient = lazy(() => import("./admin-dashboard/admin/AddPatient"));
@@ -21,10 +29,9 @@ const EditPatient = lazy(() => import("./admin-dashboard/admin/EditPatient"));
 const Patients = lazy(() => import("./admin-dashboard/admin/Patients"));
 const Doctors = lazy(() => import("./admin-dashboard/admin/Doctors"));
 const AddDoctor = lazy(() => import("./admin-dashboard/admin/AddDoctor"));
-// Note: Appointment is eagerly loaded due to 429 error debugging - can be converted back to lazy() when stable
-import Appointment from "./admin-dashboard/admin/Appointments";
-import ReceptionistBillingRecords from "./receptionist/ReceptionistBillingRecords.jsx";
-import ReceptionistAppointmentSettings from "./receptionist/Settings/Pages/ReceptionistAppointmentSettings.jsx";
+const Appointment = lazy(() => import("./admin-dashboard/admin/Appointments"));
+const ReceptionistBillingRecords = lazy(() => import("./receptionist/ReceptionistBillingRecords.jsx"));
+const ReceptionistAppointmentSettings = lazy(() => import("./receptionist/Settings/Pages/ReceptionistAppointmentSettings.jsx"));
 const BillingRecords = lazy(() => import("./admin-dashboard/admin/BillingRecords"));
 const AddBill = lazy(() => import("./admin-dashboard/admin/AddBill"));
 const EditBill = lazy(() => import("./admin-dashboard/admin/EditBill"));
@@ -534,8 +541,15 @@ function App() {
           <Route path="/verify/appointment/:id" element={<VerifyAppointment />} />
           <Route path="/verify/bill/:id" element={<VerifyBill />} />
 
+          {/* ==================== PUBLIC - LANDING PAGE ==================== */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+
           {/* ==================== AUTH ==================== */}
-          <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
