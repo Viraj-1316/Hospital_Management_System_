@@ -5,6 +5,9 @@ import axios from 'axios';
 import { FiGlobe, FiCheck, FiX, FiArrowRight, FiLoader } from 'react-icons/fi';
 import API_BASE from '../../../config';
 
+// Get frontend URL from environment - this determines the clinic website base URL
+const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+
 export default function SubdomainStep({ data, updateData, onNext }) {
   const [subdomain, setSubdomain] = useState(data?.subdomain || '');
   const [checking, setChecking] = useState(false);
@@ -87,16 +90,16 @@ export default function SubdomainStep({ data, updateData, onNext }) {
           Your Clinic Website URL
         </label>
         
-        <div className="subdomain-input-wrapper">
-          <input
-            type="text"
-            value={subdomain}
-            onChange={handleChange}
-            placeholder="yourclininame"
-            autoFocus
-          />
-          <span className="subdomain-suffix">.onecare.clinic</span>
-        </div>
+          <div className="subdomain-input-wrapper">
+            <span className="subdomain-prefix">{new URL(FRONTEND_URL).host}/c/</span>
+            <input
+              type="text"
+              value={subdomain}
+              onChange={handleChange}
+              placeholder="yourclininame"
+              autoFocus
+            />
+          </div>
         
         {/* Availability Status */}
         <div className="availability-status">
@@ -125,7 +128,7 @@ export default function SubdomainStep({ data, updateData, onNext }) {
           <div className="url-preview">
             <FiGlobe />
             <span>Your website will be available at:</span>
-            <strong>https://{subdomain}.onecare.clinic</strong>
+            <strong>{FRONTEND_URL}/c/{subdomain}</strong>
           </div>
         )}
 

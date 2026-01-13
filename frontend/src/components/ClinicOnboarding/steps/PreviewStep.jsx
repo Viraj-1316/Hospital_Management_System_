@@ -8,9 +8,28 @@ import {
 import { FaRupeeSign } from 'react-icons/fa';
 import API_BASE from '../../../config';
 
+// Get the frontend URL from environment for clinic websites
+const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+
+// Helper to generate the clinic website URL
+const getClinicWebsiteUrl = (subdomain) => {
+  return `${FRONTEND_URL}/c/${subdomain}`;
+};
+
+// Helper to get display URL (for showing in UI)
+const getDisplayUrl = (subdomain) => {
+  try {
+    const url = new URL(FRONTEND_URL);
+    return `${url.host}/c/${subdomain}`;
+  } catch {
+    return `${window.location.host}/c/${subdomain}`;
+  }
+};
+
 export default function PreviewStep({ data, onBack, onPublish, publishing }) {
   const isPublished = data?.status === 'published';
-  const websiteUrl = `https://${data?.subdomain}.onecare.clinic`;
+  const websiteUrl = getClinicWebsiteUrl(data?.subdomain);
+  const displayUrl = getDisplayUrl(data?.subdomain);
 
   // If already published, show success
   if (isPublished) {
@@ -26,7 +45,7 @@ export default function PreviewStep({ data, onBack, onPublish, publishing }) {
           <div className="website-url-box">
             <FiGlobe className="globe-icon" />
             <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
-              {data?.subdomain}.onecare.clinic
+              {displayUrl}
             </a>
           </div>
           
@@ -73,7 +92,7 @@ export default function PreviewStep({ data, onBack, onPublish, publishing }) {
           <span className="dot yellow"></span>
           <span className="dot green"></span>
           <div className="preview-url">
-            🔒 {data?.subdomain}.onecare.clinic
+            🔒 {displayUrl}
           </div>
         </div>
 
@@ -160,7 +179,7 @@ export default function PreviewStep({ data, onBack, onPublish, publishing }) {
         <div className="summary-grid">
           <div className="summary-item">
             <span className="label">Website URL</span>
-            <span className="value">{data?.subdomain}.onecare.clinic</span>
+            <span className="value">{displayUrl}</span>
           </div>
           <div className="summary-item">
             <span className="label">Clinic Name</span>

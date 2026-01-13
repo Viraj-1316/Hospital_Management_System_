@@ -23,6 +23,7 @@ const ContactPage = lazy(() => import("./components/LandingPage/ContactPage"));
 const PricingPage = lazy(() => import("./components/LandingPage/PricingPage"));
 const ClinicRegistrationPage = lazy(() => import("./components/LandingPage/ClinicRegistrationPage"));
 const ClinicOnboarding = lazy(() => import("./components/ClinicOnboarding"));
+const ClinicWebsite = lazy(() => import("./components/ClinicWebsite"));
 
 /* Admin Dashboard Components */
 const AdminDashboard = lazy(() => import("./admin-dashboard/admin/AdminDashboard"));
@@ -556,6 +557,7 @@ function App() {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/register-clinic" element={<ClinicRegistrationPage />} />
           <Route path="/onboarding/:registrationId" element={<ClinicOnboarding />} />
+          <Route path="/c/:subdomain" element={<ClinicWebsite />} />
 
           {/* ==================== AUTH ==================== */}
           <Route path="/login" element={<Login />} />

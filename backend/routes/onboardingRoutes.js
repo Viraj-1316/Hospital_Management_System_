@@ -445,10 +445,14 @@ router.post("/publish", async (req, res) => {
       clinicId: clinic._id.toString()
     });
     
+    // Generate website URL using FRONTEND_URL from environment
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const websiteUrl = `${frontendUrl}/c/${onboarding.subdomain}`;
+    
     res.json({ 
       success: true, 
       message: "Your clinic is now live!",
-      websiteUrl: `${onboarding.subdomain}.onecare.clinic`,
+      websiteUrl,
       hospitalId,
       clinicId: clinic._id,
       onboarding

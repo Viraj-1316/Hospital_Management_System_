@@ -175,6 +175,10 @@ app.use("/api/razorpay", razorpayRoutes);
 const transactionRoutes = require("./routes/transactionRoutes");
 app.use("/api/transactions", transactionRoutes);
 
+// Public Clinic Website Routes
+const clinicWebsiteRoutes = require("./routes/clinicWebsiteRoutes");
+app.use("/api/clinic-website", clinicWebsiteRoutes);
+
 
 // --- 404 Handler (Must be after all routes) ---
 app.use(notFoundHandler);

@@ -383,12 +383,17 @@
   box-shadow: none;
 }
 
-.subdomain-suffix {
+.subdomain-suffix,
+.subdomain-prefix {
   padding: 14px 16px;
   background: #e2e8f0;
   color: #64748b;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.subdomain-prefix {
+  font-size: 14px;
 }
 
 /* Buttons */
