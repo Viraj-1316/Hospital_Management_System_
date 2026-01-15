@@ -2,20 +2,23 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import PhoneInput from "react-phone-input-2";
-import { useNavigate } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
+import { useNavigate, useParams } from "react-router-dom";
+import "react-phone-input-2/lib/style.css";
 import API_BASE from "../../config";
 import { showToast } from "../../utils/useToast";
+import "./PatientProfileSetup.css";
 
 export default function PatientProfileSetup() {
   const navigate = useNavigate();
+  const { subdomain } = useParams();
 
   const [user, setUser] = useState(null);
-  const [clinics, setClinics] = useState([]);
+  const [clinicId, setClinicId] = useState("");
+  const [clinicName, setClinicName] = useState("");
+  
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
-    clinic: "",
     email: "",
     phone: "",
     dob: "",
@@ -25,98 +28,71 @@ export default function PatientProfileSetup() {
     city: "",
     country: "",
     postalCode: "",
+    allergies: "",
+    pastHistory: "",
+    emergencyContactName: "",
+    emergencyContactPhone: ""
   });
+  
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
+  // Load User and Clinic Data
   useEffect(() => {
-    const raw = localStorage.getItem("authUser");
-
-    if (!raw) {
-      setError("No 'authUser' found in localStorage.");
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-
-      if (!parsed.role) {
-        setError("User object has no role.");
-        return;
-      }
-
-      if (parsed.role !== "patient") {
-        setError(`User role is '${parsed.role}', not 'patient'.`);
-        return;
-      }
-
-      setUser(parsed);
-
-      const fullName = parsed.name || "";
-      const parts = fullName.trim().split(" ");
-      const firstName = parts[0] || "";
-      const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
-
-      setForm((prev) => ({
-        ...prev,
-        firstName,
-        lastName,
-        email: parsed.email || "",
-        phone: parsed.phone || "",
-      }));
-
-    } catch (err) {
-      console.error("Error parsing authUser:", err);
-      setError("Failed to parse 'authUser' from localStorage.");
-    }
-  }, []);
-
-  useEffect(() => {
-    const loadClinics = async () => {
+    const init = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/clinics`);
-        const data = res.data;
-        if (data.success && Array.isArray(data.clinics)) {
-          setClinics(data.clinics);
-          // Auto-select first if none selected
-          if (!form.clinic && data.clinics.length > 0) {
-            const first = data.clinics[0];
-            setForm((prev) => ({
-              ...prev,
-              clinic: first.name,
-              clinicId: first._id
-            }));
-          }
-        } else {
-          setClinics([]);
+        // 1. Load User
+        const raw = localStorage.getItem("authUser");
+        if (!raw) {
+          navigate("/clinic-finder");
+          return;
         }
+        const parsed = JSON.parse(raw);
+        setUser(parsed);
+
+        // Pre-fill Name/Email
+        const fullName = parsed.name || "";
+        const parts = fullName.trim().split(" ");
+        const firstName = parts[0] || "";
+        const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+
+        setForm(prev => ({
+          ...prev,
+          firstName,
+          lastName,
+          email: parsed.email || "",
+          phone: parsed.phone || ""
+        }));
+
+        // 2. Identify Clinic
+        // If subdomain exists, fetch clinic by subdomain
+        if (subdomain) {
+          const res = await axios.get(`${API_BASE}/api/clinic-website/${subdomain}`);
+          if (res.data.success) {
+            setClinicId(res.data.data._id);
+            setClinicName(res.data.data.name);
+          }
+        } 
+        // Fallback: Check if user object has clinicId (e.g. from signup)
+        else if (parsed.clinicId) {
+           setClinicId(parsed.clinicId);
+           // Might need to fetch name, but ID is what matters
+        }
+
       } catch (err) {
-        console.error("Error fetching clinics:", err);
-        setClinics([]);
+        console.error("Initialization error:", err);
+        setError("Failed to load profile data.");
+      } finally {
+        setLoading(false);
       }
     };
-
-    loadClinics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    init();
+  }, [subdomain, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // Special handling for clinic dropdown to capture ID
-    if (name === "clinic") {
-      const selectedClinic = clinics.find(c => c.name === value);
-      setForm(prev => ({
-        ...prev,
-        clinic: value,
-        clinicId: selectedClinic ? selectedClinic._id : ""
-      }));
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -125,319 +101,201 @@ export default function PatientProfileSetup() {
     setError("");
 
     try {
-      if (!user) {
-        setError("User not loaded. Please login again.");
-        setSaving(false);
-        return;
-      }
-
-      if (!form.phone) {
-        setError("Mobile number is required.");
-        setSaving(false);
-        return;
-      }
+      if (!user) throw new Error("User session invalid");
+      if (!form.phone) throw new Error("Mobile number is mandatory");
+      if (!clinicId) throw new Error("Clinic association missing. Please return to clinic website.");
 
       const userId = user.id || user._id;
-      const fullPhone = form.phone.startsWith("+")
-        ? form.phone
-        : `+${form.phone}`;
+      const fullPhone = form.phone.startsWith("+") ? form.phone : `+${form.phone}`;
 
       const payload = {
         ...form,
         phone: fullPhone,
-        // Ensure clinicId is sent
-        clinicId: form.clinicId
+        clinicId: clinicId,
+        clinic: clinicName // Optional, but good for display
       };
 
-      const patientRes = await axios.put(
-        `${API_BASE}/patients/by-user/${userId}`,
-        payload
-      );
+      // Update Patient Profile
+      const patientRes = await axios.put(`${API_BASE}/patients/by-user/${userId}`, payload);
       const patientDoc = patientRes.data;
 
+      // Mark Profile Completed
       await axios.put(`${API_BASE}/users/${userId}/profile-completed`, {
         profileCompleted: true,
       });
 
+      // Update Local Storage
       const updatedUser = {
         ...user,
         profileCompleted: true,
         name: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
-        clinicId: form.clinicId // Update local storage user
+        clinicId: clinicId
       };
-
+      
       localStorage.setItem("authUser", JSON.stringify(updatedUser));
-      localStorage.setItem(
-        "patient",
-        JSON.stringify({
-          id: patientDoc._id || patientDoc.id || userId,
-          _id: patientDoc._id || patientDoc.id || userId,
-          userId: patientDoc.userId || userId,
-          firstName: patientDoc.firstName || form.firstName,
-          lastName: patientDoc.lastName || form.lastName,
-          name: `${form.firstName} ${form.lastName}`.trim(),
-          email:
-            patientDoc.email || form.email || updatedUser.email || "",
-          phone: patientDoc.phone || fullPhone || "",
-          clinic: patientDoc.clinic || form.clinic || "",
-          clinicId: patientDoc.clinicId || form.clinicId,
-          dob: patientDoc.dob || form.dob || "",
-          address: patientDoc.address || form.address || "",
-        })
-      );
+      
+      // Update/Create Patient LocalStorage
+      localStorage.setItem("patient", JSON.stringify({
+          ...patientDoc,
+          // Ensure critical fields are synced
+          clinicId,
+          clinic: clinicName || patientDoc.clinic
+      }));
 
-      showToast.success("Profile saved successfully!");
-      navigate("/patient-dashboard");
+      showToast.success("Profile Setup Complete!");
+      
+      // Navigate to Dashboard
+      if (subdomain) {
+        navigate(`/c/${subdomain}/patient-dashboard`);
+      } else {
+        navigate("/patient-dashboard");
+      }
+
     } catch (err) {
-      console.error("Error saving patient profile:", err);
-      setError("Failed to save profile. Please try again.");
+      console.error("Save error:", err);
+      setError(err.message || "Failed to save profile");
     } finally {
       setSaving(false);
     }
   };
 
-  if (!user) {
+  if (loading) {
     return (
-      <div className="container mt-5" style={{ maxWidth: "700px" }}>
-        <h4>Patient Profile Setup (Debug)</h4>
-        {error && (
-          <div className="alert alert-danger mt-3">
-            <strong>Error:</strong> {error}
-          </div>
-        )}
-        <div className="mt-3">
-          <p>localStorage.getItem("authUser"):</p>
-          <pre>{localStorage.getItem("authUser") || "null"}</pre>
+      <div className="profile-setup-container">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
         </div>
-        <button className="btn btn-primary mt-3" onClick={() => navigate("/")}>
-          Go back to Login
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4 mb-5" style={{ maxWidth: "900px" }}>
-      <h3 className="text-primary mb-2">Complete Your Patient Profile</h3>
-      <p className="text-muted">
-        Please fill these details before accessing your dashboard. This will
-        happen only on your first login.
-      </p>
+    <div className="profile-setup-container">
+      <div className="profile-card">
+        <div className="profile-header">
+          <h2>Complete Your Profile</h2>
+          <p>Please provide your details to finish setting up your account {clinicName && `for ${clinicName}`}</p>
+        </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+        <div className="profile-form">
+          {error && <div className="alert alert-danger mb-4">{error}</div>}
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-4 rounded shadow-sm"
-      >
-        <h5 className="text-primary fw-bold mb-3">Basic Details</h5>
-        <div className="row g-3">
-          <div className="col-md-6">
-            <label className="form-label">First Name *</label>
-            <input
-              type="text"
-              name="firstName"
-              className="form-control"
-              value={form.firstName}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Last Name *</label>
-            <input
-              type="text"
-              name="lastName"
-              className="form-control"
-              value={form.lastName}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Clinic *</label>
-            <select
-              name="clinic"
-              className="form-select"
-              value={form.clinic}
-              disabled={false} // ENABLED for selection
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select clinic</option>
-              {clinics.map((clinic) => (
-                <option key={clinic._id} value={clinic.name}>
-                  {clinic.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Email *</label>
-            <input
-              type="email"
-              name="email"
-              className="form-control"
-              value={form.email}
-              disabled
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Contact No *</label>
-            <PhoneInput
-              country={"in"}
-              value={form.phone}
-              onChange={(value) =>
-                setForm((prev) => ({ ...prev, phone: value }))
-              }
-              inputStyle={{ width: "100%" }}
-              containerStyle={{ width: "100%" }}
-              enableSearch
-              disabled={false}
-              placeholder="Enter mobile number"
-            />
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Date of Birth *</label>
-            <input
-              type="date"
-              name="dob"
-              className="form-control"
-              value={form.dob}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Blood Group</label>
-            <select
-              name="bloodGroup"
-              className="form-select"
-              value={form.bloodGroup}
-              onChange={handleChange}
-            >
-              <option value="">Select blood group</option>
-              <option value="A+">A+</option>
-              <option value="A-">A-</option>
-              <option value="B+">B+</option>
-              <option value="B-">B-</option>
-              <option value="O+">O+</option>
-              <option value="O-">O-</option>
-              <option value="AB+">AB+</option>
-              <option value="AB-">AB-</option>
-            </select>
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Gender *</label>
-            <div className="d-flex gap-3 mt-2">
-              <label>
-                <input
-                  type="radio"
-                  name="gender"
-                  value="Male"
-                  checked={form.gender === "Male"}
-                  onChange={handleChange}
-                  required
-                />{" "}
-                Male
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="gender"
-                  value="Female"
-                  checked={form.gender === "Female"}
-                  onChange={handleChange}
-                />{" "}
-                Female
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="gender"
-                  value="Other"
-                  checked={form.gender === "Other"}
-                  onChange={handleChange}
-                />{" "}
-                Other
-              </label>
+          <form onSubmit={handleSubmit}>
+            {/* Personal Information */}
+            <div className="form-section-title">
+              <i className="fas fa-user-circle"></i> Personal Information
             </div>
-          </div>
+            
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">First Name *</label>
+                <input type="text" name="firstName" className="form-control" value={form.firstName} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Last Name *</label>
+                <input type="text" name="lastName" className="form-control" value={form.lastName} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Date of Birth *</label>
+                <input type="date" name="dob" className="form-control" value={form.dob} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Gender *</label>
+                <select name="gender" className="form-select" value={form.gender} onChange={handleChange} required>
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Blood Group</label>
+                <select name="bloodGroup" className="form-select" value={form.bloodGroup} onChange={handleChange}>
+                  <option value="">Select Group</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="form-section-title">
+              <i className="fas fa-address-card"></i> Contact Details
+            </div>
+
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <input type="email" className="form-control" value={form.email} disabled style={{opacity: 0.7, background: '#eee'}} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Mobile Number *</label>
+                <PhoneInput
+                  country={"in"}
+                  value={form.phone}
+                  onChange={(val) => setForm(prev => ({...prev, phone: val}))}
+                  inputClass="form-control"
+                  specialLabel=""
+                />
+              </div>
+              <div className="form-group full-width">
+                <label className="form-label">Address</label>
+                <textarea name="address" rows="2" className="form-control" value={form.address} onChange={handleChange} placeholder="Street address, apartment, etc." />
+              </div>
+              <div className="form-group">
+                <label className="form-label">City</label>
+                <input type="text" name="city" className="form-control" value={form.city} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Postal Code</label>
+                <input type="text" name="postalCode" className="form-control" value={form.postalCode} onChange={handleChange} />
+              </div>
+            </div>
+
+            {/* Medical & Emergency */}
+            <div className="form-section-title">
+              <i className="fas fa-heartbeat"></i> Medical & Emergency
+            </div>
+
+            <div className="form-grid">
+               <div className="form-group full-width">
+                <label className="form-label">Known Allergies</label>
+                <textarea name="allergies" rows="2" className="form-control" value={form.allergies} onChange={handleChange} placeholder="List any drug or food allergies..." />
+              </div>
+              <div className="form-group full-width">
+                <label className="form-label">Past Medical History</label>
+                <textarea name="pastHistory" rows="2" className="form-control" value={form.pastHistory} onChange={handleChange} placeholder="Any previous surgeries, chronic conditions, etc." />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Emergency Contact Name</label>
+                <input type="text" name="emergencyContactName" className="form-control" value={form.emergencyContactName} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Emergency Contact Phone</label>
+                <input type="tel" name="emergencyContactPhone" className="form-control" value={form.emergencyContactPhone} onChange={handleChange} />
+              </div>
+            </div>
+
+            <div className="action-buttons">
+              <button type="submit" className="btn-primary" disabled={saving}>
+                {saving ? (
+                  <span><i className="fas fa-spinner fa-spin"></i> Saving...</span>
+                ) : (
+                  <span>Save & Continue <i className="fas fa-arrow-right"></i></span>
+                )}
+              </button>
+            </div>
+
+          </form>
         </div>
-
-        <hr className="my-4" />
-
-        <h5 className="text-primary fw-bold mb-3">Other Details</h5>
-
-        <div className="mb-3">
-          <label className="form-label">Address</label>
-          <textarea
-            name="address"
-            className="form-control"
-            rows={2}
-            value={form.address}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="row g-3">
-          <div className="col-md-4">
-            <label className="form-label">City</label>
-            <input
-              type="text"
-              name="city"
-              className="form-control"
-              value={form.city}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="col-md-4">
-            <label className="form-label">Country</label>
-            <input
-              type="text"
-              name="country"
-              className="form-control"
-              value={form.country}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="col-md-4">
-            <label className="form-label">Postal Code</label>
-            <input
-              type="text"
-              name="postalCode"
-              className="form-control"
-              value={form.postalCode}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        <div className="d-flex justify-content-end mt-4 gap-2">
-          <button
-            type="button"
-            className="btn btn-outline-secondary"
-            onClick={() => navigate("/")}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "Saving..." : "Save & Continue"}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

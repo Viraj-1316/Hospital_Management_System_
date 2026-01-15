@@ -89,31 +89,44 @@ export default function PatientNavbar({ toggleSidebar }) {
 
           {open && (
             <div className="modern-dropdown">
-              <button
-                className="modern-dropdown-item"
-                onClick={() => {
-                  navigate("/patient/profile");
-                  setOpen(false);
-                }}
-              >
-                <FaUser />
-                My Profile
-              </button>
+              {(() => {
+                const subdomain = localStorage.getItem("clinicSubdomain");
+                const getLink = (path) => subdomain ? `/c/${subdomain}${path}` : path;
+                
+                return (
+                  <>
+                    <button
+                      className="modern-dropdown-item"
+                      onClick={() => {
+                        navigate(getLink("/patient/profile"));
+                        setOpen(false);
+                      }}
+                    >
+                      <FaUser />
+                      My Profile
+                    </button>
 
-              <button
-                className="modern-dropdown-item"
-                onClick={() => {
-                  navigate("/patient/change-password");
-                  setOpen(false);
-                }}
-              >
-                <FaLock />
-                Change Password
-              </button>
+                    <button
+                      className="modern-dropdown-item"
+                      onClick={() => {
+                        navigate(getLink("/patient/change-password"));
+                        setOpen(false);
+                      }}
+                    >
+                      <FaLock />
+                      Change Password
+                    </button>
+                  </>
+                );
+              })()}
 
               <button
                 className="modern-dropdown-item danger"
-                onClick={handleLogout}
+                onClick={() => {
+                   const subdomain = localStorage.getItem("clinicSubdomain");
+                   localStorage.clear();
+                   navigate(subdomain ? `/c/${subdomain}/login` : "/");
+                }}
               >
                 <FaSignOutAlt />
                 Logout

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMail, FiPhone, FiMenu, FiX } from 'react-icons/fi';
 import { FaLinkedin, FaTwitter, FaGithub } from 'react-icons/fa';
+import { WEBSITE_DOMAIN } from '../../config';
 import './LegalPages.css';
 
 const PrivacyPage = () => {
@@ -64,7 +65,7 @@ const PrivacyPage = () => {
               <p>
                 OneCare ("we," "our," or "us") is committed to protecting your privacy. This Privacy 
                 Policy explains how we collect, use, disclose, and safeguard your information when 
-                you use our Hospital Management System platform at onecare.bhargavkarande.dev.
+                you use our Hospital Management System platform at {WEBSITE_DOMAIN}.
               </p>
               <p>
                 By using OneCare, you agree to the collection and use of information in accordance 
@@ -179,7 +180,7 @@ const PrivacyPage = () => {
               <ul>
                 <li><strong>Email:</strong> bhargavk056@gmail.com</li>
                 <li><strong>Phone:</strong> +91 94205 30466</li>
-                <li><strong>Website:</strong> onecare.bhargavkarande.dev</li>
+                <li><strong>Website:</strong> {WEBSITE_DOMAIN}</li>
               </ul>
             </article>
           </div>

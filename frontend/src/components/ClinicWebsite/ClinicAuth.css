@@ -1,0 +1,203 @@
+/* ClinicAuth.css - Clinic Login/Signup specific styles using OneCare theme */
+
+/* Clinic Auth Wrapper */
+.clinic-auth-wrapper {
+    display: flex;
+    flex-direction: row;
+    min-height: 650px;
+    max-width: 950px;
+}
+
+/* Side Panel */
+.clinic-side-panel {
+    width: 45%;
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    background-size: 200% 200%;
+    animation: gradientMove 6s ease infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 30px 0 0 30px;
+    padding: 40px;
+}
+
+.clinic-side-panel .clinic-panel-content {
+    text-align: center;
+    color: #fff;
+}
+
+.clinic-side-panel h1 {
+    color: #fff;
+    font-size: 28px;
+    margin-bottom: 15px;
+}
+
+.clinic-side-panel p {
+    font-size: 14px;
+    opacity: 0.9;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.back-to-clinic {
+    margin-top: 25px;
+}
+
+.back-to-clinic a {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.back-to-clinic a:hover {
+    color: #fff;
+}
+
+/* Form Section */
+.clinic-form-section {
+    width: 55%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.clinic-form-section form {
+    width: 100%;
+    max-width: 380px;
+}
+
+.signup-form-section {
+    order: 1;
+}
+
+.clinic-auth-wrapper .clinic-side-panel:has(+ .signup-form-section) {
+    border-radius: 0 30px 30px 0;
+    order: 0;
+}
+
+/* Clinic Branding Header */
+.clinic-branding-header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.clinic-logo-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    object-fit: cover;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.clinic-name-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(78, 84, 200, 0.1), rgba(143, 148, 251, 0.1));
+    color: #4e54c8;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Approval Notice */
+.approval-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.12));
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 12px 15px;
+    margin: 10px 0;
+    width: 100%;
+}
+
+.approval-notice i {
+    color: #f59e0b;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.approval-notice span {
+    font-size: 11px;
+    color: #92400e;
+    line-height: 1.4;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .clinic-auth-wrapper {
+        flex-direction: column;
+        min-height: auto !important;
+    }
+
+    .clinic-side-panel {
+        display: none !important;
+    }
+
+    .clinic-form-section {
+        width: 100%;
+        padding: 20px 10px;
+        order: 1 !important;
+    }
+
+    .signup-form-section {
+        order: 1 !important;
+    }
+
+    .clinic-side-panel h1 {
+        font-size: 22px;
+    }
+
+    .clinic-form-section form {
+        max-width: 100%;
+    }
+}
+
+/* Override for signup - swap layout */
+.clinic-auth-wrapper:has(.signup-form-section) .clinic-side-panel {
+    order: -1;
+    border-radius: 30px 0 0 30px;
+}
+
+.clinic-auth-wrapper:has(.signup-form-section) .signup-form-section {
+    order: 1;
+}
+
+@media (max-width: 768px) {
+    .clinic-auth-wrapper:has(.signup-form-section) .clinic-side-panel {
+        order: 0;
+        border-radius: 30px 30px 0 0;
+    }
+}
+
+/* Animations */
+@keyframes enterAnimation {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  opacity: 0; /* Starte hidden */
+  animation: enterAnimation 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: calc(var(--i) * 0.05s); /* Staggered delay */
+}
+
+/* Page Transition */
+.onecare-auth-page {
+    animation: pageFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes pageFadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}

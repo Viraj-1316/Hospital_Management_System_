@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaPlus, FaTimes, FaTrash, FaEdit, FaPrint, FaEnvelope, FaFileImport } from "react-icons/fa";
 import toast from "react-hot-toast";
-// xlsx is loaded dynamically in file import handler
+// exceljs is loaded dynamically in file import handler
 import "../../shared/styles/shared-components.css";
 import API_BASE from "../../config";
 import MedicalReport from "./MedicalReport";
@@ -336,21 +336,39 @@ export default function SharedEncounterDetails() {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const XLSX = await import('xlsx');
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws);
+        const ExcelJS = await import("exceljs");
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(evt.target.result);
+        const worksheet = workbook.worksheets[0];
 
-        // Expected columns: Name, Frequency, Duration, Instruction
-        const newPrescriptionsToAdd = data.map(row => ({
-          _id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          name: row.Name || row.name || "Unknown Medicine",
-          frequency: row.Frequency || row.frequency || "1-0-1",
-          duration: row.Duration || row.duration || "5 days",
-          instruction: row.Instruction || row.instruction || ""
-        }));
+        const newPrescriptionsToAdd = [];
+        let headers = {};
+
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) {
+            row.eachCell((cell, colNumber) => {
+              // Store headers in lowercase for flexible matching
+              headers[colNumber] = (cell.value || "").toString().trim().toLowerCase();
+            });
+          } else {
+            let rowData = {};
+            row.eachCell((cell, colNumber) => {
+              const header = headers[colNumber];
+              if (header) {
+                rowData[header] = cell.value;
+              }
+            });
+
+            // Map based on lowercased keys
+            newPrescriptionsToAdd.push({
+              _id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              name: rowData["name"] || "Unknown Medicine",
+              frequency: rowData["frequency"] || "1-0-1",
+              duration: rowData["duration"] || "5 days",
+              instruction: rowData["instruction"] || ""
+            });
+          }
+        });
 
         const updatedPrescriptions = [...prescriptions, ...newPrescriptionsToAdd];
         setPrescriptions(updatedPrescriptions);
@@ -363,7 +381,7 @@ export default function SharedEncounterDetails() {
         toast.error("Failed to parse file. Ensure it's a valid Excel/CSV.");
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   // --- Email Logic ---

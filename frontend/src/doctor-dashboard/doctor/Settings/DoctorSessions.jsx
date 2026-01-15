@@ -6,7 +6,7 @@ import {
   FaQuestionCircle, FaChevronLeft, FaChevronRight 
 } from "react-icons/fa";
 import toast from "react-hot-toast";
-// xlsx, jsPDF, and autoTable now loaded dynamically in export handlers
+// exceljs, jsPDF, and autoTable now loaded dynamically in export handlers
 import API_BASE from "../../../config";
 
 const BASE_URL = API_BASE;
@@ -182,15 +182,35 @@ export default function DoctorSessions() {
   };
 
   const handleExport = async (type) => {
-      // Dynamic import for xlsx - only loads when user exports
+      // Dynamic import for exceljs - only loads when user exports
       if(type === "Excel") {
-        const XLSX = await import("xlsx");
-        const ws = XLSX.utils.json_to_sheet(sessions.map(s => ({
-            Clinic: s.clinic, Days: s.days.join(", "), Morning: formatRange(s.morningStart, s.morningEnd), Evening: formatRange(s.eveningStart, s.eveningEnd)
-        })));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Sessions");
-        XLSX.writeFile(wb, "My_Sessions.xlsx");
+        const ExcelJS = await import("exceljs");
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sessions");
+
+        worksheet.columns = [
+          { header: "Clinic", key: "clinic", width: 20 },
+          { header: "Days", key: "days", width: 30 },
+          { header: "Morning", key: "morning", width: 20 },
+          { header: "Evening", key: "evening", width: 20 },
+        ];
+
+        const rows = sessions.map(s => ({
+            clinic: s.clinic, 
+            days: s.days.join(", "), 
+            morning: formatRange(s.morningStart, s.morningEnd), 
+            evening: formatRange(s.eveningStart, s.eveningEnd)
+        }));
+
+        worksheet.addRows(rows);
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "My_Sessions.xlsx";
+        link.click();
+        URL.revokeObjectURL(link.href);
       }
       // Add CSV/PDF logic if needed or keep existing
   };

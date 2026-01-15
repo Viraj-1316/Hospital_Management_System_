@@ -234,7 +234,7 @@ const LandingPage = () => {
   return (
     <div className="landing-page">
       {/* Navigation */}
-      <nav className={`landing-nav ${isScrolled ? 'scrolled' : ''}`}>
+      <nav className={`landing-nav ${isScrolled ? 'scrolled' : ''} ${isMenuOpen ? 'menu-open' : ''}`}>
         <div className="nav-container">
           <Link to="/" className="nav-logo">
             <img src="/logo.png" alt="OneCare HMS" />
@@ -257,7 +257,7 @@ const LandingPage = () => {
 
           <div className="nav-cta">
             <Link to="/login" className="btn-secondary">Login</Link>
-            <Link to="/signup" className="btn-primary">Register Clinic</Link>
+            <Link to="/register-clinic" className="btn-primary">Register Clinic</Link>
           </div>
 
           <button className="nav-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
@@ -295,7 +295,7 @@ const LandingPage = () => {
                 <button onClick={() => scrollToSection('contact')} className="btn-primary btn-lg">
                   Request a Demo <FiArrowRight />
                 </button>
-                <Link to="/signup" className="btn-outline btn-lg">
+                <Link to="/register-clinic" className="btn-outline btn-lg">
                   Register Your Clinic
                 </Link>
               </div>
@@ -583,7 +583,7 @@ const LandingPage = () => {
               Get started today with a free demo.
             </p>
             <div className="cta-buttons">
-              <Link to="/signup" className="btn-primary btn-lg">
+              <Link to="/register-clinic" className="btn-primary btn-lg">
                 Register Your Clinic <FiArrowRight />
               </Link>
               <a href="mailto:bhargavk056@gmail.com" className="btn-outline btn-lg">

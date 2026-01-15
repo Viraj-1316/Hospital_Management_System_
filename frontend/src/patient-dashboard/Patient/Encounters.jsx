@@ -127,13 +127,9 @@ export default function Encounters() {
         if (Array.isArray(data)) allEncounters = data;
         else if (data && (data.rows || data.encounters)) allEncounters = data.rows || data.encounters;
 
-        const myEncounters = allEncounters.filter(e => {
-            const pId = e.patientId?._id || e.patientId || e.patient?._id || e.patient;
-            return pId?.toString() === patientId.toString();
-        });
-
-        setRows(myEncounters);
-        setTotal(myEncounters.length);
+        // Backend handles filtering for patients, so we trust the response
+        setRows(allEncounters);
+        setTotal(allEncounters.length);
 
       } catch (err) {
         console.error(err);

@@ -12,6 +12,7 @@ const generateRandomPassword = require("../utils/generatePassword");
 const { sendEmail } = require("../utils/emailService");
 const { credentialsTemplate } = require("../utils/emailTemplates");
 const { verifyToken } = require("../middleware/auth");
+const logger = require("../utils/logger");
 
 // =================================================================
 // 1. SPECIFIC ROUTES (Must come BEFORE /:id generic routes)
@@ -232,19 +233,18 @@ router.get("/", verifyToken, async (req, res) => {
     // 3. Determine Effective Role
     const effectiveRole = currentUser ? currentUser.role : req.user.role;
 
-    console.log("GET /patients - Effective Role:", effectiveRole);
-    console.log("GET /patients - Safe ClinicId:", safeClinicId);
+    logger.debug("GET /patients", { effectiveRole, safeClinicId: safeClinicId?.toString() });
 
     if (effectiveRole === 'admin') {
       // Global View for Super Admin
-      console.log("GET /patients - Global View (Admin)");
+      logger.debug("GET /patients - Global View (Admin)");
     } else if (safeClinicId) {
       // Scoped View for Clinic Admin / Doctor / Staff
       query.clinicId = safeClinicId;
-      console.log("GET /patients - Filtering by SafeClinicId:", query.clinicId);
+      logger.debug("GET /patients - Filtering by SafeClinicId", { clinicId: query.clinicId?.toString() });
     } else {
       // SAFETY FALLBACK: Non-admin user with NO clinicId should see NOTHING.
-      console.log("GET /patients - BLOCKED: Non-admin user with no Clinic ID triggered safety fallback.");
+      logger.warn("GET /patients - BLOCKED: Non-admin user with no Clinic ID triggered safety fallback.");
       return res.json([]); // Return empty list instead of full leak
     }
 

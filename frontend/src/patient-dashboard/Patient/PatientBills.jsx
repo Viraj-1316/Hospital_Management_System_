@@ -223,21 +223,31 @@ export default function PatientBills() {
   }, [search, filters]);
 
   const lookupCustomId = (bill, list = encounters) => {
-    if (bill.encounterCustomId) {
-      return bill.encounterCustomId;
+    // 1. Try to find in the fetched encounters list
+    // bill.encounterId might be an object (populated) or string (ObjectId)
+    const billEncIdStr = (typeof bill.encounterId === 'object' && bill.encounterId?._id) 
+        ? bill.encounterId._id.toString() 
+        : (bill.encounterId || "").toString();
+
+    if (list && list.length > 0) {
+        const found = list.find(e => (e._id || e.id).toString() === billEncIdStr);
+        if (found && found.encounterId) return found.encounterId;
     }
-    if (bill.encounterId) {
-      const encId = bill.encounterId;
-      if (typeof encId === 'string') {
-        if (encId.startsWith("ENC-")) return encId;
-        if (encId.length === 24) return `ENC-${encId.substring(0, 6)}`;
-        return encId;
-      }
-      if (typeof encId === 'object' && encId._id) {
-        return encId.encounterId || `ENC-${encId._id.toString().substring(0, 6)}`;
-      }
+
+    // 2. Check if bill has it directly (populated or stored)
+    if (bill.encounterCustomId) return bill.encounterCustomId;
+    
+    // 3. Check if populated in bill
+    if (typeof bill.encounterId === 'object' && bill.encounterId.encounterId) {
+        return bill.encounterId.encounterId;
     }
-    return "-";
+
+    // 4. Fallback: If it's already a custom string
+    if (typeof bill.encounterId === 'string' && bill.encounterId.startsWith("ENC-")) {
+        return bill.encounterId;
+    }
+
+    return "N/A";
   };
 
   const formatDate = (dateString) => {

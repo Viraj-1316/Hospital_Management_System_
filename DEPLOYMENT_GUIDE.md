@@ -1,149 +1,246 @@
-# Deployment Guide
+# Hostinger VPS Deployment Guide (KVM1)
 
-This guide provides comprehensive instructions for deploying OneCare to production on **AWS EC2** (Backend) and **AWS S3 + CloudFront** (Frontend).
+This guide covers deploying OneCare Hospital Management System on **Hostinger VPS KVM1** with unified frontend + backend hosting, Nginx reverse proxy, and wildcard subdomain support for clinic websites.
 
 ---
 
 ## 📋 Prerequisites
 
-- AWS Account with appropriate permissions
-- Domain name (optional, but recommended)
+- Hostinger VPS KVM1 (1 vCPU, 4GB RAM)
+- Domain configured in Hostinger DNS panel
 - MongoDB Atlas account (free tier works)
-- Git installed on local machine
+- SSH access to your VPS
 
 ---
 
-## 🖥️ Backend Deployment (AWS EC2)
+## 🖥️ VPS Initial Setup
 
-### Step 1: Launch EC2 Instance
-
-1. **Go to EC2 Dashboard** → Launch Instance
-2. **Choose AMI**: Ubuntu Server 22.04 LTS (Free tier eligible)
-3. **Instance Type**:
-   - Development/Testing: `t2.micro` (Free tier)
-   - Production: `t3.small` or higher
-4. **Key Pair**: Create or select existing `.pem` file
-5. **Security Group** - Add rules:
-   | Type | Port | Source | Purpose |
-   |------|------|--------|---------|
-   | SSH | 22 | Your IP | Server access |
-   | HTTP | 80 | 0.0.0.0/0 | Web traffic |
-   | HTTPS | 443 | 0.0.0.0/0 | Secure traffic |
-   | Custom TCP | 3001 | 0.0.0.0/0 | API (remove after Nginx setup) |
-
-6. **Launch** the instance
-
-### Step 2: Connect to Server
+### Step 1: Connect to Your VPS
 
 ```bash
-# Connect via SSH
-ssh -i "your-key.pem" ubuntu@<EC2-PUBLIC-IP>
+# SSH into your VPS (use credentials from Hostinger panel)
+ssh root@<YOUR-VPS-IP>
 ```
 
-### Step 3: Server Setup
+### Step 2: Update System & Create Deploy User
 
 ```bash
 # Update system packages
-sudo apt update && sudo apt upgrade -y
+apt update && apt upgrade -y
 
-# Install Node.js 18.x
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Create a non-root user for deployments
+adduser onecare
+usermod -aG sudo onecare
+
+# Switch to the new user
+su - onecare
+```
+
+### Step 3: Install Node.js 20.x
+
+```bash
+# Install Node.js via NodeSource
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Verify installation
-node --version  # Should show v18.x.x
+node --version  # Should show v20.x.x
 npm --version
+```
 
-# Install PM2 (Process Manager)
+### Step 4: Install PM2 (Process Manager)
+
+```bash
+# Install PM2 globally
 sudo npm install -g pm2
 
-# Install Nginx (Reverse Proxy)
-sudo apt install -y nginx
+# Enable PM2 to start on boot
+pm2 startup systemd
+# Run the command it outputs (will ask for sudo password)
+```
 
-# Install Git
+### Step 5: Install Nginx
+
+```bash
+sudo apt install -y nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+```
+
+### Step 6: Install Git
+
+```bash
 sudo apt install -y git
 ```
 
-### Step 4: Clone and Setup Application
+---
+
+## 📦 Backend Deployment
+
+### Step 1: Clone Repository
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/Hospital_Management_System_.git
-cd Hospital_Management_System_/backend
+# Create app directory
+sudo mkdir -p /var/www/onecare
+sudo chown -R onecare:onecare /var/www/onecare
+cd /var/www/onecare
 
-# Install dependencies
-npm install
+# Clone your repository
+git clone https://github.com/BhargavK001/Hospital_Management_System_.git .
 ```
 
-### Step 5: Configure Environment Variables
+### Step 2: Install Backend Dependencies
 
 ```bash
-# Create .env file
+cd backend
+npm install --production
+```
+
+### Step 3: Configure Environment Variables
+
+```bash
+# Create production .env file
 nano .env
 ```
 
-Add production configuration:
+Add the following configuration (replace placeholders):
 
 ```env
 # Server
 PORT=3001
 NODE_ENV=production
 
-# Database
-MONGO_URI=mongodb+srv://user:password@cluster.mongodb.net/hospital_db?retryWrites=true&w=majority
+# Database (MongoDB Atlas)
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/hospital_db?retryWrites=true&w=majority
 
 # Authentication
-JWT_SECRET=your-super-secret-key-min-32-characters-long
+JWT_SECRET=your-super-secure-jwt-secret-min-32-characters
 
-# CORS & Frontend
+# URLs (Replace with your actual domain)
 CORS_ORIGIN=https://yourdomain.com,https://www.yourdomain.com
 FRONTEND_URL=https://yourdomain.com
+BACKEND_URL=https://api.yourdomain.com
 
-# Email (SMTP)
+# Email (SMTP - Brevo/Sendinblue)
 EMAIL_HOST=smtp-relay.brevo.com
 EMAIL_PORT=587
 EMAIL_USER=your-smtp-user
 EMAIL_PASS=your-smtp-password
 EMAIL_FROM=noreply@yourdomain.com
 
-# Razorpay (if using payments)
+# Razorpay (Payment Gateway)
 RAZORPAY_KEY_ID=rzp_live_xxxxx
 RAZORPAY_KEY_SECRET=xxxxx
+
+# Google OAuth (if using)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=https://api.yourdomain.com/api/auth/google/doctor/callback
+
+# WhatsApp Business API (optional)
+WHATSAPP_ACCESS_TOKEN=your-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-id
 ```
 
 Save: `Ctrl+O`, Exit: `Ctrl+X`
 
-### Step 6: Start Application with PM2
+### Step 4: Start Backend with PM2
 
 ```bash
 # Start the application
-pm2 start index.js --name "onecare-api"
+pm2 start index.js --name "onecare-backend"
 
 # Save PM2 process list
 pm2 save
 
-# Enable PM2 startup on reboot
-pm2 startup
-# Run the command it outputs
-
 # View logs
-pm2 logs onecare-api
+pm2 logs onecare-backend
 ```
 
-### Step 7: Configure Nginx Reverse Proxy
+---
+
+## 🌐 Frontend Deployment
+
+### Step 1: Build Frontend (On Your Local Machine)
 
 ```bash
-# Create Nginx configuration
+cd frontend
+
+# Create production environment file
+echo "VITE_API_BASE_URL=https://api.yourdomain.com" > .env.production
+echo "VITE_GOOGLE_CLIENT_ID=your-google-client-id" >> .env.production
+
+# Build for production
+npm run build
+```
+
+### Step 2: Upload Build to VPS
+
+Option A - Using SCP:
+
+```bash
+# From your local machine
+scp -r dist/* onecare@<VPS-IP>:/var/www/onecare/frontend/dist/
+```
+
+Option B - Using Git (recommended for updates):
+
+```bash
+# On VPS, pull latest changes
+cd /var/www/onecare
+git pull origin main
+
+# Build on server
+cd frontend
+npm install
+npm run build
+```
+
+---
+
+## ⚙️ Nginx Configuration
+
+### Step 1: Create Nginx Site Configuration
+
+```bash
 sudo nano /etc/nginx/sites-available/onecare
 ```
 
-Add configuration:
+Add the following configuration:
 
 ```nginx
+# Main Application Server
 server {
     listen 80;
-    server_name api.yourdomain.com;  # Or use EC2 public IP
+    server_name yourdomain.com www.yourdomain.com;
 
+    # Frontend - Static files
+    root /var/www/onecare/frontend/dist;
+    index index.html;
+
+    # SPA routing - all routes go to index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+    gzip_min_length 1000;
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+
+# API Server (Backend)
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+
+    # Reverse proxy to Node.js backend
     location / {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
@@ -154,145 +251,100 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
+
+        # Increase timeout for long-running requests
+        proxy_read_timeout 120s;
+    }
+
+    # Serve uploaded files
+    location /uploads {
+        alias /var/www/onecare/backend/uploads;
+        expires 30d;
+        add_header Cache-Control "public";
+    }
+}
+
+# Wildcard Subdomain for Clinic Websites
+server {
+    listen 80;
+    server_name ~^(?<subdomain>.+)\.onecare\.yourdomain\.com$;
+
+    # Serve the same frontend SPA
+    root /var/www/onecare/frontend/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Static asset caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
 }
 ```
 
-Enable the site:
+### Step 2: Enable the Site
 
 ```bash
 # Create symbolic link
 sudo ln -s /etc/nginx/sites-available/onecare /etc/nginx/sites-enabled/
 
+# Remove default site
+sudo rm /etc/nginx/sites-enabled/default
+
 # Test configuration
 sudo nginx -t
 
-# Restart Nginx
-sudo systemctl restart nginx
+# Reload Nginx
+sudo systemctl reload nginx
 ```
 
-### Step 8: SSL Certificate (HTTPS)
+---
+
+## 🔒 SSL Certificate (Let's Encrypt - FREE)
+
+### Step 1: Install Certbot
 
 ```bash
-# Install Certbot
 sudo apt install -y certbot python3-certbot-nginx
+```
 
-# Get SSL certificate
-sudo certbot --nginx -d api.yourdomain.com
+### Step 2: Get SSL Certificates
 
-# Auto-renewal is set up automatically
-# Test renewal
+```bash
+# For main domain and API subdomain
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com -d api.yourdomain.com
+
+# For wildcard subdomain (clinic websites) - requires DNS challenge
+sudo certbot certonly --manual --preferred-challenges dns \
+    -d "*.onecare.yourdomain.com"
+```
+
+> **Note**: For wildcard certificates, Certbot will ask you to add a TXT record to your DNS.
+> Go to Hostinger DNS panel → Add TXT record for `_acme-challenge.onecare` with the value provided.
+
+### Step 3: Auto-Renewal Test
+
+```bash
 sudo certbot renew --dry-run
 ```
 
 ---
 
-## 🌐 Frontend Deployment (AWS S3 + CloudFront)
+## 🌍 DNS Configuration (Hostinger Panel)
 
-### Step 1: Build Frontend
+Go to Hostinger → Domains → Manage → DNS Zone and add:
 
-On your local machine:
+| Type | Name       | Value      | TTL   |
+| ---- | ---------- | ---------- | ----- |
+| A    | @          | `<VPS-IP>` | 14400 |
+| A    | www        | `<VPS-IP>` | 14400 |
+| A    | api        | `<VPS-IP>` | 14400 |
+| A    | \*.onecare | `<VPS-IP>` | 14400 |
 
-```bash
-cd frontend
-
-# Create production environment file
-nano .env.production
-```
-
-Add:
-
-```env
-VITE_API_BASE_URL=https://api.yourdomain.com
-VITE_GOOGLE_CLIENT_ID=your-google-client-id
-```
-
-```bash
-# Build for production
-npm run build
-```
-
-This creates a `dist/` folder with optimized static files.
-
-### Step 2: Create S3 Bucket
-
-1. **Go to S3** → Create bucket
-2. **Bucket name**: `onecare-frontend` (must be globally unique)
-3. **Region**: Same as your EC2 instance
-4. **Uncheck** "Block all public access" (we'll use CloudFront)
-5. **Create bucket**
-
-### Step 3: Configure S3 for Static Hosting
-
-1. Go to bucket → **Properties**
-2. Scroll to **Static website hosting** → Enable
-3. **Index document**: `index.html`
-4. **Error document**: `index.html` (for SPA routing)
-5. Save changes
-
-### Step 4: Upload Build Files
-
-```bash
-# Using AWS CLI
-aws s3 sync dist/ s3://onecare-frontend --delete
-
-# Or upload manually via AWS Console
-```
-
-### Step 5: Create CloudFront Distribution
-
-1. **Go to CloudFront** → Create distribution
-2. **Origin domain**: Select your S3 bucket
-3. **Origin access**: Origin access control (OAC) - recommended
-4. **Viewer protocol policy**: Redirect HTTP to HTTPS
-5. **Default root object**: `index.html`
-6. **Error pages**:
-   - 404 → `/index.html` (Response code: 200)
-   - 403 → `/index.html` (Response code: 200)
-7. **Create distribution**
-
-### Step 6: Update S3 Bucket Policy
-
-Add policy to allow CloudFront access:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AllowCloudFrontAccess",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "cloudfront.amazonaws.com"
-      },
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::onecare-frontend/*",
-      "Condition": {
-        "StringEquals": {
-          "AWS:SourceArn": "arn:aws:cloudfront::ACCOUNT_ID:distribution/DISTRIBUTION_ID"
-        }
-      }
-    }
-  ]
-}
-```
-
-### Step 7: Custom Domain (Optional)
-
-1. **Request SSL Certificate** in AWS Certificate Manager (ACM)
-
-   - Region: `us-east-1` (required for CloudFront)
-   - Domain: `yourdomain.com` and `*.yourdomain.com`
-   - Validate via DNS
-
-2. **Update CloudFront**:
-
-   - Alternate domain names: `yourdomain.com`, `www.yourdomain.com`
-   - Custom SSL certificate: Select your ACM certificate
-
-3. **Update DNS** (Route 53 or your DNS provider):
-   - A record → Alias to CloudFront distribution
-   - CNAME for `www` → CloudFront domain
+> DNS propagation can take up to 48 hours, but usually completes within 1-2 hours.
 
 ---
 
@@ -300,61 +352,68 @@ Add policy to allow CloudFront access:
 
 ### Backend
 
-- [ ] EC2 instance running
-- [ ] Node.js and PM2 installed
-- [ ] Application code deployed
+- [ ] VPS accessible via SSH
+- [ ] Node.js 20.x installed
+- [ ] PM2 installed and running
+- [ ] Backend dependencies installed
 - [ ] `.env` file configured
-- [ ] PM2 process running
-- [ ] Nginx configured
-- [ ] SSL certificate active
-- [ ] Security groups configured
+- [ ] Backend process running (`pm2 status`)
 
 ### Frontend
 
-- [ ] Build completed successfully
-- [ ] S3 bucket created
-- [ ] Files uploaded to S3
-- [ ] CloudFront distribution created
-- [ ] Custom domain configured (optional)
-- [ ] SSL via ACM
+- [ ] Build completed (`npm run build`)
+- [ ] Files uploaded to `/var/www/onecare/frontend/dist`
 
-### Database
+### Nginx
 
-- [ ] MongoDB Atlas cluster running
-- [ ] IP whitelist includes EC2 IP
-- [ ] Connection string in backend `.env`
+- [ ] Configuration created in `/etc/nginx/sites-available/onecare`
+- [ ] Site enabled (symlinked to sites-enabled)
+- [ ] Nginx test passes (`sudo nginx -t`)
+
+### SSL
+
+- [ ] Certbot installed
+- [ ] Certificates obtained for all domains
+- [ ] Auto-renewal configured
+
+### DNS
+
+- [ ] A records pointing to VPS IP
+- [ ] Wildcard record for clinic subdomains
 
 ---
 
-## 🔧 Common Commands
+## 🔧 Useful Commands
 
 ```bash
 # PM2 Commands
 pm2 status              # Check app status
-pm2 logs onecare-api    # View logs
-pm2 restart onecare-api # Restart app
-pm2 stop onecare-api    # Stop app
+pm2 logs onecare-backend # View logs
+pm2 restart onecare-backend # Restart app
+pm2 reload onecare-backend  # Zero-downtime reload
 
 # Nginx Commands
-sudo systemctl status nginx   # Check status
-sudo systemctl restart nginx  # Restart
-sudo nginx -t                 # Test config
+sudo systemctl status nginx    # Check status
+sudo systemctl restart nginx   # Restart
+sudo nginx -t                  # Test config
 
 # Update Application
-cd Hospital_Management_System_/backend
+cd /var/www/onecare
 git pull origin main
-npm install
-pm2 restart onecare-api
+cd backend && npm install
+pm2 restart onecare-backend
+cd ../frontend && npm install && npm run build
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
-| Issue              | Solution                                 |
-| ------------------ | ---------------------------------------- |
-| 502 Bad Gateway    | Check PM2 is running: `pm2 status`       |
-| Connection refused | Verify port 3001 in security group       |
-| CORS errors        | Check `CORS_ORIGIN` in `.env`            |
-| MongoDB timeout    | Whitelist EC2 IP in Atlas Network Access |
-| SSL not working    | Run `sudo certbot renew`                 |
+| Issue                 | Solution                                   |
+| --------------------- | ------------------------------------------ |
+| 502 Bad Gateway       | Check PM2 is running: `pm2 status`         |
+| Connection refused    | Verify backend port 3001 is correct        |
+| CORS errors           | Check `CORS_ORIGIN` in backend `.env`      |
+| MongoDB timeout       | Whitelist VPS IP in Atlas Network Access   |
+| SSL not working       | Run `sudo certbot renew`                   |
+| Subdomain not working | Check DNS wildcard record and Nginx config |

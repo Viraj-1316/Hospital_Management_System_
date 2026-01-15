@@ -95,6 +95,142 @@ export async function signupUser(userData) {
 }
 
 /**
+ * Admin-only login (Super Admin and Clinic Admin)
+ * @param {string} email 
+ * @param {string} password 
+ * @returns {Promise<{success: boolean, data?: object, error?: string, token?: string, redirectToClinicFinder?: boolean}>}
+ */
+export async function adminLogin(email, password) {
+    try {
+        const res = await fetch(`${API_BASE}/admin-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return { 
+                success: false, 
+                error: data.message || 'Login failed',
+                redirectToClinicFinder: data.redirectToClinicFinder || false
+            };
+        }
+
+        const token = data.token;
+        const user = { ...data };
+        delete user.token;
+
+        return { success: true, data: user, token };
+    } catch (err) {
+        console.error('Admin login error:', err);
+        return { success: false, error: 'Network error: backend not responding' };
+    }
+}
+
+/**
+ * Clinic-specific login for Patient, Doctor, Staff
+ * @param {string} email 
+ * @param {string} password 
+ * @param {string} subdomain - Clinic subdomain
+ * @param {string} role - 'patient', 'doctor', or 'receptionist'
+ * @returns {Promise<{success: boolean, data?: object, error?: string, token?: string}>}
+ */
+export async function clinicLogin(email, password, subdomain, role) {
+    try {
+        const res = await fetch(`${API_BASE}/clinic-login/${subdomain}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, role }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return { 
+                success: false, 
+                error: data.message || 'Login failed',
+                approvalStatus: data.approvalStatus
+            };
+        }
+
+        const token = data.token;
+        const user = { ...data };
+        delete user.token;
+
+        return { success: true, data: user, token };
+    } catch (err) {
+        console.error('Clinic login error:', err);
+        return { success: false, error: 'Network error: backend not responding' };
+    }
+}
+
+/**
+ * Clinic-specific signup for Patient, Doctor, Staff
+ * @param {object} userData - {name, email, password, phone, role}
+ * @param {string} subdomain - Clinic subdomain
+ * @returns {Promise<{success: boolean, data?: object, error?: string}>}
+ */
+export async function clinicSignup(userData, subdomain) {
+    try {
+        const res = await fetch(`${API_BASE}/clinic-signup/${subdomain}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return { 
+                success: false, 
+                error: data.message || 'Signup failed',
+                approvalStatus: data.approvalStatus
+            };
+        }
+
+        // For patients, includes token. For doctor/staff, only approval status
+        return { success: true, data };
+    } catch (err) {
+        console.error('Clinic signup error:', err);
+        return { success: false, error: 'Network error: backend not responding' };
+    }
+}
+
+/**
+ * Clinic-specific Google login (Patients only)
+ * @param {string} token - Google access token
+ * @param {string} subdomain - Clinic subdomain
+ * @returns {Promise<{success: boolean, data?: object, error?: string, token?: string}>}
+ */
+export async function clinicGoogleLogin(token, subdomain) {
+    try {
+        const res = await fetch(`${API_BASE}/clinic-google/${subdomain}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return { success: false, error: data.message || 'Google login failed' };
+        }
+
+        const authToken = data.token;
+        const user = { ...data };
+        delete user.token;
+
+        return { success: true, data: user, token: authToken };
+    } catch (err) {
+        console.error('Clinic Google login error:', err);
+        return { success: false, error: 'Network error: backend not responding' };
+    }
+}
+
+
+/**
  * Fetch patient data by user ID
  * @param {string} userId 
  * @returns {Promise<object|null>}
@@ -195,8 +331,9 @@ export function formatPhone(phone) {
  * Save auth data to localStorage
  * @param {object} user 
  * @param {string} token 
+ * @param {string} subdomain - Optional clinic subdomain for clinic-scoped users
  */
-export function saveAuthData(user, token) {
+export function saveAuthData(user, token, subdomain = null) {
     if (token) {
         localStorage.setItem('token', token);
     }
@@ -205,6 +342,11 @@ export function saveAuthData(user, token) {
     if (userId) {
         localStorage.setItem('userId', userId);
         localStorage.setItem('userRole', user.role);
+    }
+
+    // Store clinic subdomain for clinic-scoped routes
+    if (subdomain) {
+        localStorage.setItem('clinicSubdomain', subdomain);
     }
 
     const authUser = {
@@ -218,6 +360,7 @@ export function saveAuthData(user, token) {
         clinicId: user.clinicId || user.clinic?._id || null,
         clinicName: user.clinicName || user.clinic?.name || user.clinic || '',
         clinicLogo: user.clinicLogo || user.clinic?.logo || '',
+        clinicSubdomain: subdomain || user.clinicSubdomain || null,
         googleId: user.googleId || null, // Include googleId for Google login users
     };
 

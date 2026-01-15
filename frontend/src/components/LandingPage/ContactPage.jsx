@@ -7,6 +7,7 @@ import {
   FiMenu, FiX, FiMapPin, FiGlobe, FiCheck, FiClock
 } from 'react-icons/fi';
 import { FaWhatsapp, FaLinkedin, FaTwitter, FaGithub, FaHospital } from 'react-icons/fa';
+import { FRONTEND_URL, WEBSITE_DOMAIN } from '../../config';
 import './LegalPages.css';
 import LandingFooter from './LandingFooter';
 
@@ -198,8 +199,8 @@ const ContactPage = () => {
                   </div>
                   <div>
                     <h4>Website</h4>
-                    <a href="https://onecare.bhargavkarande.dev" target="_blank" rel="noopener noreferrer">
-                      onecare.bhargavkarande.dev
+                    <a href={FRONTEND_URL} target="_blank" rel="noopener noreferrer">
+                      {WEBSITE_DOMAIN}
                     </a>
                   </div>
                 </div>

@@ -18,6 +18,9 @@ const { loginValidation, signupValidation, changePasswordValidation } = require(
 // Email Service
 const { sendEmail } = require("../utils/emailService");
 
+// Logger
+const logger = require("../utils/logger");
+
 // Models
 const User = require("../models/User");
 const Receptionist = require("../models/Receptionist");
@@ -61,7 +64,7 @@ router.post("/google", async (req, res) => {
 
     const { name, email, picture, sub: googleId } = userinfo.data;
 
-    console.log(`Google Login Attempt for email: ${email}`);
+    logger.debug("Google Login Attempt", { email });
 
     // Check if user exists in other roles (Doctor, Receptionist, Admin) - RESTRICT ACCESS
     const existingDoctor = await DoctorModel.findOne({ email });
@@ -69,7 +72,7 @@ router.post("/google", async (req, res) => {
     const existingAdmin = await Admin.findOne({ email });
 
     if (existingDoctor || existingReceptionist || existingAdmin) {
-      console.warn(`Google login blocked for non-patient email: ${email}`);
+      logger.warn("Google login blocked for non-patient role", { email });
       return res.status(403).json({
         message: "Google Login is restricted to Patients only. Please use your email and password to log in."
       });
@@ -80,7 +83,7 @@ router.post("/google", async (req, res) => {
 
     if (!user) {
       // Create new patient user
-      console.log("Creating new user from Google Login:", email);
+      logger.info("Creating new user from Google Login", { email });
 
       const randomPassword = crypto.randomBytes(16).toString("hex");
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
@@ -144,7 +147,7 @@ router.post("/google", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Google Login Error:", err.message);
+    logger.error("Google Login Error", { error: err.message });
     res.status(500).json({ message: "Google authentication failed" });
   }
 });
@@ -280,13 +283,13 @@ router.post("/login", loginValidation, async (req, res) => {
     }
 
     // 4) If not receptionist or doctor, check User collection (patients, clinic_admin)
-    console.log("Checking User collection for:", email);
+    logger.debug("Checking User collection for login");
     const user = await User.findOne({ email });
 
     if (user) {
-      console.log("User found:", user._id, user.role);
+      // User found, verify password (no logging of match result for security)
+      logger.debug("Login attempt for user", { userId: user._id.toString(), role: user.role });
       const match = await checkPassword(password, user.password);
-      console.log("Password match result:", match);
 
       if (!match) {
         return res.status(401).json({ message: "Invalid email or password" });
@@ -334,7 +337,7 @@ router.post("/login", loginValidation, async (req, res) => {
 
     return res.status(401).json({ message: "Invalid email or password" });
   } catch (err) {
-    console.error("Login error:", err.message);
+    logger.error("Login error", { error: err.message });
     res.status(500).json({ message: "Server error during login" });
   }
 });
@@ -521,7 +524,7 @@ router.post("/signup", signupValidation, async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("Signup error:", err.message);
+    logger.error("Signup error", { error: err.message });
     res.status(500).json({ message: "Server error during signup" });
   }
 });
@@ -878,6 +881,455 @@ router.post("/reset-password/:token", async (req, res) => {
   } catch (err) {
     console.error("Reset password error:", err.message);
     res.status(500).json({ message: "Server error while resetting password" });
+  }
+});
+// ==========================================
+// Admin-Only Login (Super Admin and Clinic Admin)
+// ==========================================
+router.post("/admin-login", loginValidation, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1) Check Admin collection first (Super Admin)
+    const admin = await Admin.findOne({ email });
+    if (admin) {
+      const isMatch = await admin.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const adminPayload = {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: "admin",
+        profileCompleted: true,
+        clinicId: null,
+      };
+
+      const token = generateToken(adminPayload);
+      return res.json({ ...adminPayload, token });
+    }
+
+    // 2) Check User collection for clinic_admin
+    const user = await User.findOne({ email, role: "clinic_admin" });
+    if (user) {
+      const match = await checkPassword(password, user.password);
+      if (!match) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Fetch clinic details
+      const Clinic = require("../models/Clinic");
+      const clinic = await Clinic.findOne({ "admin.email": user.email });
+      
+      const userPayload = {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        profileCompleted: user.profileCompleted,
+        clinicId: clinic?._id || null,
+        clinicName: clinic?.name || "",
+        clinicLogo: clinic?.clinicLogo || "",
+      };
+
+      const token = generateToken(userPayload);
+      return res.json({ ...userPayload, token });
+    }
+
+    // Not an admin or clinic_admin
+    return res.status(403).json({ 
+      message: "This login is for administrators only. Please use your clinic's login page.",
+      redirectToClinicFinder: true
+    });
+  } catch (err) {
+    logger.error("Admin login error", { error: err.message });
+    res.status(500).json({ message: "Server error during login" });
+  }
+});
+
+// ==========================================
+// Clinic-Specific Login (Patient, Doctor, Staff)
+// ==========================================
+router.post("/clinic-login/:subdomain", loginValidation, async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+    const { email, password, role: requestedRole } = req.body;
+
+    // Validate clinic exists
+    const Clinic = require("../models/Clinic");
+    const clinic = await Clinic.findOne({ subdomain: subdomain.toLowerCase() });
+    
+    if (!clinic) {
+      return res.status(404).json({ message: "Clinic not found" });
+    }
+
+    const clinicId = clinic._id;
+
+    // Check based on requested role
+    if (requestedRole === "patient") {
+      const user = await User.findOne({ email, role: "patient" });
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Verify patient belongs to this clinic (or has no clinic set)
+      if (user.clinicId && user.clinicId.toString() !== clinicId.toString()) {
+        return res.status(403).json({ message: "This account is not registered with this clinic" });
+      }
+
+      const match = await checkPassword(password, user.password);
+      if (!match) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Update clinicId if not set
+      if (!user.clinicId) {
+        user.clinicId = clinicId;
+        await user.save();
+      }
+
+      const payload = {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        profileCompleted: user.profileCompleted,
+        clinicId: clinicId,
+        clinicSubdomain: subdomain,
+        clinicName: clinic.name,
+      };
+
+      return res.json({ ...payload, token: generateToken(payload) });
+    }
+
+    if (requestedRole === "doctor") {
+      const doctor = await DoctorModel.findOne({ email, clinicId: clinicId });
+      if (!doctor || !doctor.password) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const match = await checkPassword(password, doctor.password);
+      if (!match) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Check approval status
+      if (doctor.approvalStatus === "pending") {
+        return res.status(403).json({
+          message: "Your registration is pending approval. You will be able to login once approved.",
+          approvalStatus: "pending"
+        });
+      }
+      if (doctor.approvalStatus === "rejected") {
+        return res.status(403).json({
+          message: "Your registration has been rejected. Please contact the clinic admin.",
+          approvalStatus: "rejected"
+        });
+      }
+
+      const payload = {
+        id: doctor._id,
+        email: doctor.email,
+        role: "doctor",
+        name: `${doctor.firstName} ${doctor.lastName}`,
+        mustChangePassword: doctor.mustChangePassword,
+        profileCompleted: true,
+        clinicId: clinicId,
+        clinicSubdomain: subdomain,
+        clinicName: clinic.name,
+      };
+
+      return res.json({ ...payload, token: generateToken(payload) });
+    }
+
+    if (requestedRole === "receptionist" || requestedRole === "staff") {
+      const receptionist = await Receptionist.findOne({ 
+        email, 
+        clinicIds: { $in: [clinicId] } 
+      });
+      
+      if (!receptionist) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const match = await checkPassword(password, receptionist.password);
+      if (!match) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Check approval status
+      if (receptionist.approvalStatus === "pending") {
+        return res.status(403).json({
+          message: "Your registration is pending approval. You will be able to login once approved.",
+          approvalStatus: "pending"
+        });
+      }
+      if (receptionist.approvalStatus === "rejected") {
+        return res.status(403).json({
+          message: "Your registration has been rejected. Please contact the clinic admin.",
+          approvalStatus: "rejected"
+        });
+      }
+
+      const payload = {
+        id: receptionist._id,
+        email: receptionist.email,
+        role: "receptionist",
+        name: receptionist.name,
+        mustChangePassword: receptionist.mustChangePassword,
+        profileCompleted: true,
+        clinicId: clinicId,
+        clinicSubdomain: subdomain,
+        clinicName: clinic.name,
+      };
+
+      return res.json({ ...payload, token: generateToken(payload) });
+    }
+
+    return res.status(400).json({ message: "Invalid role specified" });
+  } catch (err) {
+    logger.error("Clinic login error", { error: err.message });
+    res.status(500).json({ message: "Server error during login" });
+  }
+});
+
+// ==========================================
+// Clinic-Specific Signup (Patient, Doctor, Staff)
+// ==========================================
+router.post("/clinic-signup/:subdomain", signupValidation, async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+    const { name, email, password, phone, role } = req.body;
+
+    // Validate clinic exists
+    const Clinic = require("../models/Clinic");
+    const clinic = await Clinic.findOne({ subdomain: subdomain.toLowerCase() });
+    
+    if (!clinic) {
+      return res.status(404).json({ message: "Clinic not found" });
+    }
+
+    const clinicId = clinic._id;
+    const normalizedRole = (role || "patient").toLowerCase();
+
+    // Check for existing email in all collections
+    const existingUser = await User.findOne({ email });
+    const existingDoctor = await DoctorModel.findOne({ email });
+    const existingReceptionist = await Receptionist.findOne({ email });
+
+    if (existingUser || existingDoctor || existingReceptionist) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    if (normalizedRole === "doctor") {
+      const nameParts = name.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      await DoctorModel.create({
+        firstName,
+        lastName,
+        email,
+        phone,
+        password: hashedPassword,
+        mustChangePassword: true,
+        status: "Active",
+        clinicId: clinicId,
+        approvalStatus: "pending",
+      });
+
+      // Notify clinic admin
+      const adminEmail = clinic.admin?.email || clinic.email;
+      if (adminEmail) {
+        const { staffSignupRequestTemplate } = require("../utils/emailTemplates");
+        sendEmail({
+          to: adminEmail,
+          subject: "New Doctor Registration Request - OneCare",
+          html: staffSignupRequestTemplate({
+            staffName: name,
+            staffEmail: email,
+            staffRole: "Doctor",
+            clinicName: clinic.name,
+            hospitalId: clinic.hospitalId,
+          }),
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "Your registration request has been sent to the clinic admin. You will be able to login once approved.",
+        approvalStatus: "pending",
+      });
+
+    } else if (normalizedRole === "receptionist" || normalizedRole === "staff") {
+      await Receptionist.create({
+        name,
+        email,
+        mobile: phone,
+        password: hashedPassword,
+        mustChangePassword: true,
+        status: true,
+        clinicIds: [clinicId],
+        approvalStatus: "pending",
+      });
+
+      // Notify clinic admin
+      const adminEmail = clinic.admin?.email || clinic.email;
+      if (adminEmail) {
+        const { staffSignupRequestTemplate } = require("../utils/emailTemplates");
+        sendEmail({
+          to: adminEmail,
+          subject: "New Staff Registration Request - OneCare",
+          html: staffSignupRequestTemplate({
+            staffName: name,
+            staffEmail: email,
+            staffRole: "Staff/Receptionist",
+            clinicName: clinic.name,
+            hospitalId: clinic.hospitalId,
+          }),
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "Your registration request has been sent to the clinic admin. You will be able to login once approved.",
+        approvalStatus: "pending",
+      });
+
+    } else {
+      // Patient registration (immediate access)
+      const newUser = await User.create({
+        email,
+        password: hashedPassword,
+        role: "patient",
+        name,
+        phone,
+        clinicId: clinicId,
+        profileCompleted: false,
+      });
+
+      await PatientModel.create({
+        userId: newUser._id,
+        clinicId: clinicId,
+      });
+
+      const payload = {
+        id: newUser._id,
+        email: newUser.email,
+        role: newUser.role,
+        name: newUser.name,
+        profileCompleted: newUser.profileCompleted,
+        clinicId: clinicId,
+        clinicSubdomain: subdomain,
+        clinicName: clinic.name,
+      };
+
+      return res.status(201).json({ ...payload, token: generateToken(payload) });
+    }
+  } catch (err) {
+    logger.error("Clinic signup error", { error: err.message });
+    res.status(500).json({ message: "Server error during signup" });
+  }
+});
+
+// ==========================================
+// Clinic-Specific Google Login (Patients Only)
+// ==========================================
+router.post("/clinic-google/:subdomain", async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: "Google token is required" });
+    }
+
+    // Validate clinic exists
+    const Clinic = require("../models/Clinic");
+    const clinic = await Clinic.findOne({ subdomain: subdomain.toLowerCase() });
+    
+    if (!clinic) {
+      return res.status(404).json({ message: "Clinic not found" });
+    }
+
+    const clinicId = clinic._id;
+
+    // Verify Google Token
+    client.setCredentials({ access_token: token });
+    const userinfo = await client.request({
+      url: "https://www.googleapis.com/oauth2/v3/userinfo",
+    });
+
+    const { name, email, picture, sub: googleId } = userinfo.data;
+
+    // Check if email exists in non-patient roles
+    const existingDoctor = await DoctorModel.findOne({ email });
+    const existingReceptionist = await Receptionist.findOne({ email });
+    const existingAdmin = await Admin.findOne({ email });
+
+    if (existingDoctor || existingReceptionist || existingAdmin) {
+      return res.status(403).json({
+        message: "This email is registered as Doctor/Staff. Please use email login."
+      });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create new patient
+      const randomPassword = crypto.randomBytes(16).toString("hex");
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      user = await User.create({
+        email,
+        name,
+        password: hashedPassword,
+        role: "patient",
+        profileCompleted: false,
+        googleId,
+        avatar: picture,
+        clinicId: clinicId,
+      });
+
+      await PatientModel.create({
+        userId: user._id,
+        clinicId: clinicId,
+      });
+    } else {
+      // Verify patient role
+      if (user.role !== "patient") {
+        return res.status(403).json({
+          message: "This account is not a patient account."
+        });
+      }
+
+      // Update googleId if not set
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    }
+
+    const payload = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      profileCompleted: user.profileCompleted,
+      clinicId: clinicId,
+      clinicSubdomain: subdomain,
+      clinicName: clinic.name,
+      googleId: user.googleId,
+    };
+
+    return res.json({ ...payload, token: generateToken(payload) });
+  } catch (err) {
+    logger.error("Clinic Google login error", { error: err.message });
+    res.status(500).json({ message: "Google authentication failed" });
   }
 });
 

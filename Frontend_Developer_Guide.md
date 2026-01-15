@@ -115,6 +115,6 @@ To build for production:
 npm run build
 ```
 
-This produces a `dist/` folder which can be served statically (AWS S3, Vercel, Netlify).
+This produces a `dist/` folder which should be copied to the VPS.
 
-See `OneCare_AWS_Deployment_Guide.md` for full deployment details.
+See `DEPLOYMENT_GUIDE.md` for full VPS deployment details.

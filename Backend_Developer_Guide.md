@@ -113,8 +113,4 @@ Currently, the project relies on manual API testing using Postman.
 
 ## 📦 Deployment
 
-See `OneCare_AWS_Deployment_Guide.md` for detailed deployment instructions on AWS EC2.
-
-### Keep-Alive Mechanism
-
-For platforms that sleep (like Render free tier), `utils/keepAlive.js` pings the server periodically. This is enabled via `RENDER_EXTERNAL_URL` env var.
+See `DEPLOYMENT_GUIDE.md` for detailed VPS deployment instructions using Nginx and PM2.

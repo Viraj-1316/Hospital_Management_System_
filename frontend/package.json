@@ -19,8 +19,10 @@
     "@react-oauth/google": "^0.13.4",
     "axios": "^1.13.2",
     "bootstrap": "^5.3.8",
+    "canvas-confetti": "^1.9.4",
+    "exceljs": "^4.4.0",
     "flatpickr": "^4.6.13",
-    "jspdf": "^3.0.4",
+    "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
@@ -32,14 +34,14 @@
     "react-phone-input-2": "^2.15.1",
     "react-quill-new": "^3.6.0",
     "react-router-dom": "^7.9.6",
-    "socket.io-client": "^4.8.3",
-    "xlsx": "^0.18.5"
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.1",
+    "baseline-browser-mapping": "^2.9.14",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

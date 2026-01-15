@@ -429,7 +429,6 @@ PDF generation is implemented in **three locations** using `pdf-lib`:
 | Email Service        | `emailService.js`                 | Nodemailer config            |
 | Email Templates      | `emailTemplates.js`               | HTML email templates         |
 | Password Generator   | `generatePassword.js`             | Random password creation     |
-| Keep Alive           | `keepAlive.js`                    | Render deployment ping       |
 | Logger               | `logger.js`                       | Winston logging              |
 | Meeting Service      | `meetingService.js`               | Google Meet/Zoom integration |
 | Populate Helper      | `populateHelper.js`               | MongoDB population helpers   |
@@ -505,11 +504,11 @@ VITE_API_BASE_URL=http://localhost:3001
 
 ### 📖 Quick Start Guides
 
-| Document                                    | Description             |
-| ------------------------------------------- | ----------------------- |
-| [Development Setup](./DEVELOPMENT_SETUP.md) | Local environment setup |
-| [Deployment Guide](./DEPLOYMENT_GUIDE.md)   | AWS EC2 + S3 deployment |
-| [Contributing](./CONTRIBUTING.md)           | Contribution guidelines |
+| Document                                    | Description              |
+| ------------------------------------------- | ------------------------ |
+| [Development Setup](./DEVELOPMENT_SETUP.md) | Local environment setup  |
+| [Deployment Guide](./DEPLOYMENT_GUIDE.md)   | **VPS deployment guide** |
+| [Contributing](./CONTRIBUTING.md)           | Contribution guidelines  |
 
 ### 🏗️ Architecture & Technical
 
@@ -543,7 +542,6 @@ VITE_API_BASE_URL=http://localhost:3001
 | [Backend Developer Guide](./Backend_Developer_Guide.md)   | Backend architecture      |
 | [Frontend Developer Guide](./Frontend_Developer_Guide.md) | Frontend structure        |
 | [Razorpay Integration](./README_RAZORPAY.md)              | Payment gateway           |
-| [AWS Deployment Guide](./OneCare_AWS_Deployment_Guide.md) | AWS specific guide        |
 | [Route Migration Guide](./route_migration_guide.md)       | Route refactoring history |
 
 ---

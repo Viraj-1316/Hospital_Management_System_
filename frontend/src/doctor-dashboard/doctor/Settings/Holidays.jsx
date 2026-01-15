@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-// xlsx, jsPDF, and autoTable are loaded dynamically in export handlers
+// exceljs, jsPDF, and autoTable are loaded dynamically in export handlers
 
 import {
   FaEdit,
@@ -331,27 +331,42 @@ const exportCSV = () => {
 
 // Export to Excel (dynamic import)
 const exportExcel = async () => {
-  const XLSX = await import("xlsx");
-  const worksheetData = sortedData.map((h) => ({
-    ID: h.id,
-    "Schedule Of": h.scheduleOf,
-    Name: h.name,
-    "From Date": h.from,
-    "To Date": h.to,
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Holidays");
+
+  worksheet.columns = [
+    { header: "ID", key: "id", width: 10 },
+    { header: "Schedule Of", key: "scheduleOf", width: 20 },
+    { header: "Name", key: "name", width: 25 },
+    { header: "From Date", key: "from", width: 15 },
+    { header: "To Date", key: "to", width: 15 },
+  ];
+
+  const rows = sortedData.map((h) => ({
+    id: h.id,
+    scheduleOf: h.scheduleOf,
+    name: h.name,
+    from: h.from,
+    to: h.to,
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-  const workbook = XLSX.utils.book_new();
+  worksheet.addRows(rows);
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Holidays");
-  XLSX.writeFile(workbook, "Holiday_List.xlsx");
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "Holiday_List.xlsx";
+  link.click();
+  URL.revokeObjectURL(link.href);
 };
 
 // 💡 UPDATED Export to PDF function (Async and uses dynamic imports)
 const exportPDF = async () => {
   const jsPDFModule = await import("jspdf");
   const autoTableModule = await import("jspdf-autotable");
-  const jsPDF = jsPDFModule.default;
+  const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
   const autoTable = autoTableModule.default;
   
   const doc = new jsPDF("p", "pt", "a4");

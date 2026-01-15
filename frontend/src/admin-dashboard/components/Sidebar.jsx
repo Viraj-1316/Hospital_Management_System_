@@ -1,6 +1,7 @@
 // src/admin-dashboard/components/Sidebar.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Collapse } from "react-bootstrap";
+import axios from "axios";
 import logo from "../images/Logo.png";
 import { IoMdSettings } from "react-icons/io";
 import {
@@ -15,18 +16,61 @@ import {
   FaMoneyBill,
   FaFileInvoice,
   FaChevronDown,
-  FaCreditCard
+  FaCreditCard,
+  FaClipboardList
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
+import API_BASE from "../../config";
 import "../../shared/styles/ModernUI.css";
 
 export default function Sidebar({ collapsed = false }) {
   const expandedWidth = 260;
   const collapsedWidth = 72;
   const [isEncountersOpen, setIsEncountersOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Fetch pending clinic registrations count
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        
+        const res = await axios.get(
+          `${API_BASE}/api/clinic-registration?status=Pending&limit=1`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        if (res.data.success && res.data.counts) {
+          setPendingCount(res.data.counts.pending || 0);
+        }
+      } catch (error) {
+        // Silently fail - user may not have admin access
+        console.log("Could not fetch pending registrations count");
+      }
+    };
+    
+    fetchPendingCount();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchPendingCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const linkClass = ({ isActive }) =>
     `modern-nav-link ${isActive ? "active" : ""}`;
+
+  // Badge style
+  const badgeStyle = {
+    background: "linear-gradient(135deg, #ef4444, #dc2626)",
+    color: "#fff",
+    fontSize: "11px",
+    fontWeight: 700,
+    padding: "2px 6px",
+    borderRadius: "10px",
+    marginLeft: "auto",
+    minWidth: "20px",
+    textAlign: "center"
+  };
 
   return (
     <div
@@ -106,6 +150,30 @@ export default function Sidebar({ collapsed = false }) {
           <NavLink to="/clinic-list" className={linkClass}>
             <span className="modern-nav-icon"><FaClinicMedical /></span>
             {!collapsed && <span>Clinic</span>}
+          </NavLink>
+        </li>
+
+        <li className="modern-nav-item">
+          <NavLink to="/clinic-registrations" className={linkClass} style={{ display: "flex", alignItems: "center" }}>
+            <span className="modern-nav-icon"><FaClipboardList /></span>
+            {!collapsed && (
+              <>
+                <span>Clinic Registrations</span>
+                {pendingCount > 0 && (
+                  <span style={badgeStyle}>{pendingCount}</span>
+                )}
+              </>
+            )}
+            {collapsed && pendingCount > 0 && (
+              <span style={{ 
+                ...badgeStyle, 
+                position: "absolute", 
+                top: "4px", 
+                right: "8px",
+                fontSize: "9px",
+                padding: "1px 4px"
+              }}>{pendingCount}</span>
+            )}
           </NavLink>
         </li>
 

@@ -16,7 +16,7 @@ import {
   FaQuestionCircle
 } from "react-icons/fa";
 import toast from "react-hot-toast";
-// xlsx, jsPDF, and autoTable are loaded dynamically in export handlers
+// exceljs, jsPDF, and autoTable are loaded dynamically in export handlers
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/light.css";
 
@@ -186,13 +186,33 @@ export default function HolidaySettings() {
 
   // --- EXPORTS (dynamic imports) ---
   const exportExcel = async () => {
-    const XLSX = await import("xlsx");
-    const ws = XLSX.utils.json_to_sheet(sortedData.map(h => ({
-      ID: h.id, Doctor: h.doctorName, From: h.from, To: h.to
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Holidays");
-    XLSX.writeFile(wb, "Holidays.xlsx");
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Holidays");
+
+    worksheet.columns = [
+      { header: "ID", key: "id", width: 10 },
+      { header: "Doctor", key: "doctorName", width: 25 },
+      { header: "From", key: "from", width: 15 },
+      { header: "To", key: "to", width: 15 },
+    ];
+
+    const rows = sortedData.map((h) => ({
+      id: h.id,
+      doctorName: h.doctorName,
+      from: h.from,
+      to: h.to,
+    }));
+
+    worksheet.addRows(rows);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "Holidays.xlsx";
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const exportCSV = () => {
@@ -208,7 +228,7 @@ export default function HolidaySettings() {
   const exportPDF = async () => {
     const jsPDFModule = await import("jspdf");
     const autoTableModule = await import("jspdf-autotable");
-    const jsPDF = jsPDFModule.default;
+    const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
     const autoTable = autoTableModule.default;
     
     const doc = new jsPDF();

@@ -59,7 +59,7 @@ export default defineConfig({
           'vendor-pdf': ['jspdf', 'jspdf-autotable'],
 
           // Excel generation - split separately (~440KB library)
-          'vendor-excel': ['xlsx'],
+          'vendor-excel': ['exceljs'],
 
           // Rich text editor - only needed for forms with rich text
           'vendor-quill': ['react-quill-new'],

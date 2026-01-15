@@ -17,7 +17,7 @@ import {
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
-// --- xlsx, jsPDF, and autoTable are now loaded dynamically ---
+// --- exceljs, jsPDF, and autoTable are now loaded dynamically ---
 import API_BASE from "../../config";
 
 // Configure your base URL
@@ -109,26 +109,42 @@ const SharedListingSettings = () => {
     link.click();
   };
 
-  // 3. Export to Excel (dynamic import)
+  // 3. Export to Excel (dynamic import using exceljs)
   const exportExcel = async () => {
-    const XLSX = await import("xlsx");
-    const worksheetData = filteredListings.map((item, index) => ({
-      ID: index + 1,
-      Name: item.name,
-      Type: item.type,
-      Status: item.status,
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Listings");
+
+    worksheet.columns = [
+      { header: "ID", key: "id", width: 10 },
+      { header: "Name", key: "name", width: 30 },
+      { header: "Type", key: "type", width: 20 },
+      { header: "Status", key: "status", width: 15 },
+    ];
+
+    const rows = filteredListings.map((item, index) => ({
+      id: index + 1,
+      name: item.name,
+      type: item.type,
+      status: item.status,
     }));
-    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Listings");
-    XLSX.writeFile(workbook, "Listings.xlsx");
+
+    worksheet.addRows(rows);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "Listings.xlsx";
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   // 4. Export to PDF (dynamic import)
   const exportPDF = async () => {
     const jsPDFModule = await import("jspdf");
     const autoTableModule = await import("jspdf-autotable");
-    const jsPDF = jsPDFModule.default;
+    const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
     const autoTable = autoTableModule.default;
     
     const doc = new jsPDF();
@@ -287,12 +303,29 @@ const SharedListingSettings = () => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const XLSX = await import("xlsx");
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        const ExcelJS = await import("exceljs");
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(e.target.result);
+        const worksheet = workbook.worksheets[0];
+        
+        let jsonData = [];
+        let headers = {};
+
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) {
+            row.eachCell((cell, colNumber) => {
+              headers[colNumber] = cell.value;
+            });
+          } else {
+            let rowData = {};
+            row.eachCell((cell, colNumber) => {
+              if (headers[colNumber]) {
+                rowData[headers[colNumber]] = cell.value;
+              }
+            });
+            jsonData.push(rowData);
+          }
+        });
 
         if (jsonData.length === 0) {
           toast.error("File is empty");

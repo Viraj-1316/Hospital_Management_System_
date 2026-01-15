@@ -4,6 +4,7 @@ const cors = require("cors");
 const path = require("path");
 const helmet = require("helmet");
 const compression = require("compression");
+const logger = require("./utils/logger");
 
 const mongoSanitize = require("./middleware/mongoSanitize");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
@@ -18,7 +19,7 @@ require("./models/Doctor");
 require("./models/Appointment");
 // (Add other models here if they rely on being registered early)
 
-console.log("🔧 Dotenv loaded. WHATSAPP_ACCESS_TOKEN present:", !!process.env.WHATSAPP_ACCESS_TOKEN);
+logger.info("🔧 Dotenv loaded. WHATSAPP_ACCESS_TOKEN present: " + !!process.env.WHATSAPP_ACCESS_TOKEN);
 
 // --- Route Imports ---
 const authRoutes = require("./routes/auth");
@@ -76,10 +77,6 @@ app.use(helmet({
 // Compression: Gzip responses for faster load times
 app.use(compression());
 
-// Rate Limiting: Removed as per request
-
-
-
 // --- CORS Configuration ---
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map(origin => origin.trim())
@@ -100,11 +97,11 @@ app.use(cors({
     } else {
       // In production, block unauthorized origins
       if (isProduction) {
-        console.warn(`CORS blocked request from origin: ${origin}`);
+        logger.warn(`CORS blocked request from origin: ${origin}`);
         callback(new Error("CORS origin not allowed"));
       } else {
         // In development, allow but log warning
-        console.warn(`CORS warning: origin ${origin} not in allowedOrigins`);
+        logger.warn(`CORS warning: origin ${origin} not in allowedOrigins`);
         callback(null, true);
       }
     }
@@ -154,6 +151,14 @@ app.use("/holidays", holidayRoutes);
 const contactRoutes = require("./routes/contactRoutes");
 app.use("/api/contact", contactRoutes);
 
+// Public Clinic Registration Routes (no auth required)
+const clinicRegistrationRoutes = require("./routes/clinicRegistrationRoutes");
+app.use("/api/clinic-registration", clinicRegistrationRoutes);
+
+// Clinic Onboarding Wizard Routes
+const onboardingRoutes = require("./routes/onboardingRoutes");
+app.use("/api/onboarding", onboardingRoutes);
+
 // ✅ NEW: Register Listing Routes
 app.use("/listings", listingRoutes);
 app.use("/api/settings", settingsRoutes);
@@ -170,6 +175,10 @@ app.use("/api/razorpay", razorpayRoutes);
 const transactionRoutes = require("./routes/transactionRoutes");
 app.use("/api/transactions", transactionRoutes);
 
+// Public Clinic Website Routes
+const clinicWebsiteRoutes = require("./routes/clinicWebsiteRoutes");
+app.use("/api/clinic-website", clinicWebsiteRoutes);
+
 
 // --- 404 Handler (Must be after all routes) ---
 app.use(notFoundHandler);
@@ -180,13 +189,6 @@ app.use(errorHandler);
 // --- Start Server ---
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log("Backend server running on port " + PORT);
-  console.log(`Security: Helmet ✓ | Compression ✓ | CORS ✓ | Sanitization ✓ | WebSockets ✓`);
-  
-  // Start keep-alive service in production (prevents Render cold starts)
-  if (isProduction && process.env.RENDER_EXTERNAL_URL) {
-    const { startKeepAlive } = require('./utils/keepAlive');
-    const healthUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
-    startKeepAlive(healthUrl);
-  }
+  logger.info("Backend server running on port " + PORT);
+  logger.info(`Security: Helmet ✓ | Compression ✓ | CORS ✓ | Sanitization ✓ | WebSockets ✓`);
 });

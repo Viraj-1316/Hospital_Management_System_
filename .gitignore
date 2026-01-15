@@ -6,6 +6,7 @@ node_modules/
 .env.local
 .env.development
 .env.production
+.env.production.template
 *.env
 
 # Production / Build
@@ -24,3 +25,4 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+backend/.env.awsproduction

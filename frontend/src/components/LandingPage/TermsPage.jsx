@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMail, FiPhone, FiMenu, FiX } from 'react-icons/fi';
 import { FaLinkedin, FaTwitter, FaGithub } from 'react-icons/fa';
+import { WEBSITE_DOMAIN } from '../../config';
 import './LegalPages.css';
 
 const TermsPage = () => {
@@ -63,7 +64,7 @@ const TermsPage = () => {
               <h2>1. Acceptance of Terms</h2>
               <p>
                 By accessing or using OneCare Hospital Management System ("Service") at 
-                onecare.bhargavkarande.dev, you agree to be bound by these Terms of Service 
+                {WEBSITE_DOMAIN}, you agree to be bound by these Terms of Service 
                 ("Terms"). If you disagree with any part of these terms, you may not access the Service.
               </p>
 
@@ -211,7 +212,7 @@ const TermsPage = () => {
               <ul>
                 <li><strong>Email:</strong> bhargavk056@gmail.com</li>
                 <li><strong>Phone:</strong> +91 94205 30466</li>
-                <li><strong>Website:</strong> onecare.bhargavkarande.dev</li>
+                <li><strong>Website:</strong> {WEBSITE_DOMAIN}</li>
               </ul>
             </article>
           </div>

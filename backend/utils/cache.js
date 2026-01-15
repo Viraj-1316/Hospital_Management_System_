@@ -1,5 +1,5 @@
 /**
- * Simple In-Memory Cache for Render Free Tier
+ * Simple In-Memory Cache for Performance Optimization
  * Reduces database queries for frequently accessed, rarely changing data
  */
 

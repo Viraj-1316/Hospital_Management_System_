@@ -99,56 +99,64 @@ export default function PatientSidebar({ collapsed = false }) {
 
       {/* Menu Items */}
       <ul className="modern-nav" style={{ overflowY: "auto", flex: 1 }}>
-        
-        {/* 1. Dashboard */}
-        <li className="modern-nav-item">
-          <NavLink to="/patient-dashboard" className={linkClass} end>
-            <span className="modern-nav-icon">
-              <FaTachometerAlt />
-            </span>
-            {!collapsed && <span>Dashboard</span>}
-          </NavLink>
-        </li>
+        {(() => {
+          const subdomain = localStorage.getItem("clinicSubdomain");
+          const getLink = (path) => subdomain ? `/c/${subdomain}${path}` : path;
+          
+          return (
+            <>
+              {/* 1. Dashboard */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/patient-dashboard")} className={linkClass} end>
+                  <span className="modern-nav-icon">
+                    <FaTachometerAlt />
+                  </span>
+                  {!collapsed && <span>Dashboard</span>}
+                </NavLink>
+              </li>
 
-        {/* 2. Appointments */}
-        <li className="modern-nav-item">
-          <NavLink to="/patient/appointments" className={linkClass}>
-            <span className="modern-nav-icon">
-              <FaCalendarAlt />
-            </span>
-            {!collapsed && <span>Appointments</span>}
-          </NavLink>
-        </li>
+              {/* 2. Appointments */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/patient/appointments")} className={linkClass}>
+                  <span className="modern-nav-icon">
+                    <FaCalendarAlt />
+                  </span>
+                  {!collapsed && <span>Appointments</span>}
+                </NavLink>
+              </li>
 
-        {/* 3. Encounters */}
-        <li className="modern-nav-item">
-          <NavLink to="/patient/encounters" className={linkClass}>
-            <span className="modern-nav-icon">
-              <FaClipboardList />
-            </span>
-            {!collapsed && <span>Encounters</span>}
-          </NavLink>
-        </li>
+              {/* 3. Encounters */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/patient/encounters")} className={linkClass}>
+                  <span className="modern-nav-icon">
+                    <FaClipboardList />
+                  </span>
+                  {!collapsed && <span>Encounters</span>}
+                </NavLink>
+              </li>
 
-        {/* 4. Billing Records */}
-        <li className="modern-nav-item">
-          <NavLink to="/patient/billing" className={linkClass}>
-            <span className="modern-nav-icon">
-              <FaFileInvoice />
-            </span>
-            {!collapsed && <span>Billing Records</span>}
-          </NavLink>
-        </li>
+              {/* 4. Billing Records */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/patient/billing")} className={linkClass}>
+                  <span className="modern-nav-icon">
+                    <FaFileInvoice />
+                  </span>
+                  {!collapsed && <span>Billing Records</span>}
+                </NavLink>
+              </li>
 
-        {/* 5. Reports */}
-        <li className="modern-nav-item">
-          <NavLink to="/patient/reports" className={linkClass}>
-            <span className="modern-nav-icon">
-              <FaChartBar />
-            </span>
-            {!collapsed && <span>Reports</span>}
-          </NavLink>
-        </li>
+              {/* 5. Reports */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/patient/reports")} className={linkClass}>
+                  <span className="modern-nav-icon">
+                    <FaChartBar />
+                  </span>
+                  {!collapsed && <span>Reports</span>}
+                </NavLink>
+              </li>
+            </>
+          );
+        })()}
       </ul>
 
       {/* Footer */}

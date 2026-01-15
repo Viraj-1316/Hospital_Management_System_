@@ -37,8 +37,12 @@ function ReceptionistProfile() {
 
   const loadProfile = async () => {
     try {
+      const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
       const res = await fetch(
-        `${API_BASE}/api/receptionists/${receptionistId}`
+        `${API_BASE}/api/receptionists/${receptionistId}`,
+        {
+          headers: { "Authorization": `Bearer ${token}` }
+        }
       );
 
       if (!res.ok) {
@@ -120,11 +124,15 @@ function ReceptionistProfile() {
         .filter(Boolean)
         .join(", ");
 
+      const token = localStorage.getItem("token") || localStorage.getItem("receptionistToken");
       const res = await fetch(
         `${API_BASE}/api/receptionists/${receptionistId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({
             name: form.name,
             email: form.email,

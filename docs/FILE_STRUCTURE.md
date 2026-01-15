@@ -11,18 +11,18 @@ Hospital_Management_System_/
 ├── backend/                          # Express.js API Server
 ├── frontend/                         # React (Vite) Application
 ├── docs/                             # Documentation folder
+├── deploy/                           # Deployment configurations (PM2, Nginx)
 ├── .gitignore                        # Git ignore rules
 ├── README.md                         # Main project overview
 ├── ARCHITECTURE.md                   # System architecture
 ├── DATABASE_SCHEMA.md                # MongoDB models
 ├── API_ENDPOINTS.md                  # API reference
-├── DEPLOYMENT_GUIDE.md               # Deployment instructions
+├── DEPLOYMENT_GUIDE.md               # VPS deployment instructions
 ├── DEVELOPMENT_SETUP.md              # Local setup guide
+├── PRODUCTION_CHECKLIST.md           # Production readiness checklist
 ├── Backend_Developer_Guide.md        # Backend development guide
 ├── Frontend_Developer_Guide.md       # Frontend development guide
 ├── README_RAZORPAY.md                # Razorpay integration docs
-├── OneCare_AWS_Deployment_Guide.md   # AWS specific deployment
-├── Production_Upgrade_Guide.md       # Production upgrade steps
 ├── route_migration_guide.md          # Route refactoring history
 └── OneCare_API.postman_collection.json  # Postman API collection
 ```
@@ -102,12 +102,11 @@ backend/
 │   ├── userRoutes.js        # User profile
 │   └── zoomOAuthRoutes.js   # Zoom OAuth
 │
-├── utils/                   # Utility functions (11 files)
+├── utils/                   # Utility functions (10 files)
 │   ├── cache.js             # In-memory caching
 │   ├── emailService.js      # Nodemailer configuration
 │   ├── emailTemplates.js    # HTML email templates
 │   ├── generatePassword.js  # Random password generation
-│   ├── keepAlive.js         # Server keep-alive ping
 │   ├── logger.js            # Winston logging setup
 │   ├── meetingService.js    # Google Meet/Zoom integration
 │   ├── populateHelper.js    # MongoDB population helpers
@@ -344,7 +343,7 @@ frontend/
 | --------------------------------- | ----- | --------------------- |
 | `backend/routes/`                 | 25    | API route definitions |
 | `backend/models/`                 | 19    | MongoDB schemas       |
-| `backend/utils/`                  | 11    | Utility functions     |
+| `backend/utils/`                  | 10    | Utility functions     |
 | `backend/middleware/`             | 5     | Express middleware    |
 | `backend/controllers/`            | 5     | Business logic        |
 | `frontend/src/admin-dashboard/`   | 46    | Admin portal          |

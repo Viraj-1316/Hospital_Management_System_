@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 
 import API_BASE from "../../config";
 
-function AdminProfile() {
+function ClinicProfile() {
   const navigate = useNavigate();
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
   const userId = authUser?.id;
@@ -419,4 +419,4 @@ function AdminProfile() {
   );
 }
 
-export default AdminProfile;
+export default ClinicProfile;

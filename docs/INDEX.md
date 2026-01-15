@@ -50,7 +50,6 @@ Central hub for all project documentation.
 - [Backend_Developer_Guide.md](../Backend_Developer_Guide.md)
 - [Frontend_Developer_Guide.md](../Frontend_Developer_Guide.md)
 - [README_RAZORPAY.md](../README_RAZORPAY.md)
-- [OneCare_AWS_Deployment_Guide.md](../OneCare_AWS_Deployment_Guide.md)
 
 ---
 
@@ -86,8 +85,8 @@ Central hub for all project documentation.
 ### For DevOps/Deployment
 
 1. [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)
-2. [OneCare_AWS_Deployment_Guide.md](../OneCare_AWS_Deployment_Guide.md)
-3. [ENVIRONMENT_CONFIG.md](./ENVIRONMENT_CONFIG.md)
+2. [ENVIRONMENT_CONFIG.md](./ENVIRONMENT_CONFIG.md)
+3. [PRODUCTION_CHECKLIST.md](../PRODUCTION_CHECKLIST.md)
 
 ---
 

@@ -1,0 +1,837 @@
+/* AppointmentBookingModal.css - Multi-step appointment booking popup */
+
+.abm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.abm-modal {
+  background: #fff;
+  border-radius: 16px;
+  display: flex;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: abm-slideIn 0.3s ease;
+}
+
+@keyframes abm-slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sidebar with steps */
+.abm-sidebar {
+  background: linear-gradient(180deg, #4a6cf7 0%, #3b5ce4 100%);
+  width: 280px;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.abm-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.abm-step.active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.abm-step.completed .abm-step-icon {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+.abm-step-icon {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.abm-step.active .abm-step-icon {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.abm-step-content h4 {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.abm-step-content p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+/* Main content */
+.abm-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.abm-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.abm-close:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.abm-content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.abm-content h2 {
+  font-size: 22px;
+  color: #1e293b;
+  margin: 0 0 24px;
+  padding-right: 40px;
+}
+
+/* Search bar */
+.abm-search {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.abm-search input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.abm-search input:focus {
+  border-color: #4a6cf7;
+}
+
+.abm-search svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+/* Doctor cards */
+.abm-doctors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.abm-doctor-card {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.abm-doctor-card:hover {
+  border-color: #4a6cf7;
+  box-shadow: 0 4px 12px rgba(74, 108, 247, 0.15);
+}
+
+.abm-doctor-card.selected {
+  border-color: #4a6cf7;
+  background: #f0f4ff;
+}
+
+.abm-doctor-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.abm-doctor-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.abm-doctor-avatar svg {
+  font-size: 28px;
+  color: #94a3b8;
+}
+
+.abm-doctor-card h4 {
+  font-size: 14px;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
+
+.abm-doctor-card .specialty {
+  font-size: 12px;
+  color: #4a6cf7;
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.abm-doctor-card .exp-badge {
+  display: inline-block;
+  background: #fecaca;
+  color: #dc2626;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.abm-doctor-card .email {
+  font-size: 11px;
+  color: #64748b;
+  word-break: break-all;
+}
+
+/* Services */
+.abm-service-category {
+  margin-bottom: 24px;
+}
+
+.abm-service-category h3 {
+  color: #4a6cf7;
+  font-size: 14px;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.abm-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.abm-service-card {
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.abm-service-card:hover {
+  border-color: #4a6cf7;
+}
+
+.abm-service-card.selected {
+  border-color: #4a6cf7;
+  background: #f0f4ff;
+}
+
+.abm-service-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background: #22c55e;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.abm-service-icon {
+  width: 48px;
+  height: 48px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.abm-service-card h4 {
+  font-size: 13px;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
+
+.abm-service-card .price {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Date & Time */
+.abm-datetime-container {
+  display: flex;
+  gap: 24px;
+}
+
+.abm-calendar {
+  flex: 1;
+}
+
+.abm-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.abm-calendar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.abm-calendar-header button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px;
+}
+
+.abm-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.abm-calendar-grid .day-name {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  padding: 8px 0;
+}
+
+.abm-calendar-grid .day {
+  padding: 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.abm-calendar-grid .day:hover:not(.disabled):not(.selected) {
+  background: #f1f5f9;
+}
+
+.abm-calendar-grid .day.today {
+  border: 2px solid #4a6cf7;
+}
+
+.abm-calendar-grid .day.selected {
+  background: #4a6cf7;
+  color: #fff;
+}
+
+.abm-calendar-grid .day.disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.abm-calendar-grid .day.past {
+  color: #fca5a5;
+}
+
+.abm-slots {
+  flex: 1;
+}
+
+.abm-slots h3 {
+  font-size: 16px;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.abm-timezone {
+  font-size: 12px;
+  color: #4a6cf7;
+  margin-bottom: 16px;
+}
+
+.abm-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.abm-slot {
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.abm-slot:hover:not(.disabled) {
+  border-color: #4a6cf7;
+  background: #f0f4ff;
+}
+
+.abm-slot.selected {
+  background: #4a6cf7;
+  color: #fff;
+  border-color: #4a6cf7;
+}
+
+/* Description */
+.abm-description textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+
+.abm-description textarea:focus {
+  border-color: #4a6cf7;
+}
+
+.abm-description textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Auth tabs */
+.abm-auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.abm-auth-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #64748b;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.abm-auth-tab.active {
+  color: #4a6cf7;
+  font-weight: 600;
+}
+
+.abm-auth-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #4a6cf7;
+}
+
+/* Form */
+.abm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.abm-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.abm-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.abm-form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.abm-form-group label .required {
+  color: #ef4444;
+}
+
+.abm-form-group input,
+.abm-form-group select {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.abm-form-group input:focus,
+.abm-form-group select:focus {
+  border-color: #4a6cf7;
+}
+
+.abm-form-group input::placeholder {
+  color: #94a3b8;
+}
+
+.abm-gender-group {
+  display: flex;
+  gap: 20px;
+  padding-top: 6px;
+}
+
+.abm-gender-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.abm-gender-group input[type="radio"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* Already logged in */
+.abm-logged-in {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.abm-logged-in svg {
+  color: #22c55e;
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.abm-logged-in h3 {
+  color: #166534;
+  margin: 0 0 8px;
+}
+
+.abm-logged-in p {
+  color: #15803d;
+  margin: 0;
+}
+
+/* Confirmation */
+.abm-confirmation {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.abm-confirmation-row {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.abm-confirmation-row:last-child {
+  border-bottom: none;
+}
+
+.abm-confirmation-row .label {
+  width: 140px;
+  font-size: 13px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.abm-confirmation-row .value {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+/* Footer */
+.abm-footer {
+  padding: 20px 30px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.abm-btn {
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.abm-btn-secondary {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+}
+
+.abm-btn-secondary:hover {
+  background: #fecaca;
+}
+
+.abm-btn-primary {
+  background: #4a6cf7;
+  color: #fff;
+  border: none;
+}
+
+.abm-btn-primary:hover {
+  background: #3b5ce4;
+}
+
+.abm-btn-primary:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Loading */
+.abm-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.abm-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #4a6cf7;
+  border-radius: 50%;
+  animation: abm-spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes abm-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.abm-empty {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.abm-empty svg {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: #cbd5e1;
+}
+
+/* Success */
+.abm-success {
+  text-align: center;
+  padding: 40px;
+}
+
+.abm-success-icon {
+  width: 80px;
+  height: 80px;
+  background: #dcfce7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.abm-success-icon svg {
+  font-size: 40px;
+  color: #22c55e;
+}
+
+.abm-success h2 {
+  color: #166534;
+  margin: 0 0 8px;
+}
+
+.abm-success p {
+  color: #15803d;
+  margin: 0 0 24px;
+}
+
+/* Success Modal (separate from main wizard modal) */
+.abm-success-modal {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: abm-slideIn 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.abm-success-modal .abm-success {
+  padding: 50px 40px 30px;
+}
+
+.abm-success-modal .abm-confirmation {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.abm-success-modal .abm-footer {
+  padding: 20px 40px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: center;
+}
+
+.abm-success-modal .abm-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.abm-success-modal .abm-close:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .abm-modal {
+    flex-direction: column;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .abm-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 16px;
+    gap: 4px;
+  }
+
+  .abm-step {
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .abm-step-content p {
+    display: none;
+  }
+
+  .abm-datetime-container {
+    flex-direction: column;
+  }
+
+  .abm-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .abm-doctors-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .abm-slots-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

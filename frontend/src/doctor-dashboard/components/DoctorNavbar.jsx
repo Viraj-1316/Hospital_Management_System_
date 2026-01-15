@@ -86,31 +86,46 @@ export default function DoctorNavbar({ onToggle }) {
 
           {dropdownOpen && (
             <div className="modern-dropdown">
-              <button
-                className="modern-dropdown-item"
-                onClick={() => {
-                  navigate("/doctor/profile");
-                  setDropdownOpen(false);
-                }}
-              >
-                <FaUser />
-                My Profile
-              </button>
+              {(() => {
+                  const subdomain = localStorage.getItem("clinicSubdomain");
+                  const getLink = (path) => subdomain ? `/c/${subdomain}${path}` : path;
+                  
+                  return (
+                    <>
+                      <button
+                        className="modern-dropdown-item"
+                        onClick={() => {
+                          navigate(getLink("/doctor/profile"));
+                          setDropdownOpen(false);
+                        }}
+                      >
+                        <FaUser />
+                        My Profile
+                      </button>
 
-              <button
-                className="modern-dropdown-item"
-                onClick={() => {
-                  navigate("/doctor/change-password");
-                  setDropdownOpen(false);
-                }}
-              >
-                <FaLock />
-                Change Password
-              </button>
+                      <button
+                        className="modern-dropdown-item"
+                        onClick={() => {
+                          navigate(getLink("/doctor/change-password"));
+                          setDropdownOpen(false);
+                        }}
+                      >
+                        <FaLock />
+                        Change Password
+                      </button>
+                    </>
+                  );
+              })()}
 
               <button
                 className="modern-dropdown-item danger"
-                onClick={handleLogout}
+                onClick={() => {
+                   const subdomain = localStorage.getItem("clinicSubdomain");
+                   localStorage.removeItem("token");
+                   localStorage.removeItem("role");
+                   localStorage.removeItem("authUser");
+                   navigate(subdomain ? `/c/${subdomain}/login` : "/");
+                }}
               >
                 <FaSignOutAlt />
                 Logout

@@ -95,7 +95,8 @@ const BillingSchema = new mongoose.Schema(
 // Pre-save hook to auto-generate verification URL
 BillingSchema.pre('save', function(next) {
   if (!this.verificationUrl && this.billNumber) {
-    this.verificationUrl = `https://onecare.bhargavkarande.dev/verify/${this._id}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    this.verificationUrl = `${frontendUrl}/verify/bill/${this._id}`;
   }
   next();
 });

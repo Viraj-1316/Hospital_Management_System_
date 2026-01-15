@@ -120,24 +120,28 @@ export default function DoctorBillingRecords() {
     setPage(1);
   };
 
-  const lookupCustomId = (bill) => {
-    // Check encounterCustomId first (set by backend)
-    if (bill.encounterCustomId) {
-      return bill.encounterCustomId;
+  const lookupCustomId = (bill, list = encountersList) => {
+    // 1. Try to find in the fetched encounters list
+    const billEncIdStr = (typeof bill.encounterId === 'object' && bill.encounterId?._id) 
+        ? bill.encounterId._id.toString() 
+        : (bill.encounterId || "").toString();
+
+    if (list && list.length > 0) {
+        const found = list.find(e => (e._id || e.id).toString() === billEncIdStr);
+        if (found && found.encounterId) return found.encounterId;
     }
-    // Check encounterId
-    if (bill.encounterId) {
-      const encId = bill.encounterId;
-      if (typeof encId === "string") {
-        if (encId.startsWith("ENC-")) return encId;
-        if (encId.length === 24) return `ENC-${encId.substring(0, 6)}`;
-        return encId;
-      }
-      if (typeof encId === "object" && encId._id) {
-        return (
-          encId.encounterId || `ENC-${encId._id.toString().substring(0, 6)}`
-        );
-      }
+
+    // 2. Check if bill has it directly (populated or stored)
+    if (bill.encounterCustomId) return bill.encounterCustomId;
+    
+    // 3. Check if populated in bill
+    if (typeof bill.encounterId === 'object' && bill.encounterId.encounterId) {
+        return bill.encounterId.encounterId;
+    }
+
+    // 4. Fallback: string heuristic
+    if (typeof bill.encounterId === 'string' && bill.encounterId.startsWith("ENC-")) {
+        return bill.encounterId;
     }
     return "-";
   };
@@ -147,7 +151,7 @@ export default function DoctorBillingRecords() {
     const q = searchTerm.trim().toLowerCase();
     return bills
       .filter((bill) => {
-        const customEncId = lookupCustomId(bill);
+        const customEncId = lookupCustomId(bill, encountersList);
         const combined =
           `${bill._id} ${customEncId} ${bill.clinicName} ${bill.patientName} ${bill.status}`.toLowerCase();
 
@@ -409,7 +413,7 @@ export default function DoctorBillingRecords() {
                         </td>
                         <td>
                           <span className="enc-badge">
-                            {lookupCustomId(bill)}
+                            {lookupCustomId(bill, encountersList)}
                           </span>
                         </td>
                         <td>{bill.clinicName}</td>
@@ -519,7 +523,7 @@ export default function DoctorBillingRecords() {
                                 Encounter
                               </small>
                               <span className="enc-badge">
-                                {lookupCustomId(bill)}
+                                {lookupCustomId(bill, encountersList)}
                               </span>
                             </div>
 

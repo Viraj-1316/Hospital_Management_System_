@@ -73,11 +73,6 @@ WHATSAPP_ACCESS_TOKEN=EAAxxxxxxxxxxxxxxx
 WHATSAPP_PHONE_NUMBER_ID=123456789012345
 WHATSAPP_BUSINESS_ACCOUNT_ID=987654321098765
 
-# ===========================================
-# RENDER DEPLOYMENT (Optional)
-# ===========================================
-# Used for keep-alive ping to prevent cold starts
-RENDER_EXTERNAL_URL=https://your-app.onrender.com
 ```
 
 ---

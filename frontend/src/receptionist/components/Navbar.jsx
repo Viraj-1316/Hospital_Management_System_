@@ -185,7 +185,10 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
                     <div 
                       key={apt._id} 
                       className="modern-dropdown-item" 
-                      onClick={() => navigate("/reception-dashboard/appointments")}
+                      onClick={() => {
+                        const subdomain = localStorage.getItem("clinicSubdomain");
+                        navigate(subdomain ? `/c/${subdomain}/reception-dashboard/appointments` : "/reception-dashboard/appointments");
+                      }}
                       style={{ borderBottom: "1px solid #f1f5f9", alignItems: "flex-start" }}
                     >
                       <div style={{ 
@@ -231,25 +234,38 @@ const ReceptionistNavbar = ({ toggleSidebar }) => {
                  <div style={{ fontSize: "12px", color: "#64748b" }}>Receptionist</div>
                </div>
 
-              <button 
-                className="modern-dropdown-item" 
-                onClick={() => { navigate("/receptionist/profile"); setOpen(false); }}
-              >
-                <FaUser /> My Profile
-              </button>
-              
-              <button 
-                className="modern-dropdown-item" 
-                onClick={() => { navigate("/receptionist/change-password-page"); setOpen(false); }}
-              >
-                <FaLock /> Change Password
-              </button>
+              {(() => {
+                const subdomain = localStorage.getItem("clinicSubdomain");
+                const getLink = (path) => subdomain ? `/c/${subdomain}${path}` : path;
+                
+                return (
+                  <>
+                    <button 
+                      className="modern-dropdown-item" 
+                      onClick={() => { navigate(getLink("/receptionist/profile")); setOpen(false); }}
+                    >
+                      <FaUser /> My Profile
+                    </button>
+                    
+                    <button 
+                      className="modern-dropdown-item" 
+                      onClick={() => { navigate(getLink("/receptionist/change-password-page")); setOpen(false); }}
+                    >
+                      <FaLock /> Change Password
+                    </button>
+                  </>
+                );
+              })()}
               
               <div style={{ borderTop: "1px solid #f1f5f9", margin: "4px 0" }}></div>
               
               <button 
                 className="modern-dropdown-item danger" 
-                onClick={handleLogout}
+                onClick={() => {
+                   const subdomain = localStorage.getItem("clinicSubdomain");
+                   localStorage.clear(); 
+                   navigate(subdomain ? `/c/${subdomain}/login` : "/");
+                }}
               >
                 <FaSignOutAlt /> Logout
               </button>

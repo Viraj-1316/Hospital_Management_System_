@@ -21,6 +21,12 @@ const PrivacyPage = lazy(() => import("./components/LandingPage/PrivacyPage"));
 const TermsPage = lazy(() => import("./components/LandingPage/TermsPage"));
 const ContactPage = lazy(() => import("./components/LandingPage/ContactPage"));
 const PricingPage = lazy(() => import("./components/LandingPage/PricingPage"));
+const ClinicRegistrationPage = lazy(() => import("./components/LandingPage/ClinicRegistrationPage"));
+const ClinicOnboarding = lazy(() => import("./components/ClinicOnboarding"));
+const ClinicWebsite = lazy(() => import("./components/ClinicWebsite"));
+const ClinicFinder = lazy(() => import("./components/ClinicFinder"));
+const ClinicLogin = lazy(() => import("./components/ClinicWebsite/ClinicLogin"));
+const ClinicSignup = lazy(() => import("./components/ClinicWebsite/ClinicSignup"));
 
 /* Admin Dashboard Components */
 const AdminDashboard = lazy(() => import("./admin-dashboard/admin/AdminDashboard"));
@@ -50,6 +56,7 @@ const MedicalReportPage = lazy(() => import("./admin-dashboard/admin/MedicalRepo
 const AddReceptionist = lazy(() => import("./admin-dashboard/admin/AddReceptionist"));
 const ReceptionistList = lazy(() => import("./admin-dashboard/admin/ReceptionistList"));
 const PaymentReports = lazy(() => import("./admin-dashboard/admin/PaymentReports"));
+const ClinicRegistrations = lazy(() => import("./admin-dashboard/admin/ClinicRegistrations"));
 
 /* Admin Settings */
 const SettingsLayout = lazy(() => import("./admin-dashboard/admin/settings/SettingsLayout"));
@@ -186,15 +193,19 @@ function App() {
     } else if (path.startsWith("/clinic-dashboard")) {
       title = "OneCare Clinic Portal";
       icon = "/admin.ico"; // Use admin icon for now
-    } else if (path.startsWith("/doctor-dashboard") || path.startsWith("/doctor")) {
+    } else if (path.startsWith("/doctor-dashboard") || path.startsWith("/doctor") || path.includes("/doctor-dashboard") || path.includes("/doctor/")) {
       title = "OneCare Doctor Portal";
       icon = "/doctor.ico";
-    } else if (path.startsWith("/patient-dashboard") || path.startsWith("/patient")) {
+    } else if (path.startsWith("/patient-dashboard") || path.startsWith("/patient") || path.includes("/patient-dashboard") || path.includes("/patient/")) {
       title = "OneCare Patient Portal";
       icon = "/patient.ico";
-    } else if (path.startsWith("/reception-dashboard") || path.startsWith("/receptionist")) {
+    } else if (path.startsWith("/reception-dashboard") || path.startsWith("/receptionist") || path.includes("/reception-dashboard") || path.includes("/receptionist/")) {
       title = "OneCare Receptionist Portal";
       icon = "/receptionist.ico";
+    } else if (path.startsWith("/c/")) {
+      // Clinic-scoped routes
+      title = "OneCare Clinic";
+      icon = "/favicon.ico";
     }
 
     document.title = title;
@@ -301,6 +312,9 @@ function App() {
           } />
           <Route path="/add-clinic" element={
             <AddClinic sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/clinic-registrations" element={
+            <ClinicRegistrations sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
           } />
           <Route path="/encounter-list" element={
             <EncounterList sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
@@ -548,6 +562,125 @@ function App() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/register-clinic" element={<ClinicRegistrationPage />} />
+          <Route path="/onboarding/:registrationId" element={<ClinicOnboarding />} />
+          
+          {/* ==================== CLINIC SITES ==================== */}
+          <Route path="/clinic-finder" element={<ClinicFinder />} />
+          <Route path="/c/:subdomain" element={<ClinicWebsite />} />
+          <Route path="/c/:subdomain/login" element={<ClinicLogin />} />
+          <Route path="/c/:subdomain/signup" element={<ClinicSignup />} />
+
+          {/* ==================== CLINIC-SCOPED PATIENT ROUTES ==================== */}
+          <Route path="/c/:subdomain/patient-dashboard" element={
+            <PatientDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/appointments" element={
+            <PatientAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/book" element={
+            <PatientBookAppointment sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/profile-setup" element={<PatientProfileSetup />} />
+          <Route path="/c/:subdomain/patient/profile" element={
+            <PatientProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/change-password" element={
+            <PatientChangePassword sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/encounters" element={
+            <Encounters sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/billing" element={
+            <PatientBilling sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/reports" element={
+            <PatientReport sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/patient/appointments/:id" element={<AppointmentDetails />} />
+
+          {/* ==================== CLINIC-SCOPED DOCTOR ROUTES ==================== */}
+          <Route path="/c/:subdomain/doctor-dashboard" element={
+            <DoctorDashboard sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/patients" element={
+            <DoctorPatients sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/appointments" element={
+            <DoctorAppointments sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/services" element={
+            <DoctorServices sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/appointments/:id" element={<DoctorAppointmentDetails />} />
+          <Route path="/c/:subdomain/doctor/profile" element={
+            <DoctorProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/change-password" element={<DoctorChangePassword />} />
+          <Route path="/c/:subdomain/doctor/change-password-first" element={<DoctorFirstLoginChangePassword />} />
+          <Route path="/c/:subdomain/doctor/encounters" element={<DoctorEncounterList />} />
+          <Route path="/c/:subdomain/doctor/encounters/:id" element={<DoctorEncounterDetails />} />
+          <Route path="/c/:subdomain/doctor/encounter-templates" element={<DoctorEncounterTemplateList />} />
+          <Route path="/c/:subdomain/doctor/encounter-template-details/:id" element={<DoctorEncounterTemplateDetails />} />
+          <Route path="/c/:subdomain/doctor/encounters/:id/reports" element={<DoctorMedicalReportPage />} />
+          <Route path="/c/:subdomain/doctor/billing" element={
+            <DoctorBillingRecords sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/add-bill" element={
+            <DoctorAddBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/edit-bill/:id" element={
+            <DoctorEditBill sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/AddPatient" element={
+            <DoctorAddPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/doctor/EditPatient/:id" element={
+            <DoctorEditPatient sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          {/* Doctor Settings (Clinic-scoped) */}
+          <Route path="/c/:subdomain/doctor/settings" element={<SettingLayout />}>
+            <Route index element={<Holidays />} />
+            <Route path="holidays" element={<Holidays />} />
+            <Route path="sessions" element={<DoctorSessions />} />
+            <Route path="listings" element={<Listings />} />
+            <Route path="integration" element={<GoogleMeetIntegration />} />
+            <Route path="zoom" element={<ZoomIntegration />} />
+          </Route>
+
+          {/* ==================== CLINIC-SCOPED RECEPTIONIST ROUTES ==================== */}
+          <Route path="/c/:subdomain/reception-dashboard" element={<ReceptionistDashboard />} />
+          <Route path="/c/:subdomain/reception-dashboard/appointments" element={<ReceptionistAppointment />} />
+          <Route path="/c/:subdomain/reception-dashboard/doctors" element={<ReceptionistDoctor />} />
+          <Route path="/c/:subdomain/receptionist-dashboard/patients" element={<ReceptionistPatients />} />
+          <Route path="/c/:subdomain/receptionist-dashboard/AddPatient" element={<ReceptionistAddPatient />} />
+          <Route path="/c/:subdomain/receptionist/add-doctor" element={<ReceptionistAddDoctor />} />
+          <Route path="/c/:subdomain/receptionist/doctor-sessions" element={<ReceptionistDoctorSession />} />
+          <Route path="/c/:subdomain/reception-dashboard/services" element={<ReceptionistServices />} />
+          <Route path="/c/:subdomain/reception-dashboard/billing" element={<ReceptionistBillingRecords />} />
+          <Route path="/c/:subdomain/reception-dashboard/payment-reports" element={
+            <ReceptionistPaymentReports sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          <Route path="/c/:subdomain/receptionist/add-bill" element={<ReceptionistAddBill />} />
+          <Route path="/c/:subdomain/receptionist/edit-bill/:id" element={<ReceptionistEditBill />} />
+          <Route path="/c/:subdomain/reception-dashboard/encounters" element={<ReceptionistEncounterList />} />
+          <Route path="/c/:subdomain/reception-dashboard/encounters/:id" element={<ReceptionistEncounterDetails />} />
+          <Route path="/c/:subdomain/reception-dashboard/encounters/templates" element={<ReceptionistEncounterTempletList />} />
+          <Route path="/c/:subdomain/reception-dashboard/encounter-template-details/:id" element={<ReceptionistEncounterTempletDetails />} />
+          <Route path="/c/:subdomain/receptionist/change-password" element={<ReceptionistChangePassword />} />
+          <Route path="/c/:subdomain/receptionist/change-password-page" element={<ReceptionistChangePasswordPage />} />
+          <Route path="/c/:subdomain/receptionist/profile" element={
+            <ReceptionistProfile sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          } />
+          {/* Receptionist Settings (Clinic-scoped) */}
+          <Route path="/c/:subdomain/receptionist-dashboard/settings" element={
+            <ReceptionistSettingsLayout sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          }>
+            <Route index element={<ReceptionistHolidaySettings />} />
+            <Route path="holidays" element={<ReceptionistHolidaySettings />} />
+            <Route path="appointment-settings" element={<ReceptionistAppointmentSettings />} />
+            <Route path="listings" element={<ReceptionistListingSettings />} />
+          </Route>
 
           {/* ==================== AUTH ==================== */}
           <Route path="/login" element={<Login />} />

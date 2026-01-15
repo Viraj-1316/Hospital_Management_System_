@@ -15,7 +15,7 @@ const VerifyAppointment = () => {
     const fetchAppointment = async () => {
       try {
         // Public endpoint - no auth required for verification
-        const response = await axios.get(`${API_BASE}/api/appointments/${id}/verify`);
+        const response = await axios.get(`${API_BASE}/appointments/${id}/verify`);
         setAppointment(response.data);
       } catch (err) {
         console.error("Error fetching appointment:", err);

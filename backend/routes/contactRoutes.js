@@ -95,10 +95,11 @@ router.post("/", async (req, res) => {
     logger.info("Admin notification email sent", { from: email, inquiryType });
 
     // 2. Send confirmation email to user
+    const frontendUrl = process.env.FRONTEND_URL || 'https://onecare.app';
     const userConfirmationHTML = `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 20px;">
         <div style="background: linear-gradient(135deg, #2c5282 0%, #38b2ac 100%); padding: 24px; text-align: center; border-radius: 12px 12px 0 0;">
-          <img src="https://onecare.bhargavkarande.dev/logo.png" alt="OneCare" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 12px;" />
+          <img src="${frontendUrl}/logo.png" alt="OneCare" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 12px;" />
           <h1 style="color: white; margin: 0; font-size: 24px;">Thank You for Contacting OneCare!</h1>
         </div>
         
@@ -122,7 +123,7 @@ router.post("/", async (req, res) => {
 
           <p style="color: #475569; margin-top: 24px; line-height: 1.7;">
             In the meantime, you can explore our features at 
-            <a href="https://onecare.bhargavkarande.dev" style="color: #2c5282; font-weight: 600;">onecare.bhargavkarande.dev</a>
+            <a href="${frontendUrl}" style="color: #2c5282; font-weight: 600;">${frontendUrl.replace('https://', '').replace('http://', '')}</a>
           </p>
 
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />

@@ -1,0 +1,280 @@
+/* ClinicFinder.css - Uses OneCare theme variables from OneCareAuth.css */
+
+/* Clinic Finder Wrapper */
+.clinic-finder-wrapper {
+    display: flex;
+    flex-direction: row;
+    min-height: 600px;
+    max-width: 950px;
+}
+
+.finder-side-panel {
+    width: 40%;
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    background-size: 200% 200%;
+    animation: gradientMove 6s ease infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 30px 0 0 30px;
+    padding: 40px;
+}
+
+.finder-side-panel .finder-panel-content {
+    text-align: center;
+    color: #fff;
+}
+
+.finder-side-panel h1 {
+    color: #fff;
+    font-size: 32px;
+    margin-bottom: 15px;
+}
+
+.finder-side-panel p {
+    font-size: 14px;
+    opacity: 0.9;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.admin-login-link a,
+.back-to-home a {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.admin-login-link {
+    margin-bottom: 15px;
+}
+
+.admin-login-link a:hover,
+.back-to-home a:hover {
+    color: #fff;
+}
+
+.finder-content-section {
+    width: 60%;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.finder-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.finder-header i {
+    font-size: 40px;
+    color: #4e54c8;
+    margin-bottom: 15px;
+}
+
+.finder-header h1 {
+    font-size: 24px;
+    color: #4e54c8;
+    margin-bottom: 8px;
+}
+
+.finder-header p {
+    font-size: 13px;
+    color: #666;
+}
+
+.search-box {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.search-box .search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    font-size: 16px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    background-color: #f4f8f7;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+    background-color: #fff;
+    border-color: #4e54c8;
+    box-shadow: 0 4px 15px rgba(78, 84, 200, 0.1);
+    outline: none;
+}
+
+.search-box input::placeholder {
+    color: #999;
+}
+
+.clinics-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scrollbar on hover transform */
+    max-height: 350px;
+    padding-right: 5px; /* Space for hover effect */
+}
+
+/* Skeleton Loading */
+.skeleton-card {
+    height: 70px;
+    background: #f0f0f0;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.clinics-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.clinics-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.clinics-list::-webkit-scrollbar-thumb {
+    background: #8f94fb;
+    border-radius: 10px;
+}
+
+.clinic-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 18px;
+    background: #f9fafb;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.clinic-card:hover {
+    background: linear-gradient(135deg, rgba(78, 84, 200, 0.05), rgba(143, 148, 251, 0.08));
+    border-color: #8f94fb;
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(78, 84, 200, 0.1);
+}
+
+.clinic-info h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 4px 0;
+}
+
+.clinic-location {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #888;
+}
+
+.clinic-location i {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.arrow-icon {
+    color: #8f94fb;
+    font-size: 14px;
+    transition: transform 0.2s;
+}
+
+.clinic-card:hover .arrow-icon {
+    transform: translateX(5px);
+    color: #4e54c8;
+}
+
+.loading-state,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 20px;
+    color: #888;
+    text-align: center;
+}
+
+.loading-state i,
+.empty-state i {
+    font-size: 40px;
+    color: #ddd;
+    margin-bottom: 15px;
+}
+
+.loading-state span,
+.empty-state span {
+    font-size: 14px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .clinic-finder-wrapper {
+        flex-direction: column-reverse;
+        min-height: auto !important;
+    }
+
+    .finder-side-panel {
+        display: none !important;
+    }
+
+    .finder-side-panel h1 {
+        font-size: 24px;
+    }
+
+    .finder-content-section {
+        width: 100%;
+        padding: 30px 20px;
+    }
+
+    .finder-header i {
+        font-size: 32px;
+    }
+
+    .finder-header h1 {
+        font-size: 20px;
+    }
+
+    .clinics-list {
+        max-height: none;
+    }
+
+    .search-box input {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}

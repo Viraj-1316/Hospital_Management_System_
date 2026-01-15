@@ -801,7 +801,7 @@ const AppointmentsContent = ({ basePath = "/admin", sidebarCollapsed }) => {
                   filteredAppointments.map((a) => (
                     <tr key={a._id}>
                       <td>{a.patientName}</td>
-                      <td>{a.services}</td>
+                      <td>{a.servicesDetail || a.services}</td>
                       <td>{a.doctorName}</td>
                       <td>{a.date ? new Date(a.date).toLocaleDateString("en-GB") : "N/A"}</td>
                       <td><span className={`badge ${a.status === 'booked' ? 'bg-primary' : a.status === 'completed' ? 'bg-success' : 'bg-secondary'}`}>{a.status}</span></td>

@@ -133,154 +133,164 @@ export default function ReceptionistSidebar({ collapsed = false }) {
       {/* Added marginBottom to increase gap above footer */}
       <ul className="modern-nav" style={{ listStyle: "none", padding: 0, margin: 0, marginBottom: "30px", overflowY: "auto", flex: 1 }}>
         
-        {/* 1. Dashboard */}
-        <li>
-          <NavLink 
-            to="/reception-dashboard" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-            end
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><FaTachometerAlt /></span>
-            {!collapsed && <span>Dashboard</span>}
-          </NavLink>
-        </li>
+        {/* Helper to get link */}
+        {(() => {
+          const subdomain = localStorage.getItem("clinicSubdomain");
+          const getLink = (path) => subdomain ? `/c/${subdomain}${path}` : path;
 
-        {/* 2. Appointments */}
-        <li>
-          <NavLink 
-            to="/reception-dashboard/appointments" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><FaCalendarAlt /></span>
-            {!collapsed && <span>Appointments</span>}
-          </NavLink>
-        </li>
+          return (
+            <>
+              {/* 1. Dashboard */}
+              <li>
+                <NavLink 
+                  to={getLink("/reception-dashboard")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                  end
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><FaTachometerAlt /></span>
+                  {!collapsed && <span>Dashboard</span>}
+                </NavLink>
+              </li>
 
-        {/* 3. Encounters (Dropdown) */}
-        <li>
-          <div
-            onClick={() => setIsEncountersOpen(!isEncountersOpen)}
-            style={{ ...navItemStyle, justifyContent: "space-between" }} // Use basic style for parent, managed manually
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ fontSize: "18px", display: "flex" }}><FaClipboardList /></span>
-              {!collapsed && <span>Encounters</span>}
-            </div>
-            {!collapsed && (
-              <span style={{ fontSize: "12px", display: "flex" }}>
-                <FaChevronDown style={{ transform: isEncountersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
-              </span>
-            )}
-          </div>
+              {/* 2. Appointments */}
+              <li>
+                <NavLink 
+                  to={getLink("/reception-dashboard/appointments")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><FaCalendarAlt /></span>
+                  {!collapsed && <span>Appointments</span>}
+                </NavLink>
+              </li>
 
-          {!collapsed && (
-            <Collapse in={isEncountersOpen}>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                <li>
-                  <NavLink 
-                    to="/reception-dashboard/encounters" 
-                    style={({ isActive }) => ({ 
-                        ...navItemStyle, 
-                        width: "calc(100% - 40px)",
-                        margin: "4px 20px",
-                        padding: "10px 16px",
-                        fontSize: "14px", 
-                        background: isActive ? "#0d6efd" : "transparent", // Submenu uses light blue instead of solid
-                        color: isActive ? "#ffff" : "#64748b" 
-                    })}
-                    end
-                  >
-                    <span style={{ marginRight: "10px" }}><FaListAlt /></span>
-                    <span>Encounter List</span>
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink 
-                    to="/reception-dashboard/encounters/templates" 
-                    style={({ isActive }) => ({ 
-                        ...navItemStyle, 
-                        width: "calc(100% - 40px)",
-                        margin: "4px 20px",
-                        padding: "10px 16px",
-                        fontSize: "14px", 
-                        background: isActive ? "#0d6efd" : "transparent",
-                        color: isActive ? "#ffff" : "#64748b"
-                    })}
-                  >
-                    <span style={{ marginRight: "10px" }}><FaRegCalendarAlt /></span>
-                    <span>Encounter Templates</span>
-                  </NavLink>
-                </li>
-              </ul>
-            </Collapse>
-          )}
-        </li>
+              {/* 3. Encounters (Dropdown) */}
+              <li>
+                <div
+                  onClick={() => setIsEncountersOpen(!isEncountersOpen)}
+                  style={{ ...navItemStyle, justifyContent: "space-between" }} // Use basic style for parent, managed manually
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "18px", display: "flex" }}><FaClipboardList /></span>
+                    {!collapsed && <span>Encounters</span>}
+                  </div>
+                  {!collapsed && (
+                    <span style={{ fontSize: "12px", display: "flex" }}>
+                      <FaChevronDown style={{ transform: isEncountersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+                    </span>
+                  )}
+                </div>
 
-        {/* 4. Patients */}
-        <li>
-          <NavLink 
-            to="/receptionist-dashboard/patients" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><FaUserInjured /></span>
-            {!collapsed && <span>Patients</span>}
-          </NavLink>
-        </li>
+                {!collapsed && (
+                  <Collapse in={isEncountersOpen}>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                      <li>
+                        <NavLink 
+                          to={getLink("/reception-dashboard/encounters")} 
+                          style={({ isActive }) => ({ 
+                              ...navItemStyle, 
+                              width: "calc(100% - 40px)",
+                              margin: "4px 20px",
+                              padding: "10px 16px",
+                              fontSize: "14px", 
+                              background: isActive ? "#0d6efd" : "transparent", // Submenu uses light blue instead of solid
+                              color: isActive ? "#ffff" : "#64748b" 
+                          })}
+                          end
+                        >
+                          <span style={{ marginRight: "10px" }}><FaListAlt /></span>
+                          <span>Encounter List</span>
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink 
+                          to={getLink("/reception-dashboard/encounters/templates")} 
+                          style={({ isActive }) => ({ 
+                              ...navItemStyle, 
+                              width: "calc(100% - 40px)",
+                              margin: "4px 20px",
+                              padding: "10px 16px",
+                              fontSize: "14px", 
+                              background: isActive ? "#0d6efd" : "transparent",
+                              color: isActive ? "#ffff" : "#64748b"
+                          })}
+                        >
+                          <span style={{ marginRight: "10px" }}><FaRegCalendarAlt /></span>
+                          <span>Encounter Templates</span>
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </Collapse>
+                )}
+              </li>
 
-        {/* 5. Doctors */}
-        <li>
-          <NavLink 
-            to="/reception-dashboard/doctors" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><FaUserMd /></span>
-            {!collapsed && <span>Doctors</span>}
-          </NavLink>
-        </li>
+              {/* 4. Patients */}
+              <li>
+                <NavLink 
+                  to={getLink("/receptionist-dashboard/patients")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><FaUserInjured /></span>
+                  {!collapsed && <span>Patients</span>}
+                </NavLink>
+              </li>
 
-        {/* 6. Services */}
-        <li>
-          <NavLink 
-            to="/reception-dashboard/services" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><FaList /></span>
-            {!collapsed && <span>Services</span>}
-          </NavLink>
-        </li>
+              {/* 5. Doctors */}
+              <li>
+                <NavLink 
+                  to={getLink("/reception-dashboard/doctors")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><FaUserMd /></span>
+                  {!collapsed && <span>Doctors</span>}
+                </NavLink>
+              </li>
 
-        {/* 7. Billing Records */}
-        <li>
-          <NavLink 
-            to="/reception-dashboard/billing" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><FaFileInvoice /></span>
-            {!collapsed && <span>Billing Records</span>}
-          </NavLink>
-        </li>
+              {/* 6. Services */}
+              <li>
+                <NavLink 
+                  to={getLink("/reception-dashboard/services")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><FaList /></span>
+                  {!collapsed && <span>Services</span>}
+                </NavLink>
+              </li>
 
-        {/* 8. Payment Reports */}
-        <li>
-          <NavLink 
-            to="/reception-dashboard/payment-reports" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><FaCreditCard /></span>
-            {!collapsed && <span>Payment Reports</span>}
-          </NavLink>
-        </li>
+              {/* 7. Billing Records */}
+              <li>
+                <NavLink 
+                  to={getLink("/reception-dashboard/billing")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><FaFileInvoice /></span>
+                  {!collapsed && <span>Billing Records</span>}
+                </NavLink>
+              </li>
 
-        {/* 9. Settings */}
-        <li style={{ marginTop: "auto" }}> {/* Push Settings to bottom if preferred, or keep natural flow */}
-          <NavLink 
-            to="/receptionist-dashboard/settings" 
-            style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
-          >
-            <span style={{ fontSize: "18px", display: "flex" }}><IoMdSettings /></span>
-            {!collapsed && <span>Settings</span>}
-          </NavLink>
-        </li>
+              {/* 8. Payment Reports */}
+              <li>
+                <NavLink 
+                  to={getLink("/reception-dashboard/payment-reports")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><FaCreditCard /></span>
+                  {!collapsed && <span>Payment Reports</span>}
+                </NavLink>
+              </li>
+
+              {/* 9. Settings */}
+              <li style={{ marginTop: "auto" }}> {/* Push Settings to bottom if preferred, or keep natural flow */}
+                <NavLink 
+                  to={getLink("/receptionist-dashboard/settings")} 
+                  style={({ isActive }) => (isActive ? activeStyle : navItemStyle)}
+                >
+                  <span style={{ fontSize: "18px", display: "flex" }}><IoMdSettings /></span>
+                  {!collapsed && <span>Settings</span>}
+                </NavLink>
+              </li>
+            </>
+          );
+        })()}
       </ul>
 
       {/* Footer */}

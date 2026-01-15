@@ -100,88 +100,97 @@ export default function DoctorSidebar({ collapsed = false }) {
       </div>
 
       <ul className="modern-nav" style={{ overflowY: "auto", flex: 1 }}>
-        {/* 1. Dashboard */}
-        <li className="modern-nav-item">
-          <NavLink to="/doctor-dashboard" className={linkClass} end>
-            <span className="modern-nav-icon"><FaTachometerAlt /></span>
-            {!collapsed && <span>Dashboard</span>}
-          </NavLink>
-        </li>
+        {(() => {
+          const subdomain = localStorage.getItem("clinicSubdomain");
+          const getLink = (path) => subdomain ? `/c/${subdomain}${path}` : path;
+          
+          return (
+            <>
+              {/* 1. Dashboard */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/doctor-dashboard")} className={linkClass} end>
+                  <span className="modern-nav-icon"><FaTachometerAlt /></span>
+                  {!collapsed && <span>Dashboard</span>}
+                </NavLink>
+              </li>
 
-        {/* 2. Appointments */}
-        <li className="modern-nav-item">
-          <NavLink to="/doctor/appointments" className={linkClass}>
-            <span className="modern-nav-icon"><FaCalendarAlt /></span>
-            {!collapsed && <span>Appointments</span>}
-          </NavLink>
-        </li>
+              {/* 2. Appointments */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/doctor/appointments")} className={linkClass}>
+                  <span className="modern-nav-icon"><FaCalendarAlt /></span>
+                  {!collapsed && <span>Appointments</span>}
+                </NavLink>
+              </li>
 
-        {/* 3. Encounters Dropdown */}
-        <li className="modern-nav-item">
-          <div
-            className={`modern-nav-link modern-nav-toggle ${isEncountersOpen ? 'open' : ''}`}
-            onClick={() => setIsEncountersOpen(!isEncountersOpen)}
-          >
-            <span className="modern-nav-icon"><FaCalendarCheck /></span>
-            {!collapsed && (
-              <>
-                <span>Encounters</span>
-                <span className="toggle-icon"><FaChevronDown /></span>
-              </>
-            )}
-          </div>
+              {/* 3. Encounters Dropdown */}
+              <li className="modern-nav-item">
+                <div
+                  className={`modern-nav-link modern-nav-toggle ${isEncountersOpen ? 'open' : ''}`}
+                  onClick={() => setIsEncountersOpen(!isEncountersOpen)}
+                >
+                  <span className="modern-nav-icon"><FaCalendarCheck /></span>
+                  {!collapsed && (
+                    <>
+                      <span>Encounters</span>
+                      <span className="toggle-icon"><FaChevronDown /></span>
+                    </>
+                  )}
+                </div>
 
-          {!collapsed && (
-            <Collapse in={isEncountersOpen}>
-              <ul className="modern-submenu">
-                <li className="modern-nav-item">
-                  <NavLink to="/doctor/encounters" className={linkClass}>
-                    <span className="modern-nav-icon"><FaListAlt /></span>
-                    <span>Encounter List</span>
-                  </NavLink>
-                </li>
-                <li className="modern-nav-item">
-                  <NavLink to="/doctor/encounter-templates" className={linkClass}>
-                    <span className="modern-nav-icon"><FaCalendarAlt /></span>
-                    <span>Templates</span>
-                  </NavLink>
-                </li>
-              </ul>
-            </Collapse>
-          )}
-        </li>
+                {!collapsed && (
+                  <Collapse in={isEncountersOpen}>
+                    <ul className="modern-submenu">
+                      <li className="modern-nav-item">
+                        <NavLink to={getLink("/doctor/encounters")} className={linkClass}>
+                          <span className="modern-nav-icon"><FaListAlt /></span>
+                          <span>Encounter List</span>
+                        </NavLink>
+                      </li>
+                      <li className="modern-nav-item">
+                        <NavLink to={getLink("/doctor/encounter-templates")} className={linkClass}>
+                          <span className="modern-nav-icon"><FaCalendarAlt /></span>
+                          <span>Templates</span>
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </Collapse>
+                )}
+              </li>
 
-        {/* 4. Patients */}
-        <li className="modern-nav-item">
-          <NavLink to="/doctor/patients" className={linkClass}>
-            <span className="modern-nav-icon"><FaUserInjured /></span>
-            {!collapsed && <span>Patients</span>}
-          </NavLink>
-        </li>
+              {/* 4. Patients */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/doctor/patients")} className={linkClass}>
+                  <span className="modern-nav-icon"><FaUserInjured /></span>
+                  {!collapsed && <span>Patients</span>}
+                </NavLink>
+              </li>
 
-        {/* 5. Services */}
-        <li className="modern-nav-item">
-          <NavLink to="/doctor/services" className={linkClass}>
-            <span className="modern-nav-icon"><FaListAlt /></span>
-            {!collapsed && <span>Services</span>}
-          </NavLink>
-        </li>
+              {/* 5. Services */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/doctor/services")} className={linkClass}>
+                  <span className="modern-nav-icon"><FaListAlt /></span>
+                  {!collapsed && <span>Services</span>}
+                </NavLink>
+              </li>
 
-        {/* 6. Billing Records */}
-        <li className="modern-nav-item">
-          <NavLink to="/doctor/billing" className={linkClass}>
-            <span className="modern-nav-icon"><FaFileInvoice /></span>
-            {!collapsed && <span>Billing Records</span>}
-          </NavLink>
-        </li>
+              {/* 6. Billing Records */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/doctor/billing")} className={linkClass}>
+                  <span className="modern-nav-icon"><FaFileInvoice /></span>
+                  {!collapsed && <span>Billing Records</span>}
+                </NavLink>
+              </li>
 
-        {/* 7. Settings */}
-        <li className="modern-nav-item">
-          <NavLink to="/doctor/settings" className={linkClass}>
-            <span className="modern-nav-icon"><IoMdSettings /></span>
-            {!collapsed && <span>Settings</span>}
-          </NavLink>
-        </li>
+              {/* 7. Settings */}
+              <li className="modern-nav-item">
+                <NavLink to={getLink("/doctor/settings")} className={linkClass}>
+                  <span className="modern-nav-icon"><IoMdSettings /></span>
+                  {!collapsed && <span>Settings</span>}
+                </NavLink>
+              </li>
+            </>
+          );
+        })()}
       </ul>
 
       {/* Footer */}
